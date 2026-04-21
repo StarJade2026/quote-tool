@@ -12,7 +12,6 @@
             margin: 0;
             padding: 20px;
         }
-        /* 帮助面板样式 */
         .help-panel {
             background: #eef2ff;
             border-radius: 12px;
@@ -36,9 +35,6 @@
             border-top: 1px solid #cbd5e1;
             padding-top: 12px;
         }
-        .help-content ul, .help-content p {
-            margin: 5px 0;
-        }
         .rule-box {
             background: #fef9e6;
             padding: 8px 12px;
@@ -46,7 +42,6 @@
             margin-top: 10px;
             border-left: 3px solid #e67e22;
         }
-        /* 反馈浮窗按钮 */
         .feedback-btn {
             position: fixed;
             bottom: 30px;
@@ -75,24 +70,10 @@
             z-index: 1001;
             border: 1px solid #e2e8f0;
         }
-        .feedback-modal h4 {
-            margin: 0 0 8px 0;
-        }
-        .feedback-modal p {
-            font-size: 13px;
-            margin: 8px 0;
-        }
-        .feedback-modal a {
-            color: #1e3a5f;
-            text-decoration: none;
-            word-break: break-all;
-        }
-        .close-modal {
-            float: right;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-        }
+        .feedback-modal h4 { margin: 0 0 8px 0; }
+        .feedback-modal p { font-size: 13px; margin: 8px 0; }
+        .feedback-modal a { color: #1e3a5f; text-decoration: none; word-break: break-all; }
+        .close-modal { float: right; cursor: pointer; font-size: 18px; font-weight: bold; }
         .app-container {
             max-width: 1400px;
             margin: 0 auto;
@@ -233,14 +214,12 @@
     </style>
 </head>
 <body>
-<!-- 反馈浮窗 -->
 <button class="feedback-btn" id="feedbackBtn">💬 反馈与建议</button>
 <div class="feedback-modal" id="feedbackModal">
     <span class="close-modal" id="closeModal">&times;</span>
     <h4>📢 联系我们</h4>
     <p>📧 邮箱：<a href="mailto:julia.wu@rainbowwaylog.com">julia.wu@rainbowwaylog.com</a></p>
     <p>📱 微信：<strong>JuliaWu_2026</strong> (请备注“报价工具”)</p>
-    <p>📝 在线反馈：<a href="#" id="feedbackLink">点击填写表单</a> (待配置)</p>
     <p style="font-size:12px; color:#666;">您也可以直接在微信中截图发给联系人。</p>
 </div>
 
@@ -248,7 +227,6 @@
     <div class="form-panel">
         <h2>📝 输入成本数据</h2>
         
-        <!-- 使用说明 + 规则解释（可折叠） -->
         <div class="help-panel" id="helpPanel">
             <div class="help-header">
                 <span>📘 使用说明 & 规则解释（点击展开/收起）</span>
@@ -257,29 +235,24 @@
             <div class="help-content" id="helpContent">
                 <p><strong>📌 快速开始</strong></p>
                 <ul>
-                    <li>1. 填写左侧公司信息（抬头会显示在报价单中）。</li>
-                    <li>2. 填写客户信息、项目描述、贸易条款等。</li>
-                    <li>3. 在三个段内添加费用项，支持自定义名称、价格、币种、单位。</li>
-                    <li>4. 右侧报价单<strong>实时更新</strong>，点击「打印/保存PDF」可导出文件。</li>
-                    <li>5. 所有数据自动保存在本机浏览器，<strong>刷新不会丢失</strong>，更换设备需重新输入。</li>
+                    <li>1. 填写公司信息、客户信息、贸易条款。</li>
+                    <li>2. 填写三段地理描述（段1起点、段2路线、段3终点）。</li>
+                    <li>3. 在各段内添加费用项（支持自定义名称、价格、币种）。</li>
+                    <li>4. 右侧报价单实时更新，点击「打印/保存PDF」导出。</li>
+                    <li>5. 所有数据自动保存在本机浏览器，刷新不丢失。</li>
                 </ul>
-                
                 <div class="rule-box">
-                    <p><strong>💰 三层费用框架说明</strong></p>
-                    <ul>
-                        <li><strong>主体价格(P0)</strong>：核心服务的基础运费，如海运费、空运费、拖车费、内装包干费。<br>→ 每段至少有一个主体价格，不可删除，可填0。</li>
-                        <li><strong>固定附加费(P1)</strong>：行业通用的附加费用，如THC、订舱费、文件费、燃油附加费、AMS。<br>→ 平台预定义，供应商可调整金额，不能删除。</li>
-                        <li><strong>增值附加费(P2)</strong>：供应商提供的差异化服务费用，如预提箱、待时费、钢琴木箱、加急操作、保险代理。<br>→ 完全自定义，可自由增删。</li>
-                    </ul>
-                    <p>💡 总价 = Σ(P0) + Σ(P1) + Σ(P2)（外币按汇率折算为CNY）</p>
+                    <p><strong>💰 三层费用框架</strong><br>
+                    主体价格(P0)：核心运费（海运费、拖车费）<br>
+                    固定附加费(P1)：行业通行费（THC、文件费、燃油附加费）<br>
+                    增值附加费(P2)：差异化服务费（预提箱、待时费）<br>
+                    总价 = Σ(P0) + Σ(P1) + Σ(P2)（外币按汇率折算）</p>
                 </div>
-                
-                <p><strong>📐 三段法（起运地→干线→目的地）</strong><br>
-                段1：起运地服务（拖车、内装、报关、订舱等）<br>
-                段2：干线段（海/空/铁路运费及附加费）<br>
-                段3：目的地服务（清关、换单、拖车、送货、关税等）</p>
-                <p><strong>⚖️ 贸易条款</strong><br>选择后责任划分会自动适配，请确保与合同一致。</p>
-                <p><strong>💡 提示</strong>：如需保存多套常用模板，后续会推出注册云端保存功能。</p>
+                <p><strong>📍 三段地理描述</strong><br>
+                段1：起运地服务的地点（门点/港口）<br>
+                段2：干线运输的起运港→目的港<br>
+                段3：目的地服务的地点（门点/港口）<br>
+                贸易条款选择后，责任划分会根据您填写的地址自动生成。</p>
             </div>
         </div>
 
@@ -295,8 +268,9 @@
 
         <div class="form-group"><label>客户公司</label><input type="text" id="customerName" value="武汉爱途"></div>
         <div class="form-group"><label>联系人</label><input type="text" id="contactName" value="Mr. 张少东经理"></div>
-        <div class="form-group"><label>项目描述</label><input type="text" id="regarding" value="Your exports cfr Mombasa to CPT Juba , South Sudan"></div>
+        <div class="form-group"><label>项目描述</label><input type="text" id="regarding" value="Your exports to South Sudan"></div>
         <div class="form-group"><label>品名</label><input type="text" id="commodity" value="WORK BAG / HS:4202129000"></div>
+        
         <div class="form-group"><label>贸易条款 (Incoterms)</label>
             <select id="incotermSelect">
                 <option value="EXW">EXW</option>
@@ -310,19 +284,25 @@
             </select>
             <input type="text" id="incotermPlace" placeholder="地点 (如 Shanghai)" value="Mombasa" style="margin-top:5px;">
         </div>
+
+        <!-- 三段地理描述（用户可自定义） -->
+        <div class="form-group"><label>📍 段1 地点（起运地服务起点）</label><input type="text" id="segment1Place" value="上海外高桥港" placeholder="例：上海外高桥港 / 浙江省宁波市XX工厂"></div>
+        <div class="form-group"><label>✈️ 段2 路线（起运港 → 目的港）</label><input type="text" id="segment2Route" value="上海港 → 蒙巴萨港" placeholder="例：上海港 → 蒙巴萨港"></div>
+        <div class="form-group"><label>📍 段3 地点（目的地服务终点）</label><input type="text" id="segment3Place" value="南苏丹朱巴仓库" placeholder="例：南苏丹朱巴仓库 / 芝加哥门点"></div>
+
         <div class="form-group"><label>汇率 (USD/CNY)</label><input type="number" id="exchangeRate" value="7.5" step="0.01"></div>
 
-        <div class="segment-card"><div class="segment-title">段1：起运地服务 (上海)</div><div id="segment1-fees"></div>
+        <div class="segment-card"><div class="segment-title">段1：起运地服务</div><div id="segment1-fees"></div>
             <button class="add-btn" onclick="addFee('segment1', 'P0')">+ 添加主体价格</button>
             <button class="add-btn" onclick="addFee('segment1', 'P1')">+ 添加固定附加费</button>
             <button class="add-btn" onclick="addFee('segment1', 'P2')">+ 添加增值附加费</button>
         </div>
-        <div class="segment-card"><div class="segment-title">段2：干线段 (上海→蒙巴萨)</div><div id="segment2-fees"></div>
+        <div class="segment-card"><div class="segment-title">段2：干线段</div><div id="segment2-fees"></div>
             <button class="add-btn" onclick="addFee('segment2', 'P0')">+ 添加主体价格</button>
             <button class="add-btn" onclick="addFee('segment2', 'P1')">+ 添加固定附加费</button>
             <button class="add-btn" onclick="addFee('segment2', 'P2')">+ 添加增值附加费</button>
         </div>
-        <div class="segment-card"><div class="segment-title">段3：目的地服务 (蒙巴萨→朱巴)</div><div id="segment3-fees"></div>
+        <div class="segment-card"><div class="segment-title">段3：目的地服务</div><div id="segment3-fees"></div>
             <button class="add-btn" onclick="addFee('segment3', 'P0')">+ 添加主体价格</button>
             <button class="add-btn" onclick="addFee('segment3', 'P1')">+ 添加固定附加费</button>
             <button class="add-btn" onclick="addFee('segment3', 'P2')">+ 添加增值附加费</button>
@@ -336,32 +316,39 @@
     </div>
 </div>
 <div class="footer-version">
-    报价单生成器 v1.0 | 数据保存在本机，刷新不丢失 | 三层费用框架：主体(P0)+固定附加(P1)+增值附加(P2)
+    报价单生成器 v1.1 | 数据保存在本机，刷新不丢失 | 三段地理描述可自定义
 </div>
 
 <script>
     var feesData = { segment1: [], segment2: [], segment3: [] };
 
-    function getResponsibility(incoterm, place) {
+    // 动态生成责任划分文本（根据贸易条款和用户填写的地点）
+    function getResponsibility(incoterm, place, seg1Place, seg2Route, seg3Place) {
+        var seg1 = seg1Place || "[起运地]";
+        var seg2Parts = seg2Route.split('→');
+        var originPort = seg2Parts[0] ? seg2Parts[0].trim() : "[起运港]";
+        var destPort = seg2Parts[1] ? seg2Parts[1].trim() : "[目的港]";
+        var seg3 = seg3Place || "[目的地]";
+        
         var map = {
-            'EXW': '卖方在工厂交货，买方负责全部后续运输、清关及费用。',
-            'FCA': '卖方负责将货物运至指定地点（仓前）；买方负责仓后运输、报关、订舱及后续。',
-            'FOB': '卖方负责将货物装上船，买方负责海运及目的港后的一切。',
-            'CFR': '卖方负责海运至目的港，买方负责目的港清关及送货。',
-            'CIF': '卖方负责海运及保险至目的港，买方负责目的港清关及送货。',
-            'CPT': '卖方负责将货物运至指定目的地（主运费已付），买方负责目的港换单及清关，卖方负责内陆送货到门。',
-            'DAP': '卖方负责将货物运至指定地点（不含卸货），买方负责卸货及后续。',
-            'DDP': '卖方负责全部费用及风险，包括关税，直至货物交付买方。'
+            'EXW': `卖方在 ${seg1} 工厂交货，买方负责从 ${seg1} 到 ${originPort} 的运输、报关、订舱及后续所有费用（包括海运费从 ${originPort} 到 ${destPort} 及目的港后的一切）。`,
+            'FCA': `卖方负责将货物运至 ${seg1}（指定地点仓前），买方负责仓后运输至 ${originPort}、报关、订舱及后续所有费用（包括海运费从 ${originPort} 到 ${destPort} 及目的港后的一切）。`,
+            'FOB': `卖方负责将货物运至 ${seg1}（起运港）并装上船，买方负责海运费（从 ${originPort} 到 ${destPort}）及目的港后的一切，包括清关和送货至 ${seg3}。`,
+            'CFR': `卖方负责将货物运至 ${seg1} 并支付海运费至 ${destPort}，买方负责目的港卸货、清关及送货至 ${seg3}。`,
+            'CIF': `卖方负责将货物运至 ${seg1}、支付海运费至 ${destPort} 并购买保险，买方负责目的港卸货、清关及送货至 ${seg3}。`,
+            'CPT': `卖方负责将货物运至 ${seg3}（主运费已付，从 ${originPort} 到 ${destPort}），但风险在 ${originPort} 交给第一承运人时转移。买方负责目的港换单及清关，卖方负责内陆送货到 ${seg3}。`,
+            'DAP': `卖方负责将货物运至 ${seg3}（指定地点不含卸货），买方负责卸货及后续。`,
+            'DDP': `卖方负责全部费用及风险，包括关税，直至货物交付至 ${seg3}。`
         };
         var text = map[incoterm] || '请根据贸易条款确认责任划分。';
-        if (place) text += ' 地点：' + place;
+        if (place) text += ' 条款地点：' + place;
         return text;
     }
 
     function loadFromStorage() {
         var saved = localStorage.getItem('quoteTool_fees');
         if (saved) try { feesData = JSON.parse(saved); } catch(e) {}
-        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace'];
+        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace','segment1Place','segment2Route','segment3Place'];
         for (var i=0; i<fields.length; i++) {
             var val = localStorage.getItem('quoteTool_'+fields[i]);
             if (val !== null) {
@@ -372,7 +359,7 @@
     }
     function saveToStorage() {
         localStorage.setItem('quoteTool_fees', JSON.stringify(feesData));
-        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace'];
+        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace','segment1Place','segment2Route','segment3Place'];
         for (var i=0; i<fields.length; i++) {
             var el = document.getElementById(fields[i]);
             if (el) localStorage.setItem('quoteTool_'+fields[i], el.value);
@@ -445,6 +432,9 @@
         var commodity = document.getElementById('commodity').value;
         var incoterm = document.getElementById('incotermSelect').value;
         var incotermPlace = document.getElementById('incotermPlace').value;
+        var seg1Place = document.getElementById('segment1Place').value;
+        var seg2Route = document.getElementById('segment2Route').value;
+        var seg3Place = document.getElementById('segment3Place').value;
         var exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 7.5;
         var today = new Date().toISOString().slice(0,10);
         var validUntil = new Date(); validUntil.setDate(validUntil.getDate()+30);
@@ -469,14 +459,17 @@
                     '<td style="border:1px solid #cbd5e1; padding:8px;">'+(f.type==='P0'?'主体价格':(f.type==='P1'?'固定附加费':'增值附加费'))+'</td>'+
                     '<td style="border:1px solid #cbd5e1; padding:8px;">'+originalPrice+'</td>'+
                     '<td style="border:1px solid #cbd5e1; padding:8px;">1</td>'+
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+priceCNY.toFixed(2)+' CNY</td>'+
-                '</tr>';
+                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+priceCNY.toFixed(2)+' CNY</td></tr>';
             }
             return rows;
         }
         
-        var responsibility = getResponsibility(incoterm, incotermPlace);
+        var responsibility = getResponsibility(incoterm, incotermPlace, seg1Place, seg2Route, seg3Place);
         var incotermDisplay = incoterm + (incotermPlace ? ' ' + incotermPlace : '');
+        
+        var seg1Title = seg1Place ? `段1：起运地服务 (${escapeHtml(seg1Place)})` : '段1：起运地服务';
+        var seg2Title = seg2Route ? `段2：干线段 (${escapeHtml(seg2Route)})` : '段2：干线段';
+        var seg3Title = seg3Place ? `段3：目的地服务 (${escapeHtml(seg3Place)})` : '段3：目的地服务';
         
         var html = '<div style="max-width:100%; margin:0 auto;">'+
             '<div style="text-align:center; border-bottom:2px solid #1e3a5f; padding-bottom:12px; margin-bottom:20px;">'+
@@ -493,22 +486,22 @@
             '<strong>责任划分:</strong> '+responsibility+'</div>'+
             
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段1：起运地服务 (上海)</caption>'+
-            '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></td></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment1, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>'+seg1Total.toFixed(2)+' CNY</td></tr>'+
-            '</tbody> </table>'+
+            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">'+seg1Title+'</caption>'+
+            '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
+            '<tbody>'+renderFeeRows(feesData.segment1, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>'+seg1Total.toFixed(2)+' CNY</td></tr></tbody>'+
+            '</table>'+
             
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段2：干线段 (上海→蒙巴萨)</caption>'+
+            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">'+seg2Title+'</caption>'+
             '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment2, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>'+seg2Total.toFixed(2)+' CNY</td></tr>'+
-            '</tbody> </table>'+
+            '<tbody>'+renderFeeRows(feesData.segment2, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>'+seg2Total.toFixed(2)+' CNY</td></tr></tbody>'+
+            '</table>'+
             
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段3：目的地服务 (蒙巴萨→朱巴)</caption>'+
+            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">'+seg3Title+'</caption>'+
             '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment3, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>'+seg3Total.toFixed(2)+' CNY</td></tr>'+
-            '</tbody> </table>'+
+            '<tbody>'+renderFeeRows(feesData.segment3, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>'+seg3Total.toFixed(2)+' CNY</td></tr></tbody>'+
+            '</table>'+
             
             '<div style="margin:20px 0; text-align:right; font-size:18px;"><strong>总价 (CNY):</strong> <span style="color:#c00; font-size:24px;">'+grandTotal.toFixed(2)+' CNY</span><br><span style="font-size:13px;">汇率: USD 1.00 = CNY '+rate.toFixed(2)+'</span></div>'+
             
@@ -521,7 +514,7 @@
     }
     
     function bindInputEvents() {
-        var ids = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace'];
+        var ids = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace','segment1Place','segment2Route','segment3Place'];
         for(var i=0;i<ids.length;i++) {
             var el=document.getElementById(ids[i]);
             if(el) el.addEventListener('input',function(){ saveToStorage(); updateQuote(); });
@@ -553,7 +546,6 @@
     renderAllFees();
     bindInputEvents();
     saveToStorage();
-    // 初始帮助面板默认收起（可选）
     document.getElementById('helpContent').style.display = 'none';
 </script>
 </body>
