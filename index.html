@@ -12,6 +12,87 @@
             margin: 0;
             padding: 20px;
         }
+        /* 帮助面板样式 */
+        .help-panel {
+            background: #eef2ff;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid #cbd5e1;
+        }
+        .help-header {
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .help-content {
+            display: none;
+            margin-top: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 12px;
+        }
+        .help-content ul, .help-content p {
+            margin: 5px 0;
+        }
+        .rule-box {
+            background: #fef9e6;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 3px solid #e67e22;
+        }
+        /* 反馈浮窗按钮 */
+        .feedback-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1e3a5f;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-size: 14px;
+        }
+        .feedback-modal {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 280px;
+            padding: 16px;
+            display: none;
+            z-index: 1001;
+            border: 1px solid #e2e8f0;
+        }
+        .feedback-modal h4 {
+            margin: 0 0 8px 0;
+        }
+        .feedback-modal p {
+            font-size: 13px;
+            margin: 8px 0;
+        }
+        .feedback-modal a {
+            color: #1e3a5f;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .close-modal {
+            float: right;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+        }
         .app-container {
             max-width: 1400px;
             margin: 0 auto;
@@ -134,8 +215,14 @@
             border-radius: 12px;
             margin-bottom: 20px;
         }
+        .footer-version {
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 20px;
+        }
         @media print {
-            .form-panel, .print-btn, .quote-preview h2 { display: none; }
+            .form-panel, .print-btn, .quote-preview h2, .help-panel, .feedback-btn, .feedback-modal, .footer-version { display: none; }
             .quote-preview { box-shadow: none; padding: 0; margin: 0; width: 100%; }
             .quote-container { border: none; }
         }
@@ -146,10 +233,56 @@
     </style>
 </head>
 <body>
+<!-- 反馈浮窗 -->
+<button class="feedback-btn" id="feedbackBtn">💬 反馈与建议</button>
+<div class="feedback-modal" id="feedbackModal">
+    <span class="close-modal" id="closeModal">&times;</span>
+    <h4>📢 联系我们</h4>
+    <p>📧 邮箱：<a href="mailto:julia.wu@rainbowwaylog.com">julia.wu@rainbowwaylog.com</a></p>
+    <p>📱 微信：<strong>JuliaWu_2026</strong> (请备注“报价工具”)</p>
+    <p>📝 在线反馈：<a href="#" id="feedbackLink">点击填写表单</a> (待配置)</p>
+    <p style="font-size:12px; color:#666;">您也可以直接在微信中截图发给联系人。</p>
+</div>
+
 <div class="app-container">
     <div class="form-panel">
         <h2>📝 输入成本数据</h2>
         
+        <!-- 使用说明 + 规则解释（可折叠） -->
+        <div class="help-panel" id="helpPanel">
+            <div class="help-header">
+                <span>📘 使用说明 & 规则解释（点击展开/收起）</span>
+                <span>▼</span>
+            </div>
+            <div class="help-content" id="helpContent">
+                <p><strong>📌 快速开始</strong></p>
+                <ul>
+                    <li>1. 填写左侧公司信息（抬头会显示在报价单中）。</li>
+                    <li>2. 填写客户信息、项目描述、贸易条款等。</li>
+                    <li>3. 在三个段内添加费用项，支持自定义名称、价格、币种、单位。</li>
+                    <li>4. 右侧报价单<strong>实时更新</strong>，点击「打印/保存PDF」可导出文件。</li>
+                    <li>5. 所有数据自动保存在本机浏览器，<strong>刷新不会丢失</strong>，更换设备需重新输入。</li>
+                </ul>
+                
+                <div class="rule-box">
+                    <p><strong>💰 三层费用框架说明</strong></p>
+                    <ul>
+                        <li><strong>主体价格(P0)</strong>：核心服务的基础运费，如海运费、空运费、拖车费、内装包干费。<br>→ 每段至少有一个主体价格，不可删除，可填0。</li>
+                        <li><strong>固定附加费(P1)</strong>：行业通用的附加费用，如THC、订舱费、文件费、燃油附加费、AMS。<br>→ 平台预定义，供应商可调整金额，不能删除。</li>
+                        <li><strong>增值附加费(P2)</strong>：供应商提供的差异化服务费用，如预提箱、待时费、钢琴木箱、加急操作、保险代理。<br>→ 完全自定义，可自由增删。</li>
+                    </ul>
+                    <p>💡 总价 = Σ(P0) + Σ(P1) + Σ(P2)（外币按汇率折算为CNY）</p>
+                </div>
+                
+                <p><strong>📐 三段法（起运地→干线→目的地）</strong><br>
+                段1：起运地服务（拖车、内装、报关、订舱等）<br>
+                段2：干线段（海/空/铁路运费及附加费）<br>
+                段3：目的地服务（清关、换单、拖车、送货、关税等）</p>
+                <p><strong>⚖️ 贸易条款</strong><br>选择后责任划分会自动适配，请确保与合同一致。</p>
+                <p><strong>💡 提示</strong>：如需保存多套常用模板，后续会推出注册云端保存功能。</p>
+            </div>
+        </div>
+
         <div class="company-section">
             <div class="form-group"><label>公司名称</label><input type="text" id="companyName" value="上海永顺穗国际货运代理有限公司"></div>
             <div class="form-group"><label>公司英文名</label><input type="text" id="companyNameEn" value="Shanghai Rainbowway International Logistics Co.,Ltd."></div>
@@ -202,11 +335,13 @@
         <button class="print-btn" onclick="window.print()">🖨️ 打印 / 保存PDF</button>
     </div>
 </div>
+<div class="footer-version">
+    报价单生成器 v1.0 | 数据保存在本机，刷新不丢失 | 三层费用框架：主体(P0)+固定附加(P1)+增值附加(P2)
+</div>
 
 <script>
     var feesData = { segment1: [], segment2: [], segment3: [] };
 
-    // 贸易条款责任划分映射
     function getResponsibility(incoterm, place) {
         var map = {
             'EXW': '卖方在工厂交货，买方负责全部后续运输、清关及费用。',
@@ -334,7 +469,8 @@
                     '<td style="border:1px solid #cbd5e1; padding:8px;">'+(f.type==='P0'?'主体价格':(f.type==='P1'?'固定附加费':'增值附加费'))+'</td>'+
                     '<td style="border:1px solid #cbd5e1; padding:8px;">'+originalPrice+'</td>'+
                     '<td style="border:1px solid #cbd5e1; padding:8px;">1</td>'+
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+priceCNY.toFixed(2)+' CNY</td></tr>';
+                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+priceCNY.toFixed(2)+' CNY</td>'+
+                '</tr>';
             }
             return rows;
         }
@@ -358,21 +494,21 @@
             
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
             '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段1：起运地服务 (上海)</caption>'+
-            '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment1, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>'+seg1Total.toFixed(2)+' CNY</td></tr></tbody>'+
-            '</table>'+
+            '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></td></thead>'+
+            '<tbody>'+renderFeeRows(feesData.segment1, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>'+seg1Total.toFixed(2)+' CNY</td></tr>'+
+            '</tbody> </table>'+
             
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
             '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段2：干线段 (上海→蒙巴萨)</caption>'+
             '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment2, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>'+seg2Total.toFixed(2)+' CNY</td></tr></tbody>'+
-            '</table>'+
+            '<tbody>'+renderFeeRows(feesData.segment2, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>'+seg2Total.toFixed(2)+' CNY</td></tr>'+
+            '</tbody> </table>'+
             
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
             '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段3：目的地服务 (蒙巴萨→朱巴)</caption>'+
             '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment3, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>'+seg3Total.toFixed(2)+' CNY</td></tr></tbody>'+
-            '</table>'+
+            '<tbody>'+renderFeeRows(feesData.segment3, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>'+seg3Total.toFixed(2)+' CNY</td></tr>'+
+            '</tbody> </table>'+
             
             '<div style="margin:20px 0; text-align:right; font-size:18px;"><strong>总价 (CNY):</strong> <span style="color:#c00; font-size:24px;">'+grandTotal.toFixed(2)+' CNY</span><br><span style="font-size:13px;">汇率: USD 1.00 = CNY '+rate.toFixed(2)+'</span></div>'+
             
@@ -392,11 +528,33 @@
         }
     }
     
+    // 帮助面板折叠
+    document.getElementById('helpPanel').addEventListener('click', function() {
+        var content = document.getElementById('helpContent');
+        var headerSpan = this.querySelector('.help-header span:last-child');
+        if (content.style.display === 'none' || content.style.display === '') {
+            content.style.display = 'block';
+            headerSpan.innerHTML = '▲';
+        } else {
+            content.style.display = 'none';
+            headerSpan.innerHTML = '▼';
+        }
+    });
+    // 反馈弹窗
+    var feedbackBtn = document.getElementById('feedbackBtn');
+    var modal = document.getElementById('feedbackModal');
+    var closeModal = document.getElementById('closeModal');
+    feedbackBtn.onclick = function() { modal.style.display = 'block'; };
+    closeModal.onclick = function() { modal.style.display = 'none'; };
+    window.onclick = function(e) { if(e.target == modal) modal.style.display = 'none'; };
+    
     loadFromStorage();
     initDefaultData();
     renderAllFees();
     bindInputEvents();
     saveToStorage();
+    // 初始帮助面板默认收起（可选）
+    document.getElementById('helpContent').style.display = 'none';
 </script>
 </body>
 </html>
