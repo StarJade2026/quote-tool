@@ -150,7 +150,6 @@
     <div class="form-panel">
         <h2>📝 输入成本数据</h2>
         
-        <!-- 公司信息（可自定义） -->
         <div class="company-section">
             <div class="form-group"><label>公司名称</label><input type="text" id="companyName" value="上海永顺穗国际货运代理有限公司"></div>
             <div class="form-group"><label>公司英文名</label><input type="text" id="companyNameEn" value="Shanghai Rainbowway International Logistics Co.,Ltd."></div>
@@ -205,14 +204,9 @@
 </div>
 
 <script>
-    // 费用数据结构
-    var feesData = {
-        segment1: [],
-        segment2: [],
-        segment3: []
-    };
+    var feesData = { segment1: [], segment2: [], segment3: [] };
 
-    // 贸易条款责任划分映射表
+    // 贸易条款责任划分映射
     function getResponsibility(incoterm, place) {
         var map = {
             'EXW': '卖方在工厂交货，买方负责全部后续运输、清关及费用。',
@@ -224,42 +218,31 @@
             'DAP': '卖方负责将货物运至指定地点（不含卸货），买方负责卸货及后续。',
             'DDP': '卖方负责全部费用及风险，包括关税，直至货物交付买方。'
         };
-        var base = map[incoterm] || '请根据贸易条款确认责任划分。';
-        if (place) base += ' 地点：' + place;
-        return base;
+        var text = map[incoterm] || '请根据贸易条款确认责任划分。';
+        if (place) text += ' 地点：' + place;
+        return text;
     }
 
-    // 从localStorage加载数据
     function loadFromStorage() {
         var saved = localStorage.getItem('quoteTool_fees');
-        if (saved) {
-            try {
-                feesData = JSON.parse(saved);
-            } catch(e) {}
-        }
-        var fields = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'exchangeRate', 'incotermSelect', 'incotermPlace'];
-        for (var i = 0; i < fields.length; i++) {
-            var val = localStorage.getItem('quoteTool_' + fields[i]);
+        if (saved) try { feesData = JSON.parse(saved); } catch(e) {}
+        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace'];
+        for (var i=0; i<fields.length; i++) {
+            var val = localStorage.getItem('quoteTool_'+fields[i]);
             if (val !== null) {
                 var el = document.getElementById(fields[i]);
-                if (el) {
-                    if (el.tagName === 'SELECT') el.value = val;
-                    else el.value = val;
-                }
+                if (el) { if (el.tagName==='SELECT') el.value=val; else el.value=val; }
             }
         }
     }
-
-    // 保存到localStorage
     function saveToStorage() {
         localStorage.setItem('quoteTool_fees', JSON.stringify(feesData));
-        var fields = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'exchangeRate', 'incotermSelect', 'incotermPlace'];
-        for (var i = 0; i < fields.length; i++) {
+        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace'];
+        for (var i=0; i<fields.length; i++) {
             var el = document.getElementById(fields[i]);
-            if (el) localStorage.setItem('quoteTool_' + fields[i], el.value);
+            if (el) localStorage.setItem('quoteTool_'+fields[i], el.value);
         }
     }
-
     function initDefaultData() {
         if (localStorage.getItem('quoteTool_fees')) return;
         feesData = {
@@ -282,70 +265,37 @@
             ]
         };
     }
-
-    function renderAllFees() {
-        renderFeeList('segment1');
-        renderFeeList('segment2');
-        renderFeeList('segment3');
-        updateQuote();
-    }
-
+    function renderAllFees() { renderFeeList('segment1'); renderFeeList('segment2'); renderFeeList('segment3'); updateQuote(); }
     function renderFeeList(segmentId) {
-        var container = document.getElementById(segmentId + '-fees');
+        var container = document.getElementById(segmentId+'-fees');
         if (!container) return;
         var fees = feesData[segmentId];
         container.innerHTML = '';
-        for (var i = 0; i < fees.length; i++) {
+        for (var i=0; i<fees.length; i++) {
             var fee = fees[i];
             var row = document.createElement('div');
             row.className = 'fee-row';
-            row.innerHTML = '<input type="text" placeholder="费用名称" value="' + escapeHtml(fee.name) + '" onchange="updateFee(\'' + segmentId + '\', ' + i + ', \'name\', this.value)">' +
-                '<select onchange="updateFee(\'' + segmentId + '\', ' + i + ', \'type\', this.value)">' +
-                '<option value="P0"' + (fee.type === 'P0' ? ' selected' : '') + '>主体(P0)</option>' +
-                '<option value="P1"' + (fee.type === 'P1' ? ' selected' : '') + '>固定附加(P1)</option>' +
-                '<option value="P2"' + (fee.type === 'P2' ? ' selected' : '') + '>增值附加(P2)</option>' +
-                '</select>' +
-                '<input type="number" step="0.01" class="price" placeholder="价格" value="' + fee.price + '" onchange="updateFee(\'' + segmentId + '\', ' + i + ', \'price\', parseFloat(this.value))">' +
-                '<select onchange="updateFee(\'' + segmentId + '\', ' + i + ', \'currency\', this.value)">' +
-                '<option value="CNY"' + (fee.currency === 'CNY' ? ' selected' : '') + '>CNY</option>' +
-                '<option value="USD"' + (fee.currency === 'USD' ? ' selected' : '') + '>USD</option>' +
-                '</select>' +
-                '<input type="text" placeholder="单位" value="' + (fee.unit || '') + '" style="width:70px" onchange="updateFee(\'' + segmentId + '\', ' + i + ', \'unit\', this.value)">' +
-                '<button onclick="removeFee(\'' + segmentId + '\', ' + i + ')">删</button>';
+            row.innerHTML = '<input type="text" placeholder="费用名称" value="'+escapeHtml(fee.name)+'" onchange="updateFee(\''+segmentId+'\','+i+',\'name\',this.value)">'+
+                '<select onchange="updateFee(\''+segmentId+'\','+i+',\'type\',this.value)">'+
+                '<option value="P0"'+(fee.type==='P0'?' selected':'')+'>主体(P0)</option>'+
+                '<option value="P1"'+(fee.type==='P1'?' selected':'')+'>固定附加(P1)</option>'+
+                '<option value="P2"'+(fee.type==='P2'?' selected':'')+'>增值附加(P2)</option>'+
+                '</select>'+
+                '<input type="number" step="0.01" class="price" placeholder="价格" value="'+fee.price+'" onchange="updateFee(\''+segmentId+'\','+i+',\'price\',parseFloat(this.value))">'+
+                '<select onchange="updateFee(\''+segmentId+'\','+i+',\'currency\',this.value)">'+
+                '<option value="CNY"'+(fee.currency==='CNY'?' selected':'')+'>CNY</option>'+
+                '<option value="USD"'+(fee.currency==='USD'?' selected':'')+'>USD</option>'+
+                '</select>'+
+                '<input type="text" placeholder="单位" value="'+(fee.unit||'')+'" style="width:70px" onchange="updateFee(\''+segmentId+'\','+i+',\'unit\',this.value)">'+
+                '<button onclick="removeFee(\''+segmentId+'\','+i+')">删</button>';
             container.appendChild(row);
         }
     }
-
-    function updateFee(segment, idx, field, value) {
-        feesData[segment][idx][field] = value;
-        saveToStorage();
-        updateQuote();
-    }
-
-    function removeFee(segment, idx) {
-        feesData[segment].splice(idx, 1);
-        saveToStorage();
-        renderFeeList(segment);
-        updateQuote();
-    }
-
-    function addFee(segment, type) {
-        feesData[segment].push({ name: "新费用", type: type, price: 0, currency: "CNY", unit: "箱" });
-        saveToStorage();
-        renderFeeList(segment);
-        updateQuote();
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
+    function updateFee(segment, idx, field, value) { feesData[segment][idx][field]=value; saveToStorage(); updateQuote(); }
+    function removeFee(segment, idx) { feesData[segment].splice(idx,1); saveToStorage(); renderFeeList(segment); updateQuote(); }
+    function addFee(segment, type) { feesData[segment].push({name:"新费用",type:type,price:0,currency:"CNY",unit:"箱"}); saveToStorage(); renderFeeList(segment); updateQuote(); }
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    
     function updateQuote() {
         var companyName = document.getElementById('companyName').value;
         var companyNameEn = document.getElementById('companyNameEn').value;
@@ -362,102 +312,86 @@
         var incotermPlace = document.getElementById('incotermPlace').value;
         var exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 7.5;
         var today = new Date().toISOString().slice(0,10);
-        var validUntil = new Date();
-        validUntil.setDate(validUntil.getDate() + 30);
+        var validUntil = new Date(); validUntil.setDate(validUntil.getDate()+30);
         var validUntilStr = validUntil.toISOString().slice(0,10);
-
-        function calcSegmentTotal(fees, rate) {
-            var total = 0;
-            for (var i = 0; i < fees.length; i++) {
-                var f = fees[i];
-                var price = f.price || 0;
-                if (f.currency === 'USD') price = price * rate;
-                total += price;
-            }
-            return total;
-        }
-
+        
+        function calcSegmentTotal(fees, rate) { var total=0; for(var i=0;i<fees.length;i++) { var p=fees[i].price||0; if(fees[i].currency==='USD') p*=rate; total+=p; } return total; }
         var rate = exchangeRate;
         var seg1Total = calcSegmentTotal(feesData.segment1, rate);
         var seg2Total = calcSegmentTotal(feesData.segment2, rate);
         var seg3Total = calcSegmentTotal(feesData.segment3, rate);
-        var grandTotal = seg1Total + seg2Total + seg3Total;
-
+        var grandTotal = seg1Total+seg2Total+seg3Total;
+        
         function renderFeeRows(fees, rate) {
-            if (fees.length === 0) return '<tr><td colspan="5">无费用项</td></tr>';
-            var rows = '';
-            for (var i = 0; i < fees.length; i++) {
-                var f = fees[i];
-                var price = f.price || 0;
-                var originalPrice = price.toFixed(2) + ' ' + f.currency;
-                var priceCNY = price;
-                if (f.currency === 'USD') priceCNY = price * rate;
-                rows += '<tr>' +
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">' + escapeHtml(f.name) + '</td>' +
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">' + (f.type === 'P0' ? '主体价格' : (f.type === 'P1' ? '固定附加费' : '增值附加费')) + '</td>' +
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">' + originalPrice + '</td>' +
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">1</td>' +
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">' + priceCNY.toFixed(2) + ' CNY</td>' +
-                '</tr>';
+            if(fees.length===0) return '<tr><td colspan="5">无费用项</td></tr>';
+            var rows='';
+            for(var i=0;i<fees.length;i++) {
+                var f=fees[i];
+                var price=f.price||0;
+                var originalPrice=price.toFixed(2)+' '+f.currency;
+                var priceCNY=(f.currency==='USD'?price*rate:price);
+                rows+='<tr><td style="border:1px solid #cbd5e1; padding:8px;">'+escapeHtml(f.name)+'</td>'+
+                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+(f.type==='P0'?'主体价格':(f.type==='P1'?'固定附加费':'增值附加费'))+'</td>'+
+                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+originalPrice+'</td>'+
+                    '<td style="border:1px solid #cbd5e1; padding:8px;">1</td>'+
+                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+priceCNY.toFixed(2)+' CNY</td></tr>';
             }
             return rows;
         }
-
+        
         var responsibility = getResponsibility(incoterm, incotermPlace);
         var incotermDisplay = incoterm + (incotermPlace ? ' ' + incotermPlace : '');
-
-        var html = '<div style="max-width:100%; margin:0 auto;">' +
-            '<div style="text-align:center; border-bottom:2px solid #1e3a5f; padding-bottom:12px; margin-bottom:20px;">' +
-            '<h2 style="margin:0; color:#1e3a5f;">' + escapeHtml(companyName) + '</h2>' +
-            '<p style="margin:5px 0 0; font-size:12px;">' + escapeHtml(companyNameEn) + '</p>' +
-            '<p style="margin:5px 0 0; font-size:12px;">' + escapeHtml(companyAddr) + '<br>Tel: ' + escapeHtml(companyTel) + ' &nbsp; Email: ' + escapeHtml(companyEmail) + '</p>' +
-            '</div>' +
-            '<div style="display:flex; justify-content:space-between; margin-bottom:20px; font-size:13px; border:1px solid #e2e8f0; padding:12px; background:#f8fafc;">' +
-            '<div><strong>Company</strong> ' + escapeHtml(customer) + '<br><strong>Contact</strong> ' + escapeHtml(contact) + '<br><strong>Regarding</strong> ' + escapeHtml(regarding) + '</div>' +
-            '<div><strong>Date</strong> ' + today + '<br><strong>By</strong> ' + escapeHtml(signatureName) + '<br><strong>Commodity</strong> ' + escapeHtml(commodity) + '</div>' +
-            '</div>' +
-            '<div style="background:#eef2ff; padding:8px 12px; margin-bottom:20px; border-left:5px solid #1e3a5f; font-size:13px;">' +
-            '<strong>贸易条款 (Incoterms):</strong> ' + escapeHtml(incotermDisplay) + '<br>' +
-            '<strong>责任划分:</strong> ' + responsibility + '</div>' +
-
-            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">' +
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段1：起运地服务 (上海)</caption>' +
-            '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>' +
-            '<tbody>' + renderFeeRows(feesData.segment1, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>' + seg1Total.toFixed(2) + ' CNY</td></tr></tbody>' +
-            '</table>' +
-
-            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">' +
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段2：干线段 (上海→蒙巴萨)</caption>' +
-            '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>' +
-            '<tbody>' + renderFeeRows(feesData.segment2, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>' + seg2Total.toFixed(2) + ' CNY</td></tr></tbody>' +
-            '</table>' +
-
-            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">' +
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段3：目的地服务 (蒙巴萨→朱巴)</caption>' +
-            '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>' +
-            '<tbody>' + renderFeeRows(feesData.segment3, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>' + seg3Total.toFixed(2) + ' CNY</td></tr></tbody>' +
-            '</table>' +
-
-            '<div style="margin:20px 0; text-align:right; font-size:18px;"><strong>总价 (CNY):</strong> <span style="color:#c00; font-size:24px;">' + grandTotal.toFixed(2) + ' CNY</span><br><span style="font-size:13px;">汇率: USD 1.00 = CNY ' + rate.toFixed(2) + '</span></div>' +
-
-            '<div style="margin-top:20px; padding:12px; background:#fef9e6; border-left:4px solid #e67e22; font-size:13px;"><strong>备注说明：</strong><br>• 以上费用仅限于普通安全，不限制运输货物。<br>• 如产生海关查验、商检、进口关税等其他一切杂费，将实报实销。<br>• 由于国际物流运输途中存在各种不可抗力因素，建议办理保险以避免损失。<br>• 报价有效期至 ' + validUntilStr + '。</div>' +
-
-            '<div style="margin-top:30px; text-align:right; border-top:1px solid #ddd; padding-top:20px; font-size:14px;">With kind regards,<br><strong>' + escapeHtml(signatureName) + '</strong><br>' + escapeHtml(signatureTitle) + '</div>' +
-            '<div style="margin-top:20px; text-align:center; font-size:11px; color:#718096;">' + escapeHtml(companyName) + '<br>Phone: ' + escapeHtml(companyTel) + ' &nbsp; Email: ' + escapeHtml(companyEmail) + '</div>' +
+        
+        var html = '<div style="max-width:100%; margin:0 auto;">'+
+            '<div style="text-align:center; border-bottom:2px solid #1e3a5f; padding-bottom:12px; margin-bottom:20px;">'+
+            '<h2 style="margin:0; color:#1e3a5f;">'+escapeHtml(companyName)+'</h2>'+
+            '<p style="margin:5px 0 0; font-size:12px;">'+escapeHtml(companyNameEn)+'</p>'+
+            '<p style="margin:5px 0 0; font-size:12px;">'+escapeHtml(companyAddr)+'<br>Tel: '+escapeHtml(companyTel)+' &nbsp; Email: '+escapeHtml(companyEmail)+'</p>'+
+            '</div>'+
+            '<div style="display:flex; justify-content:space-between; margin-bottom:20px; font-size:13px; border:1px solid #e2e8f0; padding:12px; background:#f8fafc;">'+
+            '<div><strong>Company</strong> '+escapeHtml(customer)+'<br><strong>Contact</strong> '+escapeHtml(contact)+'<br><strong>Regarding</strong> '+escapeHtml(regarding)+'</div>'+
+            '<div><strong>Date</strong> '+today+'<br><strong>By</strong> '+escapeHtml(signatureName)+'<br><strong>Commodity</strong> '+escapeHtml(commodity)+'</div>'+
+            '</div>'+
+            '<div style="background:#eef2ff; padding:8px 12px; margin-bottom:20px; border-left:5px solid #1e3a5f; font-size:13px;">'+
+            '<strong>贸易条款 (Incoterms):</strong> '+escapeHtml(incotermDisplay)+'<br>'+
+            '<strong>责任划分:</strong> '+responsibility+'</div>'+
+            
+            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
+            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段1：起运地服务 (上海)</caption>'+
+            '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
+            '<tbody>'+renderFeeRows(feesData.segment1, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>'+seg1Total.toFixed(2)+' CNY</td></tr></tbody>'+
+            '</table>'+
+            
+            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
+            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段2：干线段 (上海→蒙巴萨)</caption>'+
+            '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
+            '<tbody>'+renderFeeRows(feesData.segment2, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>'+seg2Total.toFixed(2)+' CNY</td></tr></tbody>'+
+            '</table>'+
+            
+            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
+            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段3：目的地服务 (蒙巴萨→朱巴)</caption>'+
+            '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
+            '<tbody>'+renderFeeRows(feesData.segment3, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>'+seg3Total.toFixed(2)+' CNY</td></tr></tbody>'+
+            '</table>'+
+            
+            '<div style="margin:20px 0; text-align:right; font-size:18px;"><strong>总价 (CNY):</strong> <span style="color:#c00; font-size:24px;">'+grandTotal.toFixed(2)+' CNY</span><br><span style="font-size:13px;">汇率: USD 1.00 = CNY '+rate.toFixed(2)+'</span></div>'+
+            
+            '<div style="margin-top:20px; padding:12px; background:#fef9e6; border-left:4px solid #e67e22; font-size:13px;"><strong>备注说明：</strong><br>• 以上费用仅限于普通安全，不限制运输货物。<br>• 如产生海关查验、商检、进口关税等其他一切杂费，将实报实销。<br>• 由于国际物流运输途中存在各种不可抗力因素，建议办理保险以避免损失。<br>• 报价有效期至 '+validUntilStr+'。</div>'+
+            
+            '<div style="margin-top:30px; text-align:right; border-top:1px solid #ddd; padding-top:20px; font-size:14px;">With kind regards,<br><strong>'+escapeHtml(signatureName)+'</strong><br>'+escapeHtml(signatureTitle)+'</div>'+
+            '<div style="margin-top:20px; text-align:center; font-size:11px; color:#718096;">'+escapeHtml(companyName)+'<br>Phone: '+escapeHtml(companyTel)+' &nbsp; Email: '+escapeHtml(companyEmail)+'</div>'+
             '</div>';
         document.getElementById('quoteContainer').innerHTML = html;
     }
-
+    
     function bindInputEvents() {
-        var ids = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'exchangeRate', 'incotermSelect', 'incotermPlace'];
-        for (var i = 0; i < ids.length; i++) {
-            var el = document.getElementById(ids[i]);
-            if (el) {
-                el.addEventListener('input', function() { saveToStorage(); updateQuote(); });
-            }
+        var ids = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace'];
+        for(var i=0;i<ids.length;i++) {
+            var el=document.getElementById(ids[i]);
+            if(el) el.addEventListener('input',function(){ saveToStorage(); updateQuote(); });
         }
     }
-
+    
     loadFromStorage();
     initDefaultData();
     renderAllFees();
