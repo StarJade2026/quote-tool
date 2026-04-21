@@ -165,7 +165,19 @@
         <div class="form-group"><label>联系人</label><input type="text" id="contactName" value="Mr. 张少东经理"></div>
         <div class="form-group"><label>项目描述</label><input type="text" id="regarding" value="Your exports cfr Mombasa to CPT Juba , South Sudan"></div>
         <div class="form-group"><label>品名</label><input type="text" id="commodity" value="WORK BAG / HS:4202129000"></div>
-        <div class="form-group"><label>贸易条款 (Incoterms)</label><input type="text" id="incoterm" value="CFR Mombasa"></div>
+        <div class="form-group"><label>贸易条款 (Incoterms)</label>
+            <select id="incotermSelect">
+                <option value="EXW">EXW</option>
+                <option value="FCA">FCA</option>
+                <option value="FOB">FOB</option>
+                <option value="CFR">CFR</option>
+                <option value="CIF">CIF</option>
+                <option value="CPT">CPT</option>
+                <option value="DAP">DAP</option>
+                <option value="DDP">DDP</option>
+            </select>
+            <input type="text" id="incotermPlace" placeholder="地点 (如 Shanghai)" value="Mombasa" style="margin-top:5px;">
+        </div>
         <div class="form-group"><label>汇率 (USD/CNY)</label><input type="number" id="exchangeRate" value="7.5" step="0.01"></div>
 
         <div class="segment-card"><div class="segment-title">段1：起运地服务 (上海)</div><div id="segment1-fees"></div>
@@ -200,6 +212,23 @@
         segment3: []
     };
 
+    // 贸易条款责任划分映射表
+    function getResponsibility(incoterm, place) {
+        var map = {
+            'EXW': '卖方在工厂交货，买方负责全部后续运输、清关及费用。',
+            'FCA': '卖方负责将货物运至指定地点（仓前）；买方负责仓后运输、报关、订舱及后续。',
+            'FOB': '卖方负责将货物装上船，买方负责海运及目的港后的一切。',
+            'CFR': '卖方负责海运至目的港，买方负责目的港清关及送货。',
+            'CIF': '卖方负责海运及保险至目的港，买方负责目的港清关及送货。',
+            'CPT': '卖方负责将货物运至指定目的地（主运费已付），买方负责目的港换单及清关，卖方负责内陆送货到门。',
+            'DAP': '卖方负责将货物运至指定地点（不含卸货），买方负责卸货及后续。',
+            'DDP': '卖方负责全部费用及风险，包括关税，直至货物交付买方。'
+        };
+        var base = map[incoterm] || '请根据贸易条款确认责任划分。';
+        if (place) base += ' 地点：' + place;
+        return base;
+    }
+
     // 从localStorage加载数据
     function loadFromStorage() {
         var saved = localStorage.getItem('quoteTool_fees');
@@ -208,13 +237,15 @@
                 feesData = JSON.parse(saved);
             } catch(e) {}
         }
-        // 加载公司信息等
-        var fields = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'incoterm', 'exchangeRate'];
+        var fields = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'exchangeRate', 'incotermSelect', 'incotermPlace'];
         for (var i = 0; i < fields.length; i++) {
             var val = localStorage.getItem('quoteTool_' + fields[i]);
             if (val !== null) {
                 var el = document.getElementById(fields[i]);
-                if (el) el.value = val;
+                if (el) {
+                    if (el.tagName === 'SELECT') el.value = val;
+                    else el.value = val;
+                }
             }
         }
     }
@@ -222,7 +253,7 @@
     // 保存到localStorage
     function saveToStorage() {
         localStorage.setItem('quoteTool_fees', JSON.stringify(feesData));
-        var fields = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'incoterm', 'exchangeRate'];
+        var fields = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'exchangeRate', 'incotermSelect', 'incotermPlace'];
         for (var i = 0; i < fields.length; i++) {
             var el = document.getElementById(fields[i]);
             if (el) localStorage.setItem('quoteTool_' + fields[i], el.value);
@@ -230,7 +261,6 @@
     }
 
     function initDefaultData() {
-        // 如果localStorage有数据则不再初始化默认
         if (localStorage.getItem('quoteTool_fees')) return;
         feesData = {
             segment1: [
@@ -328,7 +358,8 @@
         var contact = document.getElementById('contactName').value;
         var regarding = document.getElementById('regarding').value;
         var commodity = document.getElementById('commodity').value;
-        var incoterm = document.getElementById('incoterm').value;
+        var incoterm = document.getElementById('incotermSelect').value;
+        var incotermPlace = document.getElementById('incotermPlace').value;
         var exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 7.5;
         var today = new Date().toISOString().slice(0,10);
         var validUntil = new Date();
@@ -372,6 +403,9 @@
             return rows;
         }
 
+        var responsibility = getResponsibility(incoterm, incotermPlace);
+        var incotermDisplay = incoterm + (incotermPlace ? ' ' + incotermPlace : '');
+
         var html = '<div style="max-width:100%; margin:0 auto;">' +
             '<div style="text-align:center; border-bottom:2px solid #1e3a5f; padding-bottom:12px; margin-bottom:20px;">' +
             '<h2 style="margin:0; color:#1e3a5f;">' + escapeHtml(companyName) + '</h2>' +
@@ -383,23 +417,26 @@
             '<div><strong>Date</strong> ' + today + '<br><strong>By</strong> ' + escapeHtml(signatureName) + '<br><strong>Commodity</strong> ' + escapeHtml(commodity) + '</div>' +
             '</div>' +
             '<div style="background:#eef2ff; padding:8px 12px; margin-bottom:20px; border-left:5px solid #1e3a5f; font-size:13px;">' +
-            '<strong>贸易条款 (Incoterms):</strong> ' + escapeHtml(incoterm) + '<br>' +
-            '<strong>责任划分:</strong> 段1（起运地）卖方负责；段2（干线）卖方负责；段3（目的地）买方负责清关及后续。</div>' +
+            '<strong>贸易条款 (Incoterms):</strong> ' + escapeHtml(incotermDisplay) + '<br>' +
+            '<strong>责任划分:</strong> ' + responsibility + '</div>' +
 
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">' +
             '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段1：起运地服务 (上海)</caption>' +
             '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>' +
-            '<tbody>' + renderFeeRows(feesData.segment1, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>' + seg1Total.toFixed(2) + ' CNY</td></tr></tbody></table>' +
+            '<tbody>' + renderFeeRows(feesData.segment1, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>' + seg1Total.toFixed(2) + ' CNY</td></tr></tbody>' +
+            '</table>' +
 
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">' +
             '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段2：干线段 (上海→蒙巴萨)</caption>' +
             '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>' +
-            '<tbody>' + renderFeeRows(feesData.segment2, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>' + seg2Total.toFixed(2) + ' CNY</td></tr></tbody></table>' +
+            '<tbody>' + renderFeeRows(feesData.segment2, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>' + seg2Total.toFixed(2) + ' CNY</td></tr></tbody>' +
+            '</table>' +
 
             '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">' +
             '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段3：目的地服务 (蒙巴萨→朱巴)</caption>' +
             '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>' +
-            '<tbody>' + renderFeeRows(feesData.segment3, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>' + seg3Total.toFixed(2) + ' CNY</td></tr></tbody></table>' +
+            '<tbody>' + renderFeeRows(feesData.segment3, rate) + '<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>' + seg3Total.toFixed(2) + ' CNY</td></tr></tbody>' +
+            '</table>' +
 
             '<div style="margin:20px 0; text-align:right; font-size:18px;"><strong>总价 (CNY):</strong> <span style="color:#c00; font-size:24px;">' + grandTotal.toFixed(2) + ' CNY</span><br><span style="font-size:13px;">汇率: USD 1.00 = CNY ' + rate.toFixed(2) + '</span></div>' +
 
@@ -412,7 +449,7 @@
     }
 
     function bindInputEvents() {
-        var ids = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'incoterm', 'exchangeRate'];
+        var ids = ['companyName', 'companyNameEn', 'companyAddr', 'companyTel', 'companyEmail', 'signatureName', 'signatureTitle', 'customerName', 'contactName', 'regarding', 'commodity', 'exchangeRate', 'incotermSelect', 'incotermPlace'];
         for (var i = 0; i < ids.length; i++) {
             var el = document.getElementById(ids[i]);
             if (el) {
@@ -425,7 +462,7 @@
     initDefaultData();
     renderAllFees();
     bindInputEvents();
-    saveToStorage(); // 确保默认数据被保存一次
+    saveToStorage();
 </script>
 </body>
 </html>
