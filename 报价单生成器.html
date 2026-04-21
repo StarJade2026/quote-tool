@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>报价单生成器 - 物流三段法工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Microsoft YaHei', sans-serif;
+            background: #e2e8f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+        /* 表单区 */
+        .form-panel {
+            flex: 1;
+            min-width: 380px;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        .form-panel h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #1e3a5f;
+            border-left: 4px solid #1e3a5f;
+            padding-left: 12px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #2d3748;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .fee-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .fee-row input {
+            flex: 2;
+        }
+        .fee-row input.price {
+            flex: 1;
+        }
+        .fee-row select {
+            width: 80px;
+        }
+        .fee-row button {
+            background: #e53e3e;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .add-btn {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .segment-card {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .segment-title {
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #1e3a5f;
+            font-size: 16px;
+        }
+        /* 报价单预览区 */
+        .quote-preview {
+            flex: 1.2;
+            min-width: 500px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .quote-preview h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #1e3a5f;
+            border-left: 4px solid #1e3a5f;
+            padding-left: 12px;
+        }
+        .quote-container {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 100%;
+            background: white;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .print-btn {
+            margin-top: 20px;
+            background: #1e3a5f;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        @media print {
+            .form-panel, .print-btn, .quote-preview h2 {
+                display: none;
+            }
+            .quote-preview {
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+                width: 100%;
+            }
+            .quote-container {
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- 左侧表单 -->
+    <div class="form-panel">
+        <h2>📝 输入成本数据</h2>
+        <div class="form-group">
+            <label>客户公司</label>
+            <input type="text" id="customerName" value="武汉爱途">
+        </div>
+        <div class="form-group">
+            <label>联系人</label>
+            <input type="text" id="contactName" value="Mr. 张少东经理">
+        </div>
+        <div class="form-group">
+            <label>项目描述</label>
+            <input type="text" id="regarding" value="Your exports cfr Mombasa to CPT Juba , South Sudan">
+        </div>
+        <div class="form-group">
+            <label>品名</label>
+            <input type="text" id="commodity" value="WORK BAG / HS:4202129000">
+        </div>
+        <div class="form-group">
+            <label>贸易条款 (Incoterms)</label>
+            <input type="text" id="incoterm" value="CFR Mombasa">
+        </div>
+        <div class="form-group">
+            <label>汇率 (USD/CNY)</label>
+            <input type="number" id="exchangeRate" value="7.5" step="0.01">
+        </div>
+
+        <!-- 段1 -->
+        <div class="segment-card">
+            <div class="segment-title">段1：起运地服务 (上海)</div>
+            <div id="segment1-fees"></div>
+            <button class="add-btn" onclick="addFee('segment1', 'P0')">+ 添加主体价格</button>
+            <button class="add-btn" onclick="addFee('segment1', 'P1')">+ 添加固定附加费</button>
+            <button class="add-btn" onclick="addFee('segment1', 'P2')">+ 添加增值附加费</button>
+        </div>
+
+        <!-- 段2 -->
+        <div class="segment-card">
+            <div class="segment-title">段2：干线段 (上海→蒙巴萨)</div>
+            <div id="segment2-fees"></div>
+            <button class="add-btn" onclick="addFee('segment2', 'P0')">+ 添加主体价格</button>
+            <button class="add-btn" onclick="addFee('segment2', 'P1')">+ 添加固定附加费</button>
+            <button class="add-btn" onclick="addFee('segment2', 'P2')">+ 添加增值附加费</button>
+        </div>
+
+        <!-- 段3 -->
+        <div class="segment-card">
+            <div class="segment-title">段3：目的地服务 (蒙巴萨→朱巴)</div>
+            <div id="segment3-fees"></div>
+            <button class="add-btn" onclick="addFee('segment3', 'P0')">+ 添加主体价格</button>
+            <button class="add-btn" onclick="addFee('segment3', 'P1')">+ 添加固定附加费</button>
+            <button class="add-btn" onclick="addFee('segment3', 'P2')">+ 添加增值附加费</button>
+        </div>
+    </div>
+
+    <!-- 右侧报价单预览 -->
+    <div class="quote-preview">
+        <h2>📄 报价单预览</h2>
+        <div id="quoteContainer" class="quote-container"></div>
+        <button class="print-btn" onclick="window.print()">🖨️ 打印 / 保存PDF</button>
+    </div>
+</div>
+
+<script>
+    // 存储各段费用数据
+    let feesData = {
+        segment1: [],
+        segment2: [],
+        segment3: []
+    };
+
+    // 初始化默认示例数据
+    function initDefaultData() {
+        feesData = {
+            segment1: [
+                { name: "内装费", type: "P0", price: 1100, currency: "CNY", unit: "箱" },
+                { name: "订舱费", type: "P0", price: 320, currency: "CNY", unit: "箱" },
+                { name: "码头操作费(THC)", type: "P1", price: 790, currency: "CNY", unit: "箱" },
+                { name: "报关费", type: "P1", price: 100, currency: "CNY", unit: "票" },
+                { name: "文件费", type: "P1", price: 500, currency: "CNY", unit: "票" },
+                { name: "封子费", type: "P1", price: 50, currency: "CNY", unit: "箱" },
+                { name: "预提箱", type: "P2", price: 250, currency: "CNY", unit: "箱" }
+            ],
+            segment2: [
+                { name: "海运费", type: "P0", price: 1308, currency: "USD", unit: "箱" },
+                { name: "燃油附加费(BAF)", type: "P1", price: 300, currency: "USD", unit: "箱" }
+            ],
+            segment3: [
+                { name: "转关转运包干费", type: "P0", price: 6700, currency: "USD", unit: "票" },
+                { name: "操作服务费", type: "P2", price: 50, currency: "USD", unit: "票" }
+            ]
+        };
+        renderAllFees();
+    }
+
+    // 渲染费用列表
+    function renderAllFees() {
+        renderFeeList('segment1');
+        renderFeeList('segment2');
+        renderFeeList('segment3');
+        updateQuote();
+    }
+
+    function renderFeeList(segmentId) {
+        const container = document.getElementById(`${segmentId}-fees`);
+        if (!container) return;
+        const fees = feesData[segmentId];
+        container.innerHTML = '';
+        fees.forEach((fee, idx) => {
+            const row = document.createElement('div');
+            row.className = 'fee-row';
+            row.innerHTML = `
+                <input type="text" placeholder="费用名称" value="${escapeHtml(fee.name)}" onchange="updateFee('${segmentId}', ${idx}, 'name', this.value)">
+                <select onchange="updateFee('${segmentId}', ${idx}, 'type', this.value)">
+                    <option value="P0" ${fee.type === 'P0' ? 'selected' : ''}>主体(P0)</option>
+                    <option value="P1" ${fee.type === 'P1' ? 'selected' : ''}>固定附加(P1)</option>
+                    <option value="P2" ${fee.type === 'P2' ? 'selected' : ''}>增值附加(P2)</option>
+                </select>
+                <input type="number" step="0.01" class="price" placeholder="价格" value="${fee.price}" onchange="updateFee('${segmentId}', ${idx}, 'price', parseFloat(this.value))">
+                <select onchange="updateFee('${segmentId}', ${idx}, 'currency', this.value)">
+                    <option value="CNY" ${fee.currency === 'CNY' ? 'selected' : ''}>CNY</option>
+                    <option value="USD" ${fee.currency === 'USD' ? 'selected' : ''}>USD</option>
+                </select>
+                <input type="text" placeholder="单位" value="${fee.unit || ''}" style="width:60px" onchange="updateFee('${segmentId}', ${idx}, 'unit', this.value)">
+                <button onclick="removeFee('${segmentId}', ${idx})">删</button>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function updateFee(segment, idx, field, value) {
+        feesData[segment][idx][field] = value;
+        updateQuote();
+    }
+
+    function removeFee(segment, idx) {
+        feesData[segment].splice(idx, 1);
+        renderFeeList(segment);
+        updateQuote();
+    }
+
+    function addFee(segment, type) {
+        feesData[segment].push({
+            name: "新费用",
+            type: type,
+            price: 0,
+            currency: "CNY",
+            unit: "箱"
+        });
+        renderFeeList(segment);
+        updateQuote();
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 生成报价单HTML
+    function updateQuote() {
+        const customer = document.getElementById('customerName').value;
+        const contact = document.getElementById('contactName').value;
+        const regarding = document.getElementById('regarding').value;
+        const commodity = document.getElementById('commodity').value;
+        const incoterm = document.getElementById('incoterm').value;
+        const exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 7.5;
+
+        const today = new Date().toISOString().slice(0,10);
+        const validUntil = new Date();
+        validUntil.setDate(validUntil.getDate() + 30);
+        const validUntilStr = validUntil.toISOString().slice(0,10);
+
+        // 计算各段小计（CNY）
+        function calcSegmentTotal(fees, rate) {
+            let totalCNY = 0;
+            fees.forEach(f => {
+                let price = f.price || 0;
+                if (f.currency === 'USD') price = price * rate;
+                totalCNY += price;
+            });
+            return totalCNY;
+        }
+
+        const rate = exchangeRate;
+        const seg1Total = calcSegmentTotal(feesData.segment1, rate);
+        const seg2Total = calcSegmentTotal(feesData.segment2, rate);
+        const seg3Total = calcSegmentTotal(feesData.segment3, rate);
+        const grandTotalCNY = seg1Total + seg2Total + seg3Total;
+
+        // 生成费用表格行
+        function renderFeeRows(fees, rate) {
+            if (fees.length === 0) return '<tr><td colspan="5">无费用项</td></tr>';
+            let rows = '';
+            fees.forEach(f => {
+                let price = f.price || 0;
+                let originalPrice = price.toFixed(2) + ' ' + f.currency;
+                let priceCNY = price;
+                if (f.currency === 'USD') priceCNY = price * rate;
+                rows += `<tr>
+                    <td>${escapeHtml(f.name)}</td>
+                    <td>${f.type === 'P0' ? '主体价格' : (f.type === 'P1' ? '固定附加费' : '增值附加费')}</td>
+                    <td>${originalPrice}</td>
+                    <td>1</td>
+                    <td>${priceCNY.toFixed(2)} CNY</td>
+                </tr>`;
+            });
+            return rows;
+        }
+
+        const html = `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 100%; margin: 0 auto;">
+                <div style="text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 20px;">
+                    <h2 style="margin:0; color:#1e3a5f;">上海永顺穗国际货运代理有限公司</h2>
+                    <p style="margin:5px 0 0; font-size:12px;">Shanghai Rainbowway International Logistics Co.,Ltd.</p>
+                    <p style="margin:5px 0 0; font-size:12px;">地址：上海市虹口区天宝路466弄9号建邦大厦3楼336室<br>Tel: 192-0215-1717 &nbsp; Email: julia.wu@rainbowwaylog.com</p>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size:13px; border:1px solid #e2e8f0; padding:12px; background:#f8fafc;">
+                    <div><strong>Company</strong> ${escapeHtml(customer)}<br><strong>Contact</strong> ${escapeHtml(contact)}<br><strong>Regarding</strong> ${escapeHtml(regarding)}</div>
+                    <div><strong>Date</strong> ${today}<br><strong>By</strong> Julia Wu<br><strong>Commodity</strong> ${escapeHtml(commodity)}</div>
+                </div>
+                <div style="background:#eef2ff; padding:8px 12px; margin-bottom:20px; border-left:5px solid #1e3a5f; font-size:13px;">
+                    <strong>贸易条款 (Incoterms):</strong> ${escapeHtml(incoterm)}<br>
+                    <strong>责任划分:</strong> 段1（起运地）卖方负责；段2（干线）卖方负责；段3（目的地）买方负责清关及后续。
+                </div>
+
+                <!-- 段1 -->
+                <table style="width:100%; border-collapse:collapse; margin-bottom:25px;">
+                    <caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段1：起运地服务 (上海)</caption>
+                    <thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>
+                    <tbody>${renderFeeRows(feesData.segment1, rate)}<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>${seg1Total.toFixed(2)} CNY</td></tr></tbody>
+                </table>
+
+                <!-- 段2 -->
+                <table style="width:100%; border-collapse:collapse; margin-bottom:25px;">
+                    <caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段2：干线段 (上海→蒙巴萨)</caption>
+                    <thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>
+                    <tbody>${renderFeeRows(feesData.segment2, rate)}<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>${seg2Total.toFixed(2)} CNY</td></tr></tbody>
+                </table>
+
+                <!-- 段3 -->
+                <table style="width:100%; border-collapse:collapse; margin-bottom:25px;">
+                    <caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">段3：目的地服务 (蒙巴萨→朱巴)</caption>
+                    <thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>
+                    <tbody>${renderFeeRows(feesData.segment3, rate)}<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>${seg3Total.toFixed(2)} CNY</td></tr></tbody>
+                </table>
+
+                <div style="margin:20px 0; text-align:right; font-size:18px;">
+                    <strong>总价 (CNY):</strong> <span style="color:#c00; font-size:24px;">${grandTotalCNY.toFixed(2)} CNY</span><br>
+                    <span style="font-size:13px;">汇率: USD 1.00 = CNY ${rate.toFixed(2)}</span>
+                </div>
+
+                <div style="margin-top:20px; padding:12px; background:#fef9e6; border-left:4px solid #e67e22; font-size:13px;">
+                    <strong>备注说明：</strong><br>
+                    • 以上费用仅限于普通安全，不限制运输货物。<br>
+                    • 如产生海关查验、商检、进口关税等其他一切杂费，将实报实销。<br>
+                    • 由于国际物流运输途中存在各种不可抗力因素，建议办理保险以避免损失。<br>
+                    • 报价有效期至 ${validUntilStr}。
+                </div>
+
+                <div style="margin-top:30px; text-align:right; border-top:1px solid #ddd; padding-top:20px; font-size:14px;">
+                    With kind regards,<br>
+                    <strong>Julia Wu</strong><br>
+                    General Manager
+                </div>
+                <div style="margin-top:20px; text-align:center; font-size:11px; color:#718096;">
+                    Shanghai Rainbowway International Logistics Co.,Ltd<br>
+                    Phone: +86-192-0215-1717 &nbsp; Email: julia.wu@rainbowwaylog.com
+                </div>
+            </div>
+        `;
+        document.getElementById('quoteContainer').innerHTML = html;
+    }
+
+    // 监听所有输入变化
+    function bindInputEvents() {
+        const inputs = ['customerName', 'contactName', 'regarding', 'commodity', 'incoterm', 'exchangeRate'];
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', () => updateQuote());
+        });
+    }
+
+    initDefaultData();
+    bindInputEvents();
+</script>
+</body>
+</html>
