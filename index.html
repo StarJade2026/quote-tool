@@ -243,10 +243,10 @@
 </div>
 
 <div class="app-container">
-    <!-- 左侧输入区（原内容未改动，保证功能完整） -->
+    <!-- 左侧输入区 -->
     <div class="form-panel">
         <h2>📦 输入成本数据</h2>
-        <div class="help-panel" id="helpPanel">
+        <div class="help-panel">
             💡 三段法：段1(起运地) · 段2(干线) · 段3(目的地)<br>
             三层价格：P0主体运费 · P1固定附加费 · P2增值服务费
         </div>
@@ -289,7 +289,7 @@
 </div>
 
 <script>
-    // 贸易条款与责任联动逻辑（保持原有核心功能不变）
+    // 贸易条款列表
     const tradeTerms = ['EXW', 'FCA', 'FOB', 'CFR', 'CIF', 'CPT', 'CIP', 'DAP', 'DPU', 'DDP'];
     const termSelect = document.getElementById('tradeTerm');
     tradeTerms.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.textContent = t; termSelect.appendChild(opt); });
