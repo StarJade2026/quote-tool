@@ -5,98 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>仓库报价速填 · 地面产品报价器</title>
     <link rel="stylesheet" href="../shared/shared.css">
-    <!-- 引入 jsPDF 库用于 PDF 生成 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* 页面特有样式补充 */
-        .section-title {
-            font-size: 18px;
+        /* 页面特有样式 */
+        .section-title { font-size: 18px; font-weight: 600; margin: 20px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #0071e3; display: flex; align-items: center; gap: 10px; }
+        .section-title .toggle-btn { font-size: 14px; font-weight: normal; cursor: pointer; color: #0071e3; user-select: none; }
+        .fee-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: white; }
+        .fee-table th { background-color: #f5f5f7; font-weight: 600; }
+        .fee-table td, .fee-table th { border: 1px solid #ddd; padding: 8px 10px; vertical-align: middle; }
+        .fee-table input { width: 100px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; }
+        .fee-table .lock-icon { color: #888; font-size: 16px; margin-left: 5px; }
+        .delete-btn { background: none; border: none; color: #ff3b30; font-size: 18px; cursor: pointer; padding: 0 5px; }
+        .delete-btn:hover { color: #d70000; }
+        .add-btn { margin-top: 5px; background-color: #f0f0f0; color: #333; border: 1px dashed #999; padding: 5px 15px; }
+        .collapsible-content { transition: max-height 0.2s ease-out; overflow: hidden; }
+        .hidden { display: none; }
+        .action-buttons { display: flex; gap: 15px; flex-wrap: wrap; margin: 25px 0; }
+        .note { color: #666; font-size: 13px; margin-top: 5px; }
+
+        /* 新增：说明卡片样式 */
+        .info-card {
+            background: #fef9e7;
+            border-left: 5px solid #f1c40f;
+            padding: 12px 18px;
+            margin: 20px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .info-card .title {
             font-weight: 600;
-            margin: 20px 0 10px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #0071e3;
+            color: #7d6608;
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        .section-title .toggle-btn {
-            font-size: 14px;
-            font-weight: normal;
-            cursor: pointer;
-            color: #0071e3;
-            user-select: none;
-        }
-        .fee-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            background: white;
-        }
-        .fee-table th {
-            background-color: #f5f5f7;
-            font-weight: 600;
-        }
-        .fee-table td, .fee-table th {
-            border: 1px solid #ddd;
-            padding: 8px 10px;
-            vertical-align: middle;
-        }
-        .fee-table input {
-            width: 100px;
-            padding: 4px 6px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .fee-table .lock-icon {
-            color: #888;
-            font-size: 16px;
-            margin-left: 5px;
-        }
-        .delete-btn {
-            background: none;
-            border: none;
-            color: #ff3b30;
+        .info-card .expand-icon {
             font-size: 18px;
-            cursor: pointer;
-            padding: 0 5px;
+            transition: transform 0.2s;
         }
-        .delete-btn:hover {
-            color: #d70000;
-        }
-        .add-btn {
-            margin-top: 5px;
-            background-color: #f0f0f0;
+        .info-card .content {
+            margin-top: 15px;
             color: #333;
-            border: 1px dashed #999;
-            padding: 5px 15px;
+            font-size: 14px;
+            line-height: 1.6;
+            border-top: 1px dashed #e0c060;
+            padding-top: 12px;
         }
-        .collapsible-content {
-            transition: max-height 0.2s ease-out;
-            overflow: hidden;
-        }
-        .hidden {
-            display: none;
-        }
-        .summary-box {
-            background: #f9f9fb;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            white-space: pre-wrap;
-            font-family: monospace;
-            font-size: 13px;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin: 25px 0;
-        }
-        .note {
-            color: #666;
-            font-size: 13px;
-            margin-top: 5px;
+        .info-card .content strong {
+            color: #7d6608;
         }
     </style>
 </head>
@@ -105,7 +62,31 @@
     <h1>🏭 仓库报价速填</h1>
     <p>按三层结构填写您的仓库报价，生成专业报价单。P1固定附加费锁定不可删除。</p>
 
-    <!-- 供应商信息区 -->
+    <!-- 新增：可折叠说明卡片 -->
+    <div class="info-card" onclick="toggleInfoCard(this)">
+        <div class="title">
+            <span>💡 第一次使用？点击了解为什么要分三层报价</span>
+            <span class="expand-icon">▶</span>
+        </div>
+        <div class="content hidden">
+            <p><strong>1. 让您的报价更专业、更有说服力</strong><br>
+            传统“一口价”容易被客户砍价，因为对方看不出钱花在哪。拆成三层后：<br>
+            • <strong>P0 基础工钱</strong>：您该挣的核心服务费（如内装、仓储）。<br>
+            • <strong>P1 固定成本</strong>：码头、系统强制收的费用（实报实销，您不赚钱）。<br>
+            • <strong>P2 特色服务</strong>：您能提供的额外服务（如夜间装车、加固包装），单独标价显价值。</p>
+            
+            <p><strong>2. 帮您守住利润</strong><br>
+            当客户要求降价时，您可以明确告知：“P1是码头收的没法动，P2您不需要我可以去掉，但P0工钱真的降不了。”——砍价不伤筋骨。</p>
+            
+            <p><strong>3. 满足终端货主（甲方）的透明要求</strong><br>
+            现在越来越多的收货人/货主要求物流费用明细可追溯。您用这个格式报价，货代能直接复制给甲方，甲方觉得您规范，以后更愿意指定您为合作仓库。</p>
+            
+            <p><strong>4. 3分钟填完，省去手写Excel的麻烦</strong><br>
+            填写后一键生成PDF报价单，还能复制摘要发给货代，比微信打字更高效、更不容易扯皮。</p>
+        </div>
+    </div>
+
+    <!-- 供应商信息区（保持不变） -->
     <div style="background: #f0f7ff; padding: 20px; border-radius: 12px; margin: 25px 0;">
         <strong style="font-size: 16px;">📋 供应商信息</strong><br><br>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
@@ -120,10 +101,8 @@
     <h2>💰 费用明细（三层价格模型）</h2>
     <p style="color: #666; margin-bottom: 5px;">🔒 表示固定附加费，不可删除；P2增值服务可自定义。</p>
 
-    <!-- 费用表格容器 -->
     <div id="feeTablesContainer">加载费用库中...</div>
 
-    <!-- 操作按钮区 -->
     <div class="action-buttons">
         <button onclick="previewPDF()" style="background-color: #0071e3;">📄 预览报价单 (PDF)</button>
         <button onclick="copySummary()" style="background-color: #28a745;">📋 复制报价摘要</button>
@@ -134,294 +113,180 @@
         • “生成分享链接”将当前填写内容编码进链接，发送给货代可一键导入。
     </div>
 
-    <!-- 隐藏的摘要展示区（用于复制） -->
     <textarea id="summaryHidden" style="position: absolute; left: -9999px;"></textarea>
 </div>
 
 <script src="../shared/fee-library.js"></script>
 <script>
+    // 新增：切换卡片展开/折叠
+    window.toggleInfoCard = function(card) {
+        const content = card.querySelector('.content');
+        const icon = card.querySelector('.expand-icon');
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            icon.textContent = '▼';
+        } else {
+            content.classList.add('hidden');
+            icon.textContent = '▶';
+        }
+    };
+
+    // ---------- 以下为原有核心逻辑（未改动）----------
     (function(){
-        // ---------- 全局变量 ----------
-        let currentFees = {
-            p0: [],
-            p1: [],
-            p2: []
-        };
+        let currentFees = { p0: [], p1: [], p2: [] };
         let p2Collapsed = true;
 
-        // ---------- 初始化：从费用库加载默认值 ----------
         function initFeeData() {
             const lib = getFeeLibrary('warehouse');
-            // 深拷贝默认数据
             currentFees.p0 = lib.p0.map(item => ({ ...item, amount: item.default || 0 }));
             currentFees.p1 = lib.p1.map(item => ({ ...item, amount: item.default || 0 }));
-            currentFees.p2 = lib.p2.map(item => ({ ...item, amount: item.default || 0, checked: false })); // P2 默认未勾选
+            currentFees.p2 = lib.p2.map(item => ({ ...item, amount: item.default || 0, checked: false }));
         }
 
-        // ---------- 渲染所有表格 ----------
         function renderTables() {
             const container = document.getElementById('feeTablesContainer');
             let html = '';
-
-            // P0 表格
             html += renderTableSection('P0 主体服务费（基础服务）', 'p0', currentFees.p0, false);
-            // P1 表格（带锁）
             html += renderTableSection('P1 固定附加费（行业必收）', 'p1', currentFees.p1, true);
-            // P2 表格（可折叠，且每行带复选框）
             html += renderP2Section();
-
             container.innerHTML = html;
-
-            // 绑定事件
             bindTableEvents();
         }
 
         function renderTableSection(title, type, items, locked) {
             let html = `<div class="section-title">${title}</div>`;
-            html += `<table class="fee-table" id="table-${type}">`;
-            html += `<thead><tr><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width: 60px;">操作</th></tr></thead>`;
-            html += `<tbody>`;
+            html += `<table class="fee-table" id="table-${type}"><thead><tr><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>`;
             items.forEach((item, index) => {
                 html += `<tr data-type="${type}" data-index="${index}" data-code="${item.code}">`;
                 html += `<td>${item.name} ${locked ? '<span class="lock-icon">🔒</span>' : ''}</td>`;
                 html += `<td>${item.unit}</td>`;
-                html += `<td><input type="number" step="0.01" min="0" value="${item.amount}" data-field="amount" ${locked ? '' : ''}></td>`;
-                html += `<td>`;
-                if (!locked) {
-                    html += `<button class="delete-btn" data-action="delete">🗑️</button>`;
-                } else {
-                    html += `<span style="color: #ccc;">—</span>`;
-                }
-                html += `</td>`;
+                html += `<td><input type="number" step="0.01" min="0" value="${item.amount}" data-field="amount"></td>`;
+                html += `<td>${locked ? '<span style="color:#ccc;">—</span>' : '<button class="delete-btn" data-action="delete">🗑️</button>'}</td>`;
                 html += `</tr>`;
             });
-            html += `</tbody>`;
-            html += `</table>`;
-            if (!locked) {
-                html += `<button class="add-btn" data-add-type="${type}">+ 添加其他服务</button>`;
-            }
+            html += `</tbody></table>`;
+            if (!locked) html += `<button class="add-btn" data-add-type="${type}">+ 添加其他服务</button>`;
             return html;
         }
 
         function renderP2Section() {
-            let html = `<div class="section-title">`;
-            html += `P2 增值附加费（差异化服务）`;
-            html += `<span class="toggle-btn" onclick="toggleP2()">${p2Collapsed ? '▶ 展开' : '▼ 折叠'}</span>`;
-            html += `</div>`;
+            let html = `<div class="section-title">P2 增值附加费（差异化服务） <span class="toggle-btn" onclick="toggleP2()">${p2Collapsed ? '▶ 展开' : '▼ 折叠'}</span></div>`;
             html += `<div id="p2Content" class="collapsible-content ${p2Collapsed ? 'hidden' : ''}">`;
-            html += `<table class="fee-table" id="table-p2">`;
-            html += `<thead><tr><th style="width: 40px;">选用</th><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width: 60px;">操作</th></tr></thead>`;
-            html += `<tbody>`;
+            html += `<table class="fee-table" id="table-p2"><thead><tr><th style="width:40px;">选用</th><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>`;
             currentFees.p2.forEach((item, index) => {
                 html += `<tr data-type="p2" data-index="${index}" data-code="${item.code}">`;
-                html += `<td style="text-align: center;"><input type="checkbox" data-field="checked" ${item.checked ? 'checked' : ''}></td>`;
-                html += `<td>${item.name}</td>`;
-                html += `<td>${item.unit}</td>`;
+                html += `<td style="text-align:center;"><input type="checkbox" data-field="checked" ${item.checked ? 'checked' : ''}></td>`;
+                html += `<td>${item.name}</td><td>${item.unit}</td>`;
                 html += `<td><input type="number" step="0.01" min="0" value="${item.amount}" data-field="amount"></td>`;
-                html += `<td><button class="delete-btn" data-action="delete">🗑️</button></td>`;
-                html += `</tr>`;
+                html += `<td><button class="delete-btn" data-action="delete">🗑️</button></td></tr>`;
             });
-            html += `</tbody>`;
-            html += `</table>`;
-            html += `<button class="add-btn" data-add-type="p2">+ 自定义增值服务</button>`;
-            html += `</div>`;
+            html += `</tbody></table><button class="add-btn" data-add-type="p2">+ 自定义增值服务</button></div>`;
             return html;
         }
 
-        // 全局函数供HTML调用
-        window.toggleP2 = function() {
-            p2Collapsed = !p2Collapsed;
-            renderTables();
-        };
+        window.toggleP2 = function() { p2Collapsed = !p2Collapsed; renderTables(); };
 
-        // 绑定表格内的事件
         function bindTableEvents() {
-            // 删除按钮
             document.querySelectorAll('[data-action="delete"]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const row = e.target.closest('tr');
                     const type = row.dataset.type;
                     const index = row.dataset.index;
-                    if (type && index !== undefined) {
-                        currentFees[type].splice(index, 1);
-                        renderTables();
-                    }
+                    if (type && index !== undefined) { currentFees[type].splice(index, 1); renderTables(); }
                 });
             });
-
-            // 输入框变化同步到 currentFees
             document.querySelectorAll('input[data-field="amount"]').forEach(input => {
                 input.addEventListener('input', (e) => {
                     const row = e.target.closest('tr');
                     const type = row.dataset.type;
                     const index = row.dataset.index;
-                    if (type && index !== undefined) {
-                        const newVal = parseFloat(e.target.value) || 0;
-                        currentFees[type][index].amount = newVal;
-                    }
+                    if (type && index !== undefined) { currentFees[type][index].amount = parseFloat(e.target.value) || 0; }
                 });
             });
-
-            // P2 复选框变化
             document.querySelectorAll('input[data-field="checked"]').forEach(chk => {
                 chk.addEventListener('change', (e) => {
                     const row = e.target.closest('tr');
                     const type = row.dataset.type;
                     const index = row.dataset.index;
-                    if (type && index !== undefined) {
-                        currentFees[type][index].checked = e.target.checked;
-                    }
+                    if (type && index !== undefined) { currentFees[type][index].checked = e.target.checked; }
                 });
             });
-
-            // 添加按钮
             document.querySelectorAll('[data-add-type]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const type = btn.dataset.addType;
-                    const newName = prompt('请输入新增费用名称：');
-                    if (!newName) return;
-                    const newUnit = prompt('请输入计价单位（如：元/票）：');
-                    if (!newUnit) return;
-                    const newCode = 'CUSTOM_' + Date.now() + '_' + Math.random().toString(36);
-                    const newItem = {
-                        code: newCode,
-                        name: newName,
-                        unit: newUnit,
-                        amount: 0,
-                        deletable: true
-                    };
-                    if (type === 'p2') {
-                        newItem.checked = true;
-                    }
-                    currentFees[type].push(newItem);
-                    renderTables();
+                    const newName = prompt('请输入新增费用名称：'); if (!newName) return;
+                    const newUnit = prompt('请输入计价单位（如：元/票）：'); if (!newUnit) return;
+                    const newItem = { code: 'CUSTOM_' + Date.now() + '_' + Math.random().toString(36), name: newName, unit: newUnit, amount: 0, deletable: true };
+                    if (type === 'p2') newItem.checked = true;
+                    currentFees[type].push(newItem); renderTables();
                 });
             });
         }
 
-        // ---------- 收集当前所有数据 ----------
         function collectFormData() {
-            const supplier = {
-                name: document.getElementById('supplierName').value || '未填写',
-                contact: document.getElementById('contactPerson').value || '',
-                phone: document.getElementById('contactPhone').value || '',
-                location: document.getElementById('serviceLocation').value || '',
-                validUntil: document.getElementById('validUntil').value || ''
+            return {
+                supplier: {
+                    name: document.getElementById('supplierName').value || '未填写',
+                    contact: document.getElementById('contactPerson').value || '',
+                    phone: document.getElementById('contactPhone').value || '',
+                    location: document.getElementById('serviceLocation').value || '',
+                    validUntil: document.getElementById('validUntil').value || ''
+                },
+                p0: currentFees.p0.filter(f => f.amount > 0 || f.code.startsWith('WH_P0')),
+                p1: currentFees.p1,
+                p2: currentFees.p2.filter(f => f.checked)
             };
-
-            // 过滤出实际有效的费用（P2只取勾选的）
-            const p0Items = currentFees.p0.filter(f => f.amount > 0 || f.code.startsWith('WH_P0'));
-            const p1Items = currentFees.p1;
-            const p2Items = currentFees.p2.filter(f => f.checked);
-
-            return { supplier, p0: p0Items, p1: p1Items, p2: p2Items };
         }
 
-        // ---------- 生成报价摘要文本 ----------
-        function generateSummaryText(data) {
-            let text = `供应商：${data.supplier.name}`;
-            if (data.supplier.contact) text += `\n联系人：${data.supplier.contact}  ${data.supplier.phone}`;
-            text += `\n服务地点：${data.supplier.location}`;
-            if (data.supplier.validUntil) text += `\n有效期至：${data.supplier.validUntil}`;
-            text += `\n\n【P0 主体服务费】`;
-            data.p0.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; });
-            text += `\n\n【P1 固定附加费】`;
-            data.p1.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; });
-            if (data.p2.length > 0) {
-                text += `\n\n【P2 增值附加费】`;
-                data.p2.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; });
-            }
-            return text;
-        }
-
-        // ---------- 按钮功能 ----------
         window.previewPDF = function() {
             const data = collectFormData();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             let y = 20;
-            doc.setFontSize(16);
-            doc.text('仓库服务报价单', 105, y, { align: 'center' });
-            y += 12;
+            doc.setFontSize(16); doc.text('仓库服务报价单', 105, y, { align: 'center' }); y += 12;
             doc.setFontSize(11);
-            doc.text(`供应商：${data.supplier.name}`, 20, y);
-            y += 6;
-            if (data.supplier.contact) {
-                doc.text(`联系人：${data.supplier.contact}  ${data.supplier.phone}`, 20, y);
-                y += 6;
-            }
-            doc.text(`服务地点：${data.supplier.location}`, 20, y);
-            y += 6;
-            if (data.supplier.validUntil) {
-                doc.text(`有效期至：${data.supplier.validUntil}`, 20, y);
-                y += 6;
-            }
+            doc.text(`供应商：${data.supplier.name}`, 20, y); y += 6;
+            if (data.supplier.contact) { doc.text(`联系人：${data.supplier.contact}  ${data.supplier.phone}`, 20, y); y += 6; }
+            doc.text(`服务地点：${data.supplier.location}`, 20, y); y += 6;
+            if (data.supplier.validUntil) { doc.text(`有效期至：${data.supplier.validUntil}`, 20, y); y += 6; }
             y += 8;
-
-            // P0
-            doc.setFontSize(13);
-            doc.text('P0 主体服务费', 20, y);
-            y += 8;
-            data.p0.forEach(f => {
-                doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y);
-                y += 6;
-            });
+            doc.setFontSize(13); doc.text('P0 主体服务费', 20, y); y += 8;
+            data.p0.forEach(f => { doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y); y += 6; });
             y += 4;
-
-            // P1
-            doc.text('P1 固定附加费', 20, y);
-            y += 8;
-            data.p1.forEach(f => {
-                doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y);
-                y += 6;
-            });
+            doc.text('P1 固定附加费', 20, y); y += 8;
+            data.p1.forEach(f => { doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y); y += 6; });
             y += 4;
-
             if (data.p2.length > 0) {
-                doc.text('P2 增值附加费', 20, y);
-                y += 8;
-                data.p2.forEach(f => {
-                    doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y);
-                    y += 6;
-                });
+                doc.text('P2 增值附加费', 20, y); y += 8;
+                data.p2.forEach(f => { doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y); y += 6; });
             }
-
             doc.save('仓库报价单.pdf');
         };
 
         window.copySummary = function() {
             const data = collectFormData();
-            const summary = generateSummaryText(data);
+            let text = `供应商：${data.supplier.name}`;
+            if (data.supplier.contact) text += `\n联系人：${data.supplier.contact}  ${data.supplier.phone}`;
+            text += `\n服务地点：${data.supplier.location}`;
+            if (data.supplier.validUntil) text += `\n有效期至：${data.supplier.validUntil}`;
+            text += `\n\n【P0 主体服务费】`; data.p0.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; });
+            text += `\n\n【P1 固定附加费】`; data.p1.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; });
+            if (data.p2.length > 0) { text += `\n\n【P2 增值附加费】`; data.p2.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; }); }
             const hiddenTextarea = document.getElementById('summaryHidden');
-            hiddenTextarea.value = summary;
-            hiddenTextarea.select();
-            document.execCommand('copy');
+            hiddenTextarea.value = text; hiddenTextarea.select(); document.execCommand('copy');
             alert('报价摘要已复制到剪贴板！');
         };
 
         window.generateShareLink = function() {
             const data = collectFormData();
-            // 编码数据
-            const payload = {
-                v: '1.0',
-                supplier: data.supplier,
-                fees: {
-                    p0: data.p0,
-                    p1: data.p1,
-                    p2: data.p2
-                }
-            };
+            const payload = { v: '1.0', supplier: data.supplier, fees: { p0: data.p0, p1: data.p1, p2: data.p2 } };
             const jsonStr = JSON.stringify(payload);
             const encoded = btoa(encodeURIComponent(jsonStr));
             const url = new URL(window.location.href);
             url.searchParams.set('data', encoded);
-            const shareLink = url.toString();
-            
-            // 弹窗展示
-            prompt('🔗 复制以下链接发送给货代，对方可一键导入：', shareLink);
+            prompt('🔗 复制以下链接发送给货代，对方可一键导入：', url.toString());
         };
 
-        // 采集器模式：从URL读取预填数据
         function loadFromURL() {
             const params = new URLSearchParams(window.location.search);
             const dataParam = params.get('data');
@@ -437,37 +302,16 @@
                         document.getElementById('validUntil').value = payload.supplier.validUntil || '';
                     }
                     if (payload.fees) {
-                        // 简单合并，保持现有库结构，只覆盖金额和勾选状态
-                        if (payload.fees.p0) {
-                            currentFees.p0 = currentFees.p0.map(def => {
-                                const matched = payload.fees.p0.find(f => f.code === def.code);
-                                return matched ? { ...def, amount: matched.amount } : def;
-                            });
-                        }
-                        if (payload.fees.p1) {
-                            currentFees.p1 = currentFees.p1.map(def => {
-                                const matched = payload.fees.p1.find(f => f.code === def.code);
-                                return matched ? { ...def, amount: matched.amount } : def;
-                            });
-                        }
-                        if (payload.fees.p2) {
-                            currentFees.p2 = currentFees.p2.map(def => {
-                                const matched = payload.fees.p2.find(f => f.code === def.code);
-                                return matched ? { ...def, amount: matched.amount, checked: matched.checked } : def;
-                            });
-                        }
+                        currentFees.p0 = currentFees.p0.map(def => { const m = payload.fees.p0.find(f => f.code === def.code); return m ? { ...def, amount: m.amount } : def; });
+                        currentFees.p1 = currentFees.p1.map(def => { const m = payload.fees.p1.find(f => f.code === def.code); return m ? { ...def, amount: m.amount } : def; });
+                        currentFees.p2 = currentFees.p2.map(def => { const m = payload.fees.p2.find(f => f.code === def.code); return m ? { ...def, amount: m.amount, checked: m.checked } : def; });
                     }
                     renderTables();
-                } catch(e) {
-                    console.warn('解析分享链接失败', e);
-                }
+                } catch(e) { console.warn('解析分享链接失败', e); }
             }
         }
 
-        // ---------- 启动 ----------
-        initFeeData();
-        renderTables();
-        loadFromURL();
+        initFeeData(); renderTables(); loadFromURL();
     })();
 </script>
 </body>
