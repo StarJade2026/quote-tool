@@ -2,739 +2,302 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>报价单生成器 - 物流三段法工具</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库报价速填 · 地面产品报价器</title>
+    <link rel="stylesheet" href="../../shared/shared.css">
+    <!-- jsPDF 库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- pako 压缩库 -->
     <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: #e2e8f0;
-            margin: 0;
-            padding: 20px;
-        }
-        .help-panel {
-            background: #eef2ff;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            padding: 12px 16px;
-            cursor: pointer;
-            user-select: none;
-            border: 1px solid #cbd5e1;
-        }
-        .help-header {
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .help-content {
-            display: none;
-            margin-top: 12px;
-            font-size: 13px;
-            line-height: 1.5;
-            border-top: 1px solid #cbd5e1;
-            padding-top: 12px;
-        }
-        .rule-box {
-            background: #fef9e6;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin-top: 10px;
-            border-left: 3px solid #e67e22;
-        }
-        .feedback-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #1e3a5f;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 12px 20px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            z-index: 1000;
-            font-size: 14px;
-        }
-        .feedback-modal, .terms-modal, .import-modal {
-            position: fixed;
-            bottom: 100px;
-            right: 30px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            width: 320px;
-            padding: 16px;
-            display: none;
-            z-index: 1001;
-            border: 1px solid #e2e8f0;
-        }
-        .terms-modal {
-            width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .import-modal {
-            width: 450px;
-            bottom: auto;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            right: auto;
-        }
-        .feedback-modal h4, .terms-modal h4, .import-modal h4 { margin: 0 0 8px 0; }
-        .feedback-modal p, .terms-modal p { font-size: 13px; margin: 8px 0; line-height: 1.6; }
-        .feedback-modal a { color: #1e3a5f; text-decoration: none; word-break: break-all; }
-        .close-modal { float: right; cursor: pointer; font-size: 18px; font-weight: bold; }
-        .app-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            gap: 25px;
-            flex-wrap: wrap;
-        }
-        .form-panel {
-            flex: 1;
-            min-width: 360px;
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .form-panel h2 {
-            margin-top: 0;
-            font-size: 20px;
-            color: #1e3a5f;
-            border-left: 4px solid #1e3a5f;
-            padding-left: 12px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 13px;
-        }
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-        .fee-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .fee-row input, .fee-row select {
-            flex: 1;
-            min-width: 80px;
-        }
-        .fee-row button {
-            background: #e53e3e;
-            border: none;
-            color: white;
-            border-radius: 6px;
-            padding: 6px 10px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .add-btn {
-            background: #3182ce;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 5px;
-            margin-right: 8px;
-        }
-        .import-btn {
-            background: #38a169;
-            color: white;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-        .segment-card {
-            background: #f8fafc;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #e2e8f0;
-        }
-        .segment-title {
-            font-weight: bold;
-            margin-bottom: 12px;
-            color: #1e3a5f;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .quote-preview {
-            flex: 1.2;
-            min-width: 500px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            padding: 20px;
-        }
-        .quote-preview h2 {
-            margin-top: 0;
-            font-size: 20px;
-            color: #1e3a5f;
-            border-left: 4px solid #1e3a5f;
-            padding-left: 12px;
-        }
-        .quote-container {
-            font-family: 'Segoe UI', 'Roboto', sans-serif;
-            background: white;
-            padding: 15px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 13px;
-        }
-        .print-btn {
-            margin-top: 20px;
-            background: #1e3a5f;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .company-section {
-            background: #f1f5f9;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-        .footer-version {
-            text-align: center;
-            font-size: 11px;
-            color: #94a3b8;
-            margin-top: 20px;
-        }
-        .footer-version a {
-            color: #64748b;
-            text-decoration: underline;
-            cursor: pointer;
-        }
-        @media print {
-            .form-panel, .print-btn, .quote-preview h2, .help-panel, .feedback-btn, .feedback-modal, .terms-modal, .import-modal, .footer-version { display: none; }
-            .quote-preview { box-shadow: none; padding: 0; margin: 0; width: 100%; }
-            .quote-container { border: none; }
-        }
-        @media (max-width: 768px) {
-            .app-container { flex-direction: column; }
-            .quote-preview { min-width: auto; }
-        }
+        /* 页面特有样式 */
+        .section-title { font-size: 18px; font-weight: 600; margin: 20px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #0071e3; display: flex; align-items: center; gap: 10px; }
+        .section-title .toggle-btn { font-size: 14px; font-weight: normal; cursor: pointer; color: #0071e3; user-select: none; }
+        .fee-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: white; }
+        .fee-table th { background-color: #f5f5f7; font-weight: 600; }
+        .fee-table td, .fee-table th { border: 1px solid #ddd; padding: 8px 10px; vertical-align: middle; }
+        .fee-table input { width: 100px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; }
+        .fee-table .lock-icon { color: #888; font-size: 16px; margin-left: 5px; }
+        .delete-btn { background: none; border: none; color: #ff3b30; font-size: 18px; cursor: pointer; padding: 0 5px; }
+        .delete-btn:hover { color: #d70000; }
+        .add-btn { margin-top: 5px; background-color: #f0f0f0; color: #333; border: 1px dashed #999; padding: 5px 15px; cursor: pointer; }
+        .collapsible-content { transition: max-height 0.2s ease-out; overflow: hidden; }
+        .hidden { display: none; }
+        .action-buttons { display: flex; gap: 15px; flex-wrap: wrap; margin: 25px 0; }
+        .note { color: #666; font-size: 13px; margin-top: 5px; }
+        .info-card { background: #fef9e7; border-left: 5px solid #f1c40f; padding: 12px 18px; margin: 20px 0; border-radius: 8px; cursor: pointer; user-select: none; }
+        .info-card .title { font-weight: 600; color: #7d6608; display: flex; align-items: center; gap: 10px; }
+        .info-card .expand-icon { font-size: 18px; transition: transform 0.2s; }
+        .info-card .content { margin-top: 15px; color: #333; font-size: 14px; line-height: 1.6; border-top: 1px dashed #e0c060; padding-top: 12px; }
+        .info-card .content strong { color: #7d6608; }
     </style>
 </head>
 <body>
-<button class="feedback-btn" id="feedbackBtn">💬 反馈与建议</button>
-<div class="feedback-modal" id="feedbackModal">
-    <span class="close-modal" id="closeFeedbackModal">&times;</span>
-    <h4>📢 联系我们</h4>
-    <p>📧 邮箱：<a href="mailto:julia.wu@rainbowwaylog.com">julia.wu@rainbowwaylog.com</a></p>
-    <p>📱 微信：<strong>JuliaWu_2026</strong> (请备注“报价工具”)</p>
-    <p style="font-size:12px; color:#666;">您也可以直接在微信中截图发给联系人。</p>
-</div>
+<div style="max-width: 1200px; margin: 20px auto; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <h1>🏭 仓库报价速填</h1>
+    <p>按三层结构填写您的仓库报价，生成专业报价单。P1固定附加费锁定不可删除。</p>
 
-<!-- 使用条款弹窗 -->
-<div class="terms-modal" id="termsModal">
-    <span class="close-modal" id="closeTermsModal">&times;</span>
-    <h4>📜 使用条款</h4>
-    <p>欢迎使用本工具。</p>
-    <p>本工具是一个信息生成助手，只帮你快速生成报价单的格式，不参与任何实际交易。</p>
-    <p>你在使用生成的报价单前，请务必自行核对所有信息的准确性与合法性。</p>
-    <p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
-    <p>工具内的所有示例数据（如公司名、货物品名等）都是匿名占位符，请记得替换为你的实际信息。</p>
-</div>
-
-<!-- 导入仓库报价弹窗 -->
-<div class="import-modal" id="importModal">
-    <span class="close-modal" id="closeImportModal">&times;</span>
-    <h4>📦 导入仓库报价</h4>
-    <p style="font-size:13px; color:#666;">粘贴仓库工具生成的「分享链接」，自动填充到段1费用表。</p>
-    <input type="text" id="importUrlInput" placeholder="https://starjade2026.github.io/quote-tool/warehouse-tool/?data=..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin:10px 0;">
-    <div style="display:flex; gap:10px; justify-content:flex-end;">
-        <button onclick="importFromWarehouse()" style="background:#0071e3; color:white; border:none; padding:8px 20px; border-radius:20px; cursor:pointer;">导入</button>
-        <button onclick="closeImportModal()" style="background:#e2e8f0; border:none; padding:8px 20px; border-radius:20px; cursor:pointer;">取消</button>
-    </div>
-    <p id="importMsg" style="font-size:12px; margin-top:10px;"></p>
-</div>
-
-<div class="app-container">
-    <div class="form-panel">
-        <h2>📝 输入成本数据</h2>
-        
-        <div class="help-panel" id="helpPanel">
-            <div class="help-header">
-                <span>📘 使用说明 & 规则解释（点击展开/收起）</span>
-                <span>▼</span>
-            </div>
-            <div class="help-content" id="helpContent">
-                <p><strong>📌 快速开始</strong></p>
-                <ul>
-                    <li>1. 填写公司信息、客户信息、贸易条款。</li>
-                    <li>2. 填写三段地理描述（段1起点、段2路线、段3终点）。</li>
-                    <li>3. 在各段内添加费用项（支持自定义名称、价格、币种）。</li>
-                    <li>4. 右侧报价单实时更新，点击「打印/保存PDF」导出。</li>
-                    <li>5. 所有数据自动保存在本机浏览器，刷新不丢失。</li>
-                </ul>
-                <div class="rule-box">
-                    <p><strong>💰 三层费用框架</strong><br>
-                    主体价格(P0)：核心运费（海运费、拖车费）<br>
-                    固定附加费(P1)：行业通行费（THC、文件费、燃油附加费）<br>
-                    增值附加费(P2)：差异化服务费（预提箱、待时费）<br>
-                    总价 = Σ(P0) + Σ(P1) + Σ(P2)（外币按汇率折算）</p>
-                </div>
-                <p><strong>📍 三段地理描述</strong><br>
-                段1：起运地服务的地点（门点/港口）<br>
-                段2：干线运输的起运港→目的港<br>
-                段3：目的地服务的地点（门点/港口）<br>
-                贸易条款选择后，责任划分会根据您填写的地址自动生成。</p>
-            </div>
+    <!-- 可折叠说明卡片 -->
+    <div class="info-card" onclick="toggleInfoCard(this)">
+        <div class="title">
+            <span>💡 第一次使用？点击了解为什么要分三层报价</span>
+            <span class="expand-icon">▶</span>
         </div>
-
-        <div class="company-section">
-            <div class="form-group"><label>公司名称</label><input type="text" id="companyName" value="XX 国际货运代理有限公司"></div>
-            <div class="form-group"><label>公司英文名</label><input type="text" id="companyNameEn" value="XX International Logistics Co.,Ltd."></div>
-            <div class="form-group"><label>公司地址</label><input type="text" id="companyAddr" value="[您的公司地址]"></div>
-            <div class="form-group"><label>联系电话</label><input type="text" id="companyTel" value="[您的电话]"></div>
-            <div class="form-group"><label>联系邮箱</label><input type="text" id="companyEmail" value="[您的邮箱]"></div>
-            <div class="form-group"><label>签名人</label><input type="text" id="signatureName" value="[您的姓名]"></div>
-            <div class="form-group"><label>职位</label><input type="text" id="signatureTitle" value="[您的职位]"></div>
-        </div>
-
-        <div class="form-group"><label>客户公司</label><input type="text" id="customerName" value="XX 供应链有限公司"></div>
-        <div class="form-group"><label>联系人</label><input type="text" id="contactName" value="张经理"></div>
-        <div class="form-group"><label>项目描述</label><input type="text" id="regarding" value="Your exports to [Destination]"></div>
-        <div class="form-group"><label>品名</label><input type="text" id="commodity" value="FAK 货物 / HS:0000000000"></div>
-        
-        <div class="form-group"><label>贸易条款 (Incoterms)</label>
-            <select id="incotermSelect">
-                <option value="EXW">EXW</option>
-                <option value="FCA">FCA</option>
-                <option value="FOB">FOB</option>
-                <option value="CFR">CFR</option>
-                <option value="CIF">CIF</option>
-                <option value="CPT">CPT</option>
-                <option value="DAP">DAP</option>
-                <option value="DDP">DDP</option>
-            </select>
-            <input type="text" id="incotermPlace" placeholder="地点 (如 Shanghai)" value="Mombasa" style="margin-top:5px;">
-        </div>
-
-        <div class="form-group"><label>📍 段1 地点（起运地服务起点）</label><input type="text" id="segment1Place" value="上海外高桥港" placeholder="例：上海外高桥港 / 浙江省宁波市XX工厂"></div>
-        <div class="form-group"><label>✈️ 段2 路线（起运港 → 目的港）</label><input type="text" id="segment2Route" value="上海港 → 蒙巴萨港" placeholder="例：上海港 → 蒙巴萨港"></div>
-        <div class="form-group"><label>📍 段3 地点（目的地服务终点）</label><input type="text" id="segment3Place" value="南苏丹朱巴仓库" placeholder="例：南苏丹朱巴仓库 / 芝加哥门点"></div>
-
-        <div class="form-group"><label>汇率 (USD/CNY)</label><input type="number" id="exchangeRate" value="7.5" step="0.01"></div>
-
-        <div class="segment-card">
-            <div class="segment-title">
-                段1：起运地服务
-                <button class="import-btn" onclick="openImportModal()">📦 导入仓库报价</button>
-            </div>
-            <div id="segment1-fees"></div>
-            <button class="add-btn" onclick="addFee('segment1', 'P0')">+ 添加主体价格</button>
-            <button class="add-btn" onclick="addFee('segment1', 'P1')">+ 添加固定附加费</button>
-            <button class="add-btn" onclick="addFee('segment1', 'P2')">+ 添加增值附加费</button>
-        </div>
-        <div class="segment-card"><div class="segment-title">段2：干线段</div><div id="segment2-fees"></div>
-            <button class="add-btn" onclick="addFee('segment2', 'P0')">+ 添加主体价格</button>
-            <button class="add-btn" onclick="addFee('segment2', 'P1')">+ 添加固定附加费</button>
-            <button class="add-btn" onclick="addFee('segment2', 'P2')">+ 添加增值附加费</button>
-        </div>
-        <div class="segment-card"><div class="segment-title">段3：目的地服务</div><div id="segment3-fees"></div>
-            <button class="add-btn" onclick="addFee('segment3', 'P0')">+ 添加主体价格</button>
-            <button class="add-btn" onclick="addFee('segment3', 'P1')">+ 添加固定附加费</button>
-            <button class="add-btn" onclick="addFee('segment3', 'P2')">+ 添加增值附加费</button>
+        <div class="content hidden">
+            <p><strong>1. 让您的报价更专业、更有说服力</strong><br>
+            传统“一口价”容易被客户砍价，因为对方看不出钱花在哪。拆成三层后：<br>
+            • <strong>P0 基础工钱</strong>：您该挣的核心服务费（如内装、仓储）。<br>
+            • <strong>P1 固定成本</strong>：码头、系统强制收的费用（实报实销，您不赚钱）。<br>
+            • <strong>P2 特色服务</strong>：您能提供的额外服务（如夜间装车、加固包装），单独标价显价值。</p>
+            <p><strong>2. 帮您守住利润</strong><br>
+            当客户要求降价时，您可以明确告知：“P1是码头收的没法动，P2您不需要我可以去掉，但P0工钱真的降不了。”——砍价不伤筋骨。</p>
+            <p><strong>3. 满足终端货主（甲方）的透明要求</strong><br>
+            现在越来越多的收货人/货主要求物流费用明细可追溯。您用这个格式报价，货代能直接复制给甲方，甲方觉得您规范，以后更愿意指定您为合作仓库。</p>
+            <p><strong>4. 3分钟填完，省去手写Excel的麻烦</strong><br>
+            填写后一键生成PDF报价单，还能复制摘要发给货代，比微信打字更高效、更不容易扯皮。</p>
         </div>
     </div>
 
-    <div class="quote-preview">
-        <h2>📄 报价单预览</h2>
-        <div id="quoteContainer" class="quote-container"></div>
-        <button class="print-btn" onclick="window.print()">🖨️ 打印 / 保存PDF</button>
+    <!-- 供应商信息区 -->
+    <div style="background: #f0f7ff; padding: 20px; border-radius: 12px; margin: 25px 0;">
+        <strong style="font-size: 16px;">📋 供应商信息</strong><br><br>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+            <label>名称：<input type="text" id="supplierName" placeholder="如：壮力仓库" style="width: 100%;"></label>
+            <label>联系人：<input type="text" id="contactPerson" placeholder="姓名" style="width: 100%;"></label>
+            <label>电话：<input type="text" id="contactPhone" placeholder="手机号" style="width: 100%;"></label>
+            <label>服务地点：<input type="text" id="serviceLocation" placeholder="如：上海洋山港" style="width: 100%;"></label>
+            <label>报价有效期至：<input type="date" id="validUntil" style="width: 100%;"></label>
+        </div>
     </div>
-</div>
-<div class="footer-version">
-    报价单生成器 v2.0-beta4 | 数据保存在本机，刷新不丢失 | 采集-报价闭环
-    <br>
-    <a id="termsLink" style="cursor: pointer;">📜 使用条款</a>
+
+    <h2>💰 费用明细（三层价格模型）</h2>
+    <p style="color: #666; margin-bottom: 5px;">🔒 表示固定附加费，不可删除；P2增值服务可自定义。</p>
+
+    <div id="feeTablesContainer">加载费用库中...</div>
+
+    <div class="action-buttons">
+        <button onclick="previewPDF()" style="background-color: #0071e3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📄 预览报价单 (PDF)</button>
+        <button onclick="copySummary()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 复制报价摘要</button>
+        <button onclick="generateShareLink()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">🔗 生成分享链接</button>
+    </div>
+    <div class="note">
+        • “复制摘要”将生成格式化文本，可直接粘贴给客户。<br>
+        • “生成分享链接”将当前填写内容编码进链接，发送给货代可一键导入。
+    </div>
+
+    <textarea id="summaryHidden" style="position: absolute; left: -9999px;"></textarea>
 </div>
 
+<script src="../../shared/fee-library.js"></script>
 <script>
-    var feesData = { segment1: [], segment2: [], segment3: [] };
-
-    function getResponsibility(incoterm, place, seg1Place, seg2Route, seg3Place) {
-        var seg1 = seg1Place || "[起运地]";
-        var seg2Parts = seg2Route.split('→');
-        var originPort = seg2Parts[0] ? seg2Parts[0].trim() : "[起运港]";
-        var destPort = seg2Parts[1] ? seg2Parts[1].trim() : "[目的港]";
-        var seg3 = seg3Place || "[目的地]";
-        
-        var map = {
-            'EXW': `卖方在 ${seg1} 工厂交货，买方负责从 ${seg1} 到 ${originPort} 的运输、报关、订舱及后续所有费用（包括海运费从 ${originPort} 到 ${destPort} 及目的港后的一切）。`,
-            'FCA': `卖方负责将货物运至 ${seg1}（指定地点仓前），买方负责仓后运输至 ${originPort}、报关、订舱及后续所有费用（包括海运费从 ${originPort} 到 ${destPort} 及目的港后的一切）。`,
-            'FOB': `卖方负责将货物运至 ${seg1}（起运港）并装上船，买方负责海运费（从 ${originPort} 到 ${destPort}）及目的港后的一切，包括清关和送货至 ${seg3}。`,
-            'CFR': `卖方负责将货物运至 ${seg1} 并支付海运费至 ${destPort}，买方负责目的港卸货、清关及送货至 ${seg3}。`,
-            'CIF': `卖方负责将货物运至 ${seg1}、支付海运费至 ${destPort} 并购买保险，买方负责目的港卸货、清关及送货至 ${seg3}。`,
-            'CPT': `卖方负责将货物运至 ${seg3}（主运费已付，从 ${originPort} 到 ${destPort}），但风险在 ${originPort} 交给第一承运人时转移。买方负责目的港换单及清关，卖方负责内陆送货到 ${seg3}。`,
-            'DAP': `卖方负责将货物运至 ${seg3}（指定地点不含卸货），买方负责卸货及后续。`,
-            'DDP': `卖方负责全部费用及风险，包括关税，直至货物交付至 ${seg3}。`
-        };
-        var text = map[incoterm] || '请根据贸易条款确认责任划分。';
-        if (place) text += ' 条款地点：' + place;
-        return text;
-    }
-
-    function loadFromStorage() {
-        var saved = localStorage.getItem('quoteTool_fees');
-        if (saved) try { 
-            feesData = JSON.parse(saved); 
-            for (var seg in feesData) {
-                feesData[seg].forEach(function(fee) {
-                    if (fee.source === undefined) fee.source = "";
-                });
-            }
-        } catch(e) {}
-        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace','segment1Place','segment2Route','segment3Place'];
-        for (var i=0; i<fields.length; i++) {
-            var val = localStorage.getItem('quoteTool_'+fields[i]);
-            if (val !== null) {
-                var el = document.getElementById(fields[i]);
-                if (el) { if (el.tagName==='SELECT') el.value=val; else el.value=val; }
-            }
-        }
-    }
-    function saveToStorage() {
-        localStorage.setItem('quoteTool_fees', JSON.stringify(feesData));
-        var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace','segment1Place','segment2Route','segment3Place'];
-        for (var i=0; i<fields.length; i++) {
-            var el = document.getElementById(fields[i]);
-            if (el) localStorage.setItem('quoteTool_'+fields[i], el.value);
-        }
-    }
-    function initDefaultData() {
-        if (localStorage.getItem('quoteTool_fees')) return;
-        feesData = {
-            segment1: [
-                { name: "内装费", type: "P0", price: 1100, currency: "CNY", unit: "箱", source: "" },
-                { name: "订舱费", type: "P0", price: 320, currency: "CNY", unit: "箱", source: "" },
-                { name: "码头操作费(THC)", type: "P1", price: 790, currency: "CNY", unit: "箱", source: "" },
-                { name: "报关费", type: "P1", price: 100, currency: "CNY", unit: "票", source: "" },
-                { name: "文件费", type: "P1", price: 500, currency: "CNY", unit: "票", source: "" },
-                { name: "封子费", type: "P1", price: 50, currency: "CNY", unit: "箱", source: "" },
-                { name: "预提箱", type: "P2", price: 250, currency: "CNY", unit: "箱", source: "" }
-            ],
-            segment2: [
-                { name: "海运费", type: "P0", price: 1308, currency: "USD", unit: "箱", source: "" },
-                { name: "燃油附加费(BAF)", type: "P1", price: 300, currency: "USD", unit: "箱", source: "" }
-            ],
-            segment3: [
-                { name: "转关转运包干费", type: "P0", price: 6700, currency: "USD", unit: "票", source: "" },
-                { name: "操作服务费", type: "P2", price: 50, currency: "USD", unit: "票", source: "" }
-            ]
-        };
-    }
-    function renderAllFees() { renderFeeList('segment1'); renderFeeList('segment2'); renderFeeList('segment3'); updateQuote(); }
-    function renderFeeList(segmentId) {
-        var container = document.getElementById(segmentId+'-fees');
-        if (!container) return;
-        var fees = feesData[segmentId];
-        container.innerHTML = '';
-        for (var i=0; i<fees.length; i++) {
-            var fee = fees[i];
-            var row = document.createElement('div');
-            row.className = 'fee-row';
-            row.innerHTML = '<input type="text" placeholder="费用名称" value="'+escapeHtml(fee.name)+'" onchange="updateFee(\''+segmentId+'\','+i+',\'name\',this.value)">'+
-                '<select onchange="updateFee(\''+segmentId+'\','+i+',\'type\',this.value)">'+
-                '<option value="P0"'+(fee.type==='P0'?' selected':'')+'>主体(P0)</option>'+
-                '<option value="P1"'+(fee.type==='P1'?' selected':'')+'>固定附加(P1)</option>'+
-                '<option value="P2"'+(fee.type==='P2'?' selected':'')+'>增值附加(P2)</option>'+
-                '</select>'+
-                '<input type="number" step="0.01" class="price" placeholder="价格" value="'+fee.price+'" onchange="updateFee(\''+segmentId+'\','+i+',\'price\',parseFloat(this.value))">'+
-                '<select onchange="updateFee(\''+segmentId+'\','+i+',\'currency\',this.value)">'+
-                '<option value="CNY"'+(fee.currency==='CNY'?' selected':'')+'>CNY</option>'+
-                '<option value="USD"'+(fee.currency==='USD'?' selected':'')+'>USD</option>'+
-                '</select>'+
-                '<input type="text" placeholder="单位" value="'+(fee.unit||'')+'" style="width:70px" onchange="updateFee(\''+segmentId+'\','+i+',\'unit\',this.value)">'+
-                '<button onclick="removeFee(\''+segmentId+'\','+i+')">删</button>';
-            container.appendChild(row);
-        }
-    }
-    function updateFee(segment, idx, field, value) { feesData[segment][idx][field]=value; saveToStorage(); updateQuote(); }
-    function removeFee(segment, idx) { feesData[segment].splice(idx,1); saveToStorage(); renderFeeList(segment); updateQuote(); }
-    function addFee(segment, type) { 
-        feesData[segment].push({name:"新费用", type:type, price:0, currency:"CNY", unit:"箱", source:""}); 
-        saveToStorage(); 
-        renderFeeList(segment); 
-        updateQuote(); 
-    }
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-    
-    function updateQuote() {
-        var companyName = document.getElementById('companyName').value;
-        var companyNameEn = document.getElementById('companyNameEn').value;
-        var companyAddr = document.getElementById('companyAddr').value;
-        var companyTel = document.getElementById('companyTel').value;
-        var companyEmail = document.getElementById('companyEmail').value;
-        var signatureName = document.getElementById('signatureName').value;
-        var signatureTitle = document.getElementById('signatureTitle').value;
-        var customer = document.getElementById('customerName').value;
-        var contact = document.getElementById('contactName').value;
-        var regarding = document.getElementById('regarding').value;
-        var commodity = document.getElementById('commodity').value;
-        var incoterm = document.getElementById('incotermSelect').value;
-        var incotermPlace = document.getElementById('incotermPlace').value;
-        var seg1Place = document.getElementById('segment1Place').value;
-        var seg2Route = document.getElementById('segment2Route').value;
-        var seg3Place = document.getElementById('segment3Place').value;
-        var exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 7.5;
-        var today = new Date().toISOString().slice(0,10);
-        var validUntil = new Date(); validUntil.setDate(validUntil.getDate()+30);
-        var validUntilStr = validUntil.toISOString().slice(0,10);
-        
-        function calcSegmentTotal(fees, rate) { var total=0; for(var i=0;i<fees.length;i++) { var p=fees[i].price||0; if(fees[i].currency==='USD') p*=rate; total+=p; } return total; }
-        var rate = exchangeRate;
-        var seg1Total = calcSegmentTotal(feesData.segment1, rate);
-        var seg2Total = calcSegmentTotal(feesData.segment2, rate);
-        var seg3Total = calcSegmentTotal(feesData.segment3, rate);
-        var grandTotal = seg1Total+seg2Total+seg3Total;
-        
-        function renderFeeRows(fees, rate) {
-            if(fees.length===0) return '<tr><td colspan="5">无费用项</td></tr>';
-            var rows='';
-            for(var i=0;i<fees.length;i++) {
-                var f=fees[i];
-                var price=f.price||0;
-                var originalPrice=price.toFixed(2)+' '+f.currency;
-                var priceCNY=(f.currency==='USD'?price*rate:price);
-                rows+='<tr><td style="border:1px solid #cbd5e1; padding:8px;">'+escapeHtml(f.name)+'</td>'+
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+(f.type==='P0'?'主体价格':(f.type==='P1'?'固定附加费':'增值附加费'))+'</td>'+
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+originalPrice+'</td>'+
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">1</td>'+
-                    '<td style="border:1px solid #cbd5e1; padding:8px;">'+priceCNY.toFixed(2)+' CNY</td></tr>';
-            }
-            return rows;
-        }
-        
-        var responsibility = getResponsibility(incoterm, incotermPlace, seg1Place, seg2Route, seg3Place);
-        var incotermDisplay = incoterm + (incotermPlace ? ' ' + incotermPlace : '');
-        
-        var seg1Title = seg1Place ? `段1：起运地服务 (${escapeHtml(seg1Place)})` : '段1：起运地服务';
-        var seg2Title = seg2Route ? `段2：干线段 (${escapeHtml(seg2Route)})` : '段2：干线段';
-        var seg3Title = seg3Place ? `段3：目的地服务 (${escapeHtml(seg3Place)})` : '段3：目的地服务';
-        
-        var html = '<div style="max-width:100%; margin:0 auto;">'+
-            '<div style="text-align:center; border-bottom:2px solid #1e3a5f; padding-bottom:12px; margin-bottom:20px;">'+
-            '<h2 style="margin:0; color:#1e3a5f;">'+escapeHtml(companyName)+'</h2>'+
-            '<p style="margin:5px 0 0; font-size:12px;">'+escapeHtml(companyNameEn)+'</p>'+
-            '<p style="margin:5px 0 0; font-size:12px;">'+escapeHtml(companyAddr)+'<br>Tel: '+escapeHtml(companyTel)+' &nbsp; Email: '+escapeHtml(companyEmail)+'</p>'+
-            '</div>'+
-            '<div style="display:flex; justify-content:space-between; margin-bottom:20px; font-size:13px; border:1px solid #e2e8f0; padding:12px; background:#f8fafc;">'+
-            '<div><strong>Company</strong> '+escapeHtml(customer)+'<br><strong>Contact</strong> '+escapeHtml(contact)+'<br><strong>Regarding</strong> '+escapeHtml(regarding)+'</div>'+
-            '<div><strong>Date</strong> '+today+'<br><strong>By</strong> '+escapeHtml(signatureName)+'<br><strong>Commodity</strong> '+escapeHtml(commodity)+'</div>'+
-            '</div>'+
-            '<div style="background:#eef2ff; padding:8px 12px; margin-bottom:20px; border-left:5px solid #1e3a5f; font-size:13px;">'+
-            '<strong>贸易条款 (Incoterms):</strong> '+escapeHtml(incotermDisplay)+'<br>'+
-            '<strong>责任划分:</strong> '+responsibility+'</div>'+
-            
-            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">'+seg1Title+'</caption>'+
-            '<thead><tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:8px;">费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment1, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段1小计</td><td>'+seg1Total.toFixed(2)+' CNY</td></tr></tbody>'+
-            '</table>'+
-            
-            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">'+seg2Title+'</caption>'+
-            '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment2, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段2小计</td><td>'+seg2Total.toFixed(2)+' CNY</td></tr></tbody>'+
-            '</table>'+
-            
-            '<table style="width:100%; border-collapse:collapse; margin-bottom:25px;">'+
-            '<caption style="text-align:left; font-weight:bold; font-size:16px; margin-bottom:8px; background:#f1f5f9; padding:6px 10px;">'+seg3Title+'</caption>'+
-            '<thead><tr style="background:#e2e8f0;"><th>费用项</th><th>类型</th><th>单价</th><th>数量</th><th>小计(CNY)</th></tr></thead>'+
-            '<tbody>'+renderFeeRows(feesData.segment3, rate)+'<tr style="background:#e6f7ff; font-weight:bold;"><td colspan="4" style="text-align:right;">段3小计</td><td>'+seg3Total.toFixed(2)+' CNY</td></tr></tbody>'+
-            '</table>'+
-            
-            '<div style="margin:20px 0; text-align:right; font-size:18px;"><strong>总价 (CNY):</strong> <span style="color:#c00; font-size:24px;">'+grandTotal.toFixed(2)+' CNY</span><br><span style="font-size:13px;">汇率: USD 1.00 = CNY '+rate.toFixed(2)+'</span></div>'+
-            
-            '<div style="margin-top:20px; padding:12px; background:#fef9e6; border-left:4px solid #e67e22; font-size:13px;"><strong>备注说明：</strong><br>• 以上费用仅限于普通安全，不限制运输货物。<br>• 如产生海关查验、商检、进口关税等其他一切杂费，将实报实销。<br>• 由于国际物流运输途中存在各种不可抗力因素，建议办理保险以避免损失。<br>• 报价有效期至 '+validUntilStr+'。</div>'+
-            
-            '<div style="margin-top:30px; text-align:right; border-top:1px solid #ddd; padding-top:20px; font-size:14px;">With kind regards,<br><strong>'+escapeHtml(signatureName)+'</strong><br>'+escapeHtml(signatureTitle)+'</div>'+
-            '<div style="margin-top:20px; text-align:center; font-size:11px; color:#718096;">'+escapeHtml(companyName)+'<br>Phone: '+escapeHtml(companyTel)+' &nbsp; Email: '+escapeHtml(companyEmail)+'</div>'+
-            '</div>';
-        document.getElementById('quoteContainer').innerHTML = html;
-    }
-    
-    function bindInputEvents() {
-        var ids = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace','segment1Place','segment2Route','segment3Place'];
-        for(var i=0;i<ids.length;i++) {
-            var el=document.getElementById(ids[i]);
-            if(el) el.addEventListener('input',function(){ saveToStorage(); updateQuote(); });
-        }
-    }
-    
-    document.getElementById('helpPanel').addEventListener('click', function() {
-        var content = document.getElementById('helpContent');
-        var headerSpan = this.querySelector('.help-header span:last-child');
-        if (content.style.display === 'none' || content.style.display === '') {
-            content.style.display = 'block';
-            headerSpan.innerHTML = '▲';
+    // 切换卡片展开/折叠
+    window.toggleInfoCard = function(card) {
+        const content = card.querySelector('.content');
+        const icon = card.querySelector('.expand-icon');
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            icon.textContent = '▼';
         } else {
-            content.style.display = 'none';
-            headerSpan.innerHTML = '▼';
+            content.classList.add('hidden');
+            icon.textContent = '▶';
         }
-    });
-    
-    var feedbackBtn = document.getElementById('feedbackBtn');
-    var feedbackModal = document.getElementById('feedbackModal');
-    var closeFeedback = document.getElementById('closeFeedbackModal');
-    feedbackBtn.onclick = function() { feedbackModal.style.display = 'block'; };
-    closeFeedback.onclick = function() { feedbackModal.style.display = 'none'; };
-    
-    var termsLink = document.getElementById('termsLink');
-    var termsModal = document.getElementById('termsModal');
-    var closeTerms = document.getElementById('closeTermsModal');
-    termsLink.onclick = function() { termsModal.style.display = 'block'; };
-    closeTerms.onclick = function() { termsModal.style.display = 'none'; };
-    
-    var importModal = document.getElementById('importModal');
-    var closeImport = document.getElementById('closeImportModal');
-    window.openImportModal = function() { 
-        document.getElementById('importUrlInput').value = '';
-        document.getElementById('importMsg').innerHTML = '';
-        importModal.style.display = 'block'; 
-    };
-    window.closeImportModal = function() { importModal.style.display = 'none'; };
-    closeImport.onclick = closeImportModal;
-    
-    window.onclick = function(e) {
-        if(e.target == feedbackModal) feedbackModal.style.display = 'none';
-        if(e.target == termsModal) termsModal.style.display = 'none';
-        if(e.target == importModal) importModal.style.display = 'none';
     };
 
-    window.importFromWarehouse = function() {
-        var urlInput = document.getElementById('importUrlInput').value.trim();
-        var msgEl = document.getElementById('importMsg');
-        if (!urlInput) {
-            msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 请输入分享链接</span>';
-            return;
+    (function(){
+        let currentFees = { p0: [], p1: [], p2: [] };
+        let p2Collapsed = true;
+
+        function initFeeData() {
+            const lib = getFeeLibrary('warehouse');
+            currentFees.p0 = lib.p0.map(item => ({ ...item, amount: item.default || 0 }));
+            currentFees.p1 = lib.p1.map(item => ({ ...item, amount: item.default || 0 }));
+            currentFees.p2 = lib.p2.map(item => ({ ...item, amount: item.default || 0, checked: false }));
         }
-        try {
-            var url = new URL(urlInput);
-            var dataParam = url.searchParams.get('data');
-            if (!dataParam) {
-                msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 链接无效：缺少 data 参数</span>';
-                return;
-            }
-            
-            // 解码 Base64
-            var binary = atob(dataParam);
-            var bytes = new Uint8Array(binary.length);
-            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            
-            var jsonStr;
-            try {
-                // 尝试 gunzip 解压（新版压缩格式）
-                jsonStr = pako.ungzip(bytes, { to: 'string' });
-            } catch (e) {
-                // 如果解压失败，可能是旧版未压缩格式
-                jsonStr = decodeURIComponent(binary);
-            }
-            
-            var payload = JSON.parse(jsonStr);
-            if (!payload.fees) {
-                msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 数据格式错误</span>';
-                return;
-            }
-            
-            feesData.segment1 = [];
-            
-            var codeMap = {
-                'WH_P0_STUFFING_20': '内装费(20GP)',
-                'WH_P0_STUFFING_40': '内装费(40GP)',
-                'WH_P0_STUFFING_LCL': '内装费(拼箱)',
-                'WH_P0_STORAGE': '仓储费',
-                'WH_P0_UNSTUFFING_20': '拆箱费(20GP)',
-                'WH_P0_UNSTUFFING_40': '拆箱费(40GP)',
-                'WH_P0_TALLY': '理货费',
-                'WH_P1_SECURITY': '港口安保费',
-                'WH_P1_VGM': 'VGM称重费',
-                'WH_P1_DOC': '系统录入费',
-                'WH_P1_GATE': '进门费',
-                'WH_P1_EDI': 'EDI传输费',
-                'WH_P1_SEAL': '铅封费',
-                'WH_P2_NIGHT': '夜间作业费',
-                'WH_P2_WAITING': '待时费',
-                'WH_P2_PACKING': '加固包装费',
-                'WH_P2_LABELING': '贴唛/换唛费',
-                'WH_P2_FUMIGATION': '熏蒸服务费',
-                'WH_P2_FORKLIFT': '叉车租赁费',
-                'WH_P2_SUPERVISION': '监装服务费',
-                'WH_P2_PHOTO': '拍照/视频服务'
+
+        function renderTables() {
+            const container = document.getElementById('feeTablesContainer');
+            let html = '';
+            html += renderTableSection('P0 主体服务费（基础服务）', 'p0', currentFees.p0, false);
+            html += renderTableSection('P1 固定附加费（行业必收）', 'p1', currentFees.p1, true);
+            html += renderP2Section();
+            container.innerHTML = html;
+            bindTableEvents();
+        }
+
+        function renderTableSection(title, type, items, locked) {
+            let html = `<div class="section-title">${title}</div>`;
+            html += `<table class="fee-table" id="table-${type}"><thead><tr><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>`;
+            items.forEach((item, index) => {
+                html += `<tr data-type="${type}" data-index="${index}" data-code="${item.code}">`;
+                html += `<td>${item.name} ${locked ? '<span class="lock-icon">🔒</span>' : ''}</td>`;
+                html += `<td>${item.unit}</td>`;
+                html += `<td><input type="number" step="0.01" min="0" value="${item.amount}" data-field="amount"></td>`;
+                html += `<td>${locked ? '<span style="color:#ccc;">—</span>' : '<button class="delete-btn" data-action="delete">🗑️</button>'}</td>`;
+                html += `</tr>`;
+            });
+            html += `</tbody></table>`;
+            if (!locked) html += `<button class="add-btn" data-add-type="${type}">+ 添加其他服务</button>`;
+            return html;
+        }
+
+        function renderP2Section() {
+            let html = `<div class="section-title">P2 增值附加费（差异化服务） <span class="toggle-btn" onclick="toggleP2()">${p2Collapsed ? '▶ 展开' : '▼ 折叠'}</span></div>`;
+            html += `<div id="p2Content" class="collapsible-content ${p2Collapsed ? 'hidden' : ''}">`;
+            html += `<table class="fee-table" id="table-p2"><thead><tr><th style="width:40px;">选用</th><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>`;
+            currentFees.p2.forEach((item, index) => {
+                html += `<tr data-type="p2" data-index="${index}" data-code="${item.code}">`;
+                html += `<td style="text-align:center;"><input type="checkbox" data-field="checked" ${item.checked ? 'checked' : ''}></td>`;
+                html += `<td>${item.name}</td><td>${item.unit}</td>`;
+                html += `<td><input type="number" step="0.01" min="0" value="${item.amount}" data-field="amount"></td>`;
+                html += `<td><button class="delete-btn" data-action="delete">🗑️</button></td></tr>`;
+            });
+            html += `</tbody></table><button class="add-btn" data-add-type="p2">+ 自定义增值服务</button></div>`;
+            return html;
+        }
+
+        window.toggleP2 = function() { p2Collapsed = !p2Collapsed; renderTables(); };
+
+        function bindTableEvents() {
+            document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    const type = row.dataset.type;
+                    const index = row.dataset.index;
+                    if (type && index !== undefined) { currentFees[type].splice(index, 1); renderTables(); }
+                });
+            });
+            document.querySelectorAll('input[data-field="amount"]').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const row = e.target.closest('tr');
+                    const type = row.dataset.type;
+                    const index = row.dataset.index;
+                    if (type && index !== undefined) { currentFees[type][index].amount = parseFloat(e.target.value) || 0; }
+                });
+            });
+            document.querySelectorAll('input[data-field="checked"]').forEach(chk => {
+                chk.addEventListener('change', (e) => {
+                    const row = e.target.closest('tr');
+                    const type = row.dataset.type;
+                    const index = row.dataset.index;
+                    if (type && index !== undefined) { currentFees[type][index].checked = e.target.checked; }
+                });
+            });
+            document.querySelectorAll('[data-add-type]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const type = btn.dataset.addType;
+                    const newName = prompt('请输入新增费用名称：'); if (!newName) return;
+                    const newUnit = prompt('请输入计价单位（如：元/票）：'); if (!newUnit) return;
+                    const newItem = { code: 'CUSTOM_' + Date.now() + '_' + Math.random().toString(36), name: newName, unit: newUnit, amount: 0, deletable: true };
+                    if (type === 'p2') newItem.checked = true;
+                    currentFees[type].push(newItem); renderTables();
+                });
+            });
+        }
+
+        function collectFormData() {
+            return {
+                supplier: {
+                    name: document.getElementById('supplierName').value || '未填写',
+                    contact: document.getElementById('contactPerson').value || '',
+                    phone: document.getElementById('contactPhone').value || '',
+                    location: document.getElementById('serviceLocation').value || '',
+                    validUntil: document.getElementById('validUntil').value || ''
+                },
+                p0: currentFees.p0.filter(f => f.amount > 0 || f.code.startsWith('WH_P0')),
+                p1: currentFees.p1,
+                p2: currentFees.p2.filter(f => f.checked)
             };
-            
-            (payload.fees.p0 || []).forEach(function(f) {
-                var name = codeMap[f.code] || f.name;
-                feesData.segment1.push({
-                    name: name, type: 'P0', price: f.amount || 0, currency: 'CNY',
-                    unit: f.unit || '箱', source: '供应商报价'
-                });
-            });
-            (payload.fees.p1 || []).forEach(function(f) {
-                var name = codeMap[f.code] || f.name;
-                feesData.segment1.push({
-                    name: name, type: 'P1', price: f.amount || 0, currency: 'CNY',
-                    unit: f.unit || '箱', source: '供应商报价'
-                });
-            });
-            (payload.fees.p2 || []).forEach(function(f) {
-                var name = codeMap[f.code] || f.name;
-                feesData.segment1.push({
-                    name: name, type: 'P2', price: f.amount || 0, currency: 'CNY',
-                    unit: f.unit || '箱', source: '供应商报价'
-                });
-            });
-            
-            renderFeeList('segment1');
-            updateQuote();
-            saveToStorage();
-            closeImportModal();
-            msgEl.innerHTML = '<span style="color:#38a169;">✅ 导入成功！段1费用已更新。</span>';
-            setTimeout(function(){ msgEl.innerHTML = ''; }, 3000);
-        } catch(e) {
-            msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 解析失败：链接格式错误</span>';
         }
-    };
-    
-    loadFromStorage();
-    initDefaultData();
-    renderAllFees();
-    bindInputEvents();
-    saveToStorage();
-    document.getElementById('helpContent').style.display = 'none';
+
+        window.previewPDF = function() {
+            const data = collectFormData();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let y = 20;
+            doc.setFontSize(16); doc.text('仓库服务报价单', 105, y, { align: 'center' }); y += 12;
+            doc.setFontSize(11);
+            doc.text(`供应商：${data.supplier.name}`, 20, y); y += 6;
+            if (data.supplier.contact) { doc.text(`联系人：${data.supplier.contact}  ${data.supplier.phone}`, 20, y); y += 6; }
+            doc.text(`服务地点：${data.supplier.location}`, 20, y); y += 6;
+            if (data.supplier.validUntil) { doc.text(`有效期至：${data.supplier.validUntil}`, 20, y); y += 6; }
+            y += 8;
+            doc.setFontSize(13); doc.text('P0 主体服务费', 20, y); y += 8;
+            data.p0.forEach(f => { doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y); y += 6; });
+            y += 4;
+            doc.text('P1 固定附加费', 20, y); y += 8;
+            data.p1.forEach(f => { doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y); y += 6; });
+            y += 4;
+            if (data.p2.length > 0) {
+                doc.text('P2 增值附加费', 20, y); y += 8;
+                data.p2.forEach(f => { doc.text(`${f.name}：${f.amount} ${f.unit}`, 25, y); y += 6; });
+            }
+            doc.save('仓库报价单.pdf');
+        };
+
+        window.copySummary = function() {
+            const data = collectFormData();
+            let text = `供应商：${data.supplier.name}`;
+            if (data.supplier.contact) text += `\n联系人：${data.supplier.contact}  ${data.supplier.phone}`;
+            text += `\n服务地点：${data.supplier.location}`;
+            if (data.supplier.validUntil) text += `\n有效期至：${data.supplier.validUntil}`;
+            text += `\n\n【P0 主体服务费】`; data.p0.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; });
+            text += `\n\n【P1 固定附加费】`; data.p1.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; });
+            if (data.p2.length > 0) { text += `\n\n【P2 增值附加费】`; data.p2.forEach(f => { text += `\n  ${f.name}：${f.amount} ${f.unit}`; }); }
+            const hiddenTextarea = document.getElementById('summaryHidden');
+            hiddenTextarea.value = text; hiddenTextarea.select(); document.execCommand('copy');
+            alert('报价摘要已复制到剪贴板！');
+        };
+
+        window.generateShareLink = function() {
+            const data = collectFormData();
+            const payload = { v: '1.1', supplier: data.supplier, fees: { p0: data.p0, p1: data.p1, p2: data.p2 } };
+            const jsonStr = JSON.stringify(payload);
+            // 使用 pako 压缩
+            const compressed = pako.gzip(jsonStr);
+            // 转为 Base64（安全 URL 编码）
+            const base64 = btoa(String.fromCharCode.apply(null, compressed));
+            const url = new URL(window.location.href);
+            url.searchParams.set('data', base64);
+            prompt('🔗 复制以下链接发送给货代，对方可一键导入：', url.toString());
+        };
+
+        function loadFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const dataParam = params.get('data');
+            if (dataParam) {
+                try {
+                    // 尝试 Base64 解码
+                    const binary = atob(dataParam);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    // 尝试 gunzip 解压（新版压缩格式）
+                    let jsonStr;
+                    try {
+                        jsonStr = pako.ungzip(bytes, { to: 'string' });
+                    } catch (e) {
+                        // 如果解压失败，可能是旧版未压缩格式，直接解码 JSON
+                        jsonStr = decodeURIComponent(binary);
+                    }
+                    const payload = JSON.parse(jsonStr);
+                    if (payload.supplier) {
+                        document.getElementById('supplierName').value = payload.supplier.name || '';
+                        document.getElementById('contactPerson').value = payload.supplier.contact || '';
+                        document.getElementById('contactPhone').value = payload.supplier.phone || '';
+                        document.getElementById('serviceLocation').value = payload.supplier.location || '';
+                        document.getElementById('validUntil').value = payload.supplier.validUntil || '';
+                    }
+                    if (payload.fees) {
+                        currentFees.p0 = currentFees.p0.map(def => { const m = payload.fees.p0?.find(f => f.code === def.code); return m ? { ...def, amount: m.amount } : def; });
+                        currentFees.p1 = currentFees.p1.map(def => { const m = payload.fees.p1?.find(f => f.code === def.code); return m ? { ...def, amount: m.amount } : def; });
+                        currentFees.p2 = currentFees.p2.map(def => { const m = payload.fees.p2?.find(f => f.code === def.code); return m ? { ...def, amount: m.amount, checked: m.checked } : def; });
+                    }
+                    renderTables();
+                } catch(e) { console.warn('解析分享链接失败', e); }
+            }
+        }
+
+        initFeeData(); renderTables(); loadFromURL();
+    })();
 </script>
 </body>
 </html>
