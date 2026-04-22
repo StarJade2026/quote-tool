@@ -6,6 +6,29 @@
     <title>报价单生成器 - 物流三段法工具</title>
     <style>
         * { box-sizing: border-box; }
+        <!-- 反馈悬浮按钮 -->
+<div id="feedbackFloatingBtn" class="feedback-floating-btn" onclick="openFeedbackModal()">
+    <span class="feedback-icon">💬</span>
+    <span class="feedback-text">反馈</span>
+</div>
+
+<!-- 反馈弹窗 -->
+<div id="feedbackModal" class="feedback-modal">
+    <div class="feedback-modal-content">
+        <span class="feedback-close" onclick="closeFeedbackModal()">&times;</span>
+        <h3>帮助我们改进</h3>
+        <p>请复制以下模板，填写您的建议后发送给 Julia：</p>
+        <textarea id="feedbackTemplate" readonly rows="6">
+【报价工具反馈】
+1. 您觉得整体使用顺畅吗？
+2. 有哪些功能让您觉得不方便或需要改进？
+3. 您还希望增加什么功能？
+（请在此处填写您的建议）
+        </textarea>
+        <button onclick="copyFeedback()">📋 一键复制</button>
+        <p id="copySuccessMsg" style="display:none; color: green;">✅ 已复制，请粘贴发送</p>
+    </div>
+</div>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             background: #e2e8f0;
@@ -211,6 +234,56 @@
             .app-container { flex-direction: column; }
             .quote-preview { min-width: auto; }
         }
+        .feedback-floating-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 55px;
+    height: 55px;
+    background-color: #0071e3;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.2s;
+    z-index: 999;
+}
+.feedback-floating-btn:hover {
+    width: 80px;
+    border-radius: 30px;
+    background-color: #005bb5;
+}
+.feedback-icon { font-size: 24px; }
+.feedback-text { display: none; font-size: 14px; margin-left: 5px; }
+.feedback-floating-btn:hover .feedback-text { display: inline; }
+.feedback-floating-btn:hover .feedback-icon { display: none; }
+
+.feedback-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+.feedback-modal-content {
+    background: white;
+    margin: 10% auto;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+.feedback-close {
+    position: absolute;
+    right: 15px; top: 10px;
+    font-size: 28px;
+    cursor: pointer;
+}
     </style>
 </head>
 <body>
@@ -547,6 +620,28 @@
     bindInputEvents();
     saveToStorage();
     document.getElementById('helpContent').style.display = 'none';
+    function openFeedbackModal() {
+    document.getElementById('feedbackModal').style.display = 'block';
+}
+function closeFeedbackModal() {
+    document.getElementById('feedbackModal').style.display = 'none';
+}
+function copyFeedback() {
+    const textarea = document.getElementById('feedbackTemplate');
+    textarea.select();
+    navigator.clipboard.writeText(textarea.value).then(() => {
+        document.getElementById('copySuccessMsg').style.display = 'block';
+        setTimeout(() => {
+            document.getElementById('copySuccessMsg').style.display = 'none';
+        }, 2000);
+    });
+}
+window.onclick = function(event) {
+    const modal = document.getElementById('feedbackModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+}
 </script>
 </body>
 </html>
