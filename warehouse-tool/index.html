@@ -62,6 +62,8 @@
         .info-card .expand-icon { font-size: 18px; transition: transform 0.2s; }
         .info-card .content { margin-top: 15px; color: #333; font-size: 14px; line-height: 1.6; border-top: 1px dashed #e0c060; padding-top: 12px; }
         .info-card .content strong { color: #7d6608; }
+        .guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+        .guide-text a { color: #64748b; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -111,6 +113,7 @@
         <button onclick="previewPDF()" style="background-color: #0071e3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📄 预览报价单 (PDF)</button>
         <button onclick="copySummary()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 复制报价摘要</button>
         <button onclick="generateShareLink()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">🔗 生成分享链接</button>
+        <p class="guide-text" style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">💡 分享给货代，对方可在报价工具中一键导入</p>
     </div>
     <div class="note">
         • "复制摘要"将生成格式化文本，可直接粘贴给客户。<br>
