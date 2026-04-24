@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>业务流转单 · 极简原型 v0.5</title>
+    <title>货代业务流转单</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -187,7 +187,7 @@
         <div id="upstreamCards"></div>
         <button class="btn btn-sm" onclick="addUpstreamCard()">+ 添加上游委托方</button>
 
-        <!-- 段1：服务供应商（v0.5 卡片组） -->
+        <!-- 段1：服务供应商（卡片组） -->
         <h3 style="margin-top:20px;">🚚 段1 · 起运地服务</h3>
         <div class="form-group">
             <label>服务供应商（可多名）</label>
@@ -225,7 +225,7 @@
             <textarea id="seg3Note" placeholder="如：到港前2周通知收货人、清关文件需提前确认..."></textarea>
         </div>
 
-        <!-- 费用记录区（v0.5 修订：应付改为自由文本） -->
+        <!-- 费用记录区 -->
         <h3 style="margin-top:24px;">💰 费用记录</h3>
         <p class="guide-text">💡 应收可简化为一句概括（如"见报价单附件"）；应付按段自由记录，无固定格式。</p>
         
@@ -567,7 +567,7 @@ BAF 300 USD</textarea>
             html += renderSegmentPreview('段3 · 目的地服务', '', tasks.seg3, seg3Note);
         }
 
-        // ---- 费用表格（v0.5 修订版：应付自由文本） ----
+        // 费用表格
         const rDesc = document.getElementById('receivableDesc')?.value || '';
         const rAmt = document.getElementById('receivableAmount')?.value || '';
         const seg1Pay = document.getElementById('seg1Pay')?.value?.trim() || '';
@@ -576,13 +576,11 @@ BAF 300 USD</textarea>
 
         html += `<div class="preview-section"><h4>💰 费用核心摘要</h4>`;
 
-        // 应收行
         if (rDesc || rAmt) {
             html += `<p style="font-weight:600; margin:8px 0 4px;">📤 应收客户${customer ? ' (' + customer + ')' : ''}</p>`;
             html += `<table class="fee-summary-table"><tr><th>费用说明</th><th>金额</th></tr><tr><td>${rDesc || '-'}</td><td>${rAmt || '待确认'}</td></tr></table>`;
         }
 
-        // 应付明细
         if (seg1Pay || seg2Pay || seg3Pay) {
             html += `<p style="font-weight:600; margin:12px 0 4px;">📥 应付明细</p>`;
             html += `<table class="fee-summary-table"><tr><th>段</th><th>费用项</th><th>金额</th></tr>`;
@@ -592,7 +590,6 @@ BAF 300 USD</textarea>
                 const lines = p.text.split('\n').filter(l => l.trim());
                 if (lines.length === 0) return;
                 lines.forEach((line, i) => {
-                    // 尝试拆分费用项和金额（以最后一个空格为界）
                     const trimmed = line.trim();
                     const lastSpace = trimmed.lastIndexOf(' ');
                     let item = trimmed, amt = '';
