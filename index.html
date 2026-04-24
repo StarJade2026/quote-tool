@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>报价单生成器 - 物流三段法工具</title>
+    <!-- pako 压缩库 -->
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -57,21 +59,34 @@
             z-index: 1000;
             font-size: 14px;
         }
-        .feedback-modal {
+        .feedback-modal, .terms-modal, .import-modal {
             position: fixed;
             bottom: 100px;
             right: 30px;
             background: white;
             border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            width: 280px;
+            width: 320px;
             padding: 16px;
             display: none;
             z-index: 1001;
             border: 1px solid #e2e8f0;
         }
-        .feedback-modal h4 { margin: 0 0 8px 0; }
-        .feedback-modal p { font-size: 13px; margin: 8px 0; }
+        .terms-modal {
+            width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .import-modal {
+            width: 450px;
+            bottom: auto;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            right: auto;
+        }
+        .feedback-modal h4, .terms-modal h4, .import-modal h4 { margin: 0 0 8px 0; }
+        .feedback-modal p, .terms-modal p { font-size: 13px; margin: 8px 0; line-height: 1.6; }
         .feedback-modal a { color: #1e3a5f; text-decoration: none; word-break: break-all; }
         .close-modal { float: right; cursor: pointer; font-size: 18px; font-weight: bold; }
         .app-container {
@@ -144,6 +159,16 @@
             margin-top: 5px;
             margin-right: 8px;
         }
+        .import-btn {
+            background: #38a169;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+        }
         .segment-card {
             background: #f8fafc;
             padding: 12px;
@@ -156,6 +181,9 @@
             margin-bottom: 12px;
             color: #1e3a5f;
             font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .quote-preview {
             flex: 1.2;
@@ -202,8 +230,13 @@
             color: #94a3b8;
             margin-top: 20px;
         }
+        .footer-version a {
+            color: #64748b;
+            text-decoration: underline;
+            cursor: pointer;
+        }
         @media print {
-            .form-panel, .print-btn, .quote-preview h2, .help-panel, .feedback-btn, .feedback-modal, .footer-version { display: none; }
+            .form-panel, .print-btn, .quote-preview h2, .help-panel, .feedback-btn, .feedback-modal, .terms-modal, .import-modal, .footer-version { display: none; }
             .quote-preview { box-shadow: none; padding: 0; margin: 0; width: 100%; }
             .quote-container { border: none; }
         }
@@ -216,11 +249,35 @@
 <body>
 <button class="feedback-btn" id="feedbackBtn">💬 反馈与建议</button>
 <div class="feedback-modal" id="feedbackModal">
-    <span class="close-modal" id="closeModal">&times;</span>
+    <span class="close-modal" id="closeFeedbackModal">&times;</span>
     <h4>📢 联系我们</h4>
     <p>📧 邮箱：<a href="mailto:julia.wu@rainbowwaylog.com">julia.wu@rainbowwaylog.com</a></p>
-    <p>📱 微信：<strong>JuliaWu_2026</strong> (请备注“报价工具”)</p>
+    <p>📱 微信：<strong>JuliaWu_2026</strong> (请备注"报价工具")</p>
     <p style="font-size:12px; color:#666;">您也可以直接在微信中截图发给联系人。</p>
+</div>
+
+<!-- 使用条款弹窗 -->
+<div class="terms-modal" id="termsModal">
+    <span class="close-modal" id="closeTermsModal">&times;</span>
+    <h4>📜 使用条款</h4>
+    <p>欢迎使用本工具。</p>
+    <p>本工具是一个信息生成助手，只帮你快速生成报价单的格式，不参与任何实际交易。</p>
+    <p>你在使用生成的报价单前，请务必自行核对所有信息的准确性与合法性。</p>
+    <p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
+    <p>工具内的所有示例数据（如公司名、货物品名等）都是匿名占位符，请记得替换为你的实际信息。</p>
+</div>
+
+<!-- 导入仓库报价弹窗 -->
+<div class="import-modal" id="importModal">
+    <span class="close-modal" id="closeImportModal">&times;</span>
+    <h4>📦 导入仓库报价</h4>
+    <p style="font-size:13px; color:#666;">粘贴仓库工具生成的「分享链接」，自动填充到段1费用表。</p>
+    <input type="text" id="importUrlInput" placeholder="https://starjade2026.github.io/quote-tool/warehouse-tool/?data=..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin:10px 0;">
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button onclick="importFromWarehouse()" style="background:#0071e3; color:white; border:none; padding:8px 20px; border-radius:20px; cursor:pointer;">导入</button>
+        <button onclick="closeImportModal()" style="background:#e2e8f0; border:none; padding:8px 20px; border-radius:20px; cursor:pointer;">取消</button>
+    </div>
+    <p id="importMsg" style="font-size:12px; margin-top:10px;"></p>
 </div>
 
 <div class="app-container">
@@ -257,19 +314,19 @@
         </div>
 
         <div class="company-section">
-            <div class="form-group"><label>公司名称</label><input type="text" id="companyName" value="上海永顺穗国际货运代理有限公司"></div>
-            <div class="form-group"><label>公司英文名</label><input type="text" id="companyNameEn" value="Shanghai Rainbowway International Logistics Co.,Ltd."></div>
-            <div class="form-group"><label>公司地址</label><input type="text" id="companyAddr" value="上海市虹口区天宝路466弄9号建邦大厦3楼336室"></div>
-            <div class="form-group"><label>联系电话</label><input type="text" id="companyTel" value="192-0215-1717"></div>
-            <div class="form-group"><label>联系邮箱</label><input type="text" id="companyEmail" value="julia.wu@rainbowwaylog.com"></div>
-            <div class="form-group"><label>签名人</label><input type="text" id="signatureName" value="Julia Wu"></div>
-            <div class="form-group"><label>职位</label><input type="text" id="signatureTitle" value="General Manager"></div>
+            <div class="form-group"><label>公司名称</label><input type="text" id="companyName" value="XX 国际货运代理有限公司"></div>
+            <div class="form-group"><label>公司英文名</label><input type="text" id="companyNameEn" value="XX International Logistics Co.,Ltd."></div>
+            <div class="form-group"><label>公司地址</label><input type="text" id="companyAddr" value="[您的公司地址]"></div>
+            <div class="form-group"><label>联系电话</label><input type="text" id="companyTel" value="[您的电话]"></div>
+            <div class="form-group"><label>联系邮箱</label><input type="text" id="companyEmail" value="[您的邮箱]"></div>
+            <div class="form-group"><label>签名人</label><input type="text" id="signatureName" value="[您的姓名]"></div>
+            <div class="form-group"><label>职位</label><input type="text" id="signatureTitle" value="[您的职位]"></div>
         </div>
 
-        <div class="form-group"><label>客户公司</label><input type="text" id="customerName" value="武汉爱途"></div>
-        <div class="form-group"><label>联系人</label><input type="text" id="contactName" value="Mr. 张少东经理"></div>
-        <div class="form-group"><label>项目描述</label><input type="text" id="regarding" value="Your exports to South Sudan"></div>
-        <div class="form-group"><label>品名</label><input type="text" id="commodity" value="WORK BAG / HS:4202129000"></div>
+        <div class="form-group"><label>客户公司</label><input type="text" id="customerName" value="XX 供应链有限公司"></div>
+        <div class="form-group"><label>联系人</label><input type="text" id="contactName" value="张经理"></div>
+        <div class="form-group"><label>项目描述</label><input type="text" id="regarding" value="Your exports to [Destination]"></div>
+        <div class="form-group"><label>品名</label><input type="text" id="commodity" value="FAK 货物 / HS:0000000000"></div>
         
         <div class="form-group"><label>贸易条款 (Incoterms)</label>
             <select id="incotermSelect">
@@ -285,14 +342,18 @@
             <input type="text" id="incotermPlace" placeholder="地点 (如 Shanghai)" value="Mombasa" style="margin-top:5px;">
         </div>
 
-        <!-- 三段地理描述（用户可自定义） -->
         <div class="form-group"><label>📍 段1 地点（起运地服务起点）</label><input type="text" id="segment1Place" value="上海外高桥港" placeholder="例：上海外高桥港 / 浙江省宁波市XX工厂"></div>
         <div class="form-group"><label>✈️ 段2 路线（起运港 → 目的港）</label><input type="text" id="segment2Route" value="上海港 → 蒙巴萨港" placeholder="例：上海港 → 蒙巴萨港"></div>
         <div class="form-group"><label>📍 段3 地点（目的地服务终点）</label><input type="text" id="segment3Place" value="南苏丹朱巴仓库" placeholder="例：南苏丹朱巴仓库 / 芝加哥门点"></div>
 
         <div class="form-group"><label>汇率 (USD/CNY)</label><input type="number" id="exchangeRate" value="7.5" step="0.01"></div>
 
-        <div class="segment-card"><div class="segment-title">段1：起运地服务</div><div id="segment1-fees"></div>
+        <div class="segment-card">
+            <div class="segment-title">
+                段1：起运地服务
+                <button class="import-btn" onclick="openImportModal()">📦 导入仓库报价</button>
+            </div>
+            <div id="segment1-fees"></div>
             <button class="add-btn" onclick="addFee('segment1', 'P0')">+ 添加主体价格</button>
             <button class="add-btn" onclick="addFee('segment1', 'P1')">+ 添加固定附加费</button>
             <button class="add-btn" onclick="addFee('segment1', 'P2')">+ 添加增值附加费</button>
@@ -316,15 +377,16 @@
     </div>
 </div>
 <div class="footer-version">
-    报价单生成器 v1.1 | 数据保存在本机，刷新不丢失 | 三段地理描述可自定义
+    报价单生成器 v2.0 | 数据保存在本机，刷新不丢失 | 采集-报价闭环
     <br>
     🧰 更多工具：<a href="warehouse-tool/" style="color:#64748b;">仓库报价器</a> | <a href="workflow/" style="color:#64748b;">货代业务流转单</a>
+    <br>
+    <a id="termsLink" style="cursor: pointer;">📜 使用条款</a>
 </div>
 
 <script>
     var feesData = { segment1: [], segment2: [], segment3: [] };
 
-    // 动态生成责任划分文本（根据贸易条款和用户填写的地点）
     function getResponsibility(incoterm, place, seg1Place, seg2Route, seg3Place) {
         var seg1 = seg1Place || "[起运地]";
         var seg2Parts = seg2Route.split('→');
@@ -349,7 +411,14 @@
 
     function loadFromStorage() {
         var saved = localStorage.getItem('quoteTool_fees');
-        if (saved) try { feesData = JSON.parse(saved); } catch(e) {}
+        if (saved) try { 
+            feesData = JSON.parse(saved); 
+            for (var seg in feesData) {
+                feesData[seg].forEach(function(fee) {
+                    if (fee.source === undefined) fee.source = "";
+                });
+            }
+        } catch(e) {}
         var fields = ['companyName','companyNameEn','companyAddr','companyTel','companyEmail','signatureName','signatureTitle','customerName','contactName','regarding','commodity','exchangeRate','incotermSelect','incotermPlace','segment1Place','segment2Route','segment3Place'];
         for (var i=0; i<fields.length; i++) {
             var val = localStorage.getItem('quoteTool_'+fields[i]);
@@ -371,21 +440,21 @@
         if (localStorage.getItem('quoteTool_fees')) return;
         feesData = {
             segment1: [
-                { name: "内装费", type: "P0", price: 1100, currency: "CNY", unit: "箱" },
-                { name: "订舱费", type: "P0", price: 320, currency: "CNY", unit: "箱" },
-                { name: "码头操作费(THC)", type: "P1", price: 790, currency: "CNY", unit: "箱" },
-                { name: "报关费", type: "P1", price: 100, currency: "CNY", unit: "票" },
-                { name: "文件费", type: "P1", price: 500, currency: "CNY", unit: "票" },
-                { name: "封子费", type: "P1", price: 50, currency: "CNY", unit: "箱" },
-                { name: "预提箱", type: "P2", price: 250, currency: "CNY", unit: "箱" }
+                { name: "内装费", type: "P0", price: 1100, currency: "CNY", unit: "箱", source: "" },
+                { name: "订舱费", type: "P0", price: 320, currency: "CNY", unit: "箱", source: "" },
+                { name: "码头操作费(THC)", type: "P1", price: 790, currency: "CNY", unit: "箱", source: "" },
+                { name: "报关费", type: "P1", price: 100, currency: "CNY", unit: "票", source: "" },
+                { name: "文件费", type: "P1", price: 500, currency: "CNY", unit: "票", source: "" },
+                { name: "封子费", type: "P1", price: 50, currency: "CNY", unit: "箱", source: "" },
+                { name: "预提箱", type: "P2", price: 250, currency: "CNY", unit: "箱", source: "" }
             ],
             segment2: [
-                { name: "海运费", type: "P0", price: 1308, currency: "USD", unit: "箱" },
-                { name: "燃油附加费(BAF)", type: "P1", price: 300, currency: "USD", unit: "箱" }
+                { name: "海运费", type: "P0", price: 1308, currency: "USD", unit: "箱", source: "" },
+                { name: "燃油附加费(BAF)", type: "P1", price: 300, currency: "USD", unit: "箱", source: "" }
             ],
             segment3: [
-                { name: "转关转运包干费", type: "P0", price: 6700, currency: "USD", unit: "票" },
-                { name: "操作服务费", type: "P2", price: 50, currency: "USD", unit: "票" }
+                { name: "转关转运包干费", type: "P0", price: 6700, currency: "USD", unit: "票", source: "" },
+                { name: "操作服务费", type: "P2", price: 50, currency: "USD", unit: "票", source: "" }
             ]
         };
     }
@@ -417,7 +486,12 @@
     }
     function updateFee(segment, idx, field, value) { feesData[segment][idx][field]=value; saveToStorage(); updateQuote(); }
     function removeFee(segment, idx) { feesData[segment].splice(idx,1); saveToStorage(); renderFeeList(segment); updateQuote(); }
-    function addFee(segment, type) { feesData[segment].push({name:"新费用",type:type,price:0,currency:"CNY",unit:"箱"}); saveToStorage(); renderFeeList(segment); updateQuote(); }
+    function addFee(segment, type) { 
+        feesData[segment].push({name:"新费用", type:type, price:0, currency:"CNY", unit:"箱", source:""}); 
+        saveToStorage(); 
+        renderFeeList(segment); 
+        updateQuote(); 
+    }
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
     
     function updateQuote() {
@@ -523,7 +597,6 @@
         }
     }
     
-    // 帮助面板折叠
     document.getElementById('helpPanel').addEventListener('click', function() {
         var content = document.getElementById('helpContent');
         var headerSpan = this.querySelector('.help-header span:last-child');
@@ -535,13 +608,125 @@
             headerSpan.innerHTML = '▼';
         }
     });
-    // 反馈弹窗
+    
     var feedbackBtn = document.getElementById('feedbackBtn');
-    var modal = document.getElementById('feedbackModal');
-    var closeModal = document.getElementById('closeModal');
-    feedbackBtn.onclick = function() { modal.style.display = 'block'; };
-    closeModal.onclick = function() { modal.style.display = 'none'; };
-    window.onclick = function(e) { if(e.target == modal) modal.style.display = 'none'; };
+    var feedbackModal = document.getElementById('feedbackModal');
+    var closeFeedback = document.getElementById('closeFeedbackModal');
+    feedbackBtn.onclick = function() { feedbackModal.style.display = 'block'; };
+    closeFeedback.onclick = function() { feedbackModal.style.display = 'none'; };
+    
+    var termsLink = document.getElementById('termsLink');
+    var termsModal = document.getElementById('termsModal');
+    var closeTerms = document.getElementById('closeTermsModal');
+    termsLink.onclick = function() { termsModal.style.display = 'block'; };
+    closeTerms.onclick = function() { termsModal.style.display = 'none'; };
+    
+    var importModal = document.getElementById('importModal');
+    var closeImport = document.getElementById('closeImportModal');
+    window.openImportModal = function() { 
+        document.getElementById('importUrlInput').value = '';
+        document.getElementById('importMsg').innerHTML = '';
+        importModal.style.display = 'block'; 
+    };
+    window.closeImportModal = function() { importModal.style.display = 'none'; };
+    closeImport.onclick = closeImportModal;
+    
+    window.onclick = function(e) {
+        if(e.target == feedbackModal) feedbackModal.style.display = 'none';
+        if(e.target == termsModal) termsModal.style.display = 'none';
+        if(e.target == importModal) importModal.style.display = 'none';
+    };
+
+    window.importFromWarehouse = function() {
+        var urlInput = document.getElementById('importUrlInput').value.trim();
+        var msgEl = document.getElementById('importMsg');
+        if (!urlInput) {
+            msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 请输入分享链接</span>';
+            return;
+        }
+        try {
+            var url = new URL(urlInput);
+            var dataParam = url.searchParams.get('data');
+            if (!dataParam) {
+                msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 链接无效：缺少 data 参数</span>';
+                return;
+            }
+            
+            var binary = atob(dataParam);
+            var bytes = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            
+            var jsonStr;
+            try {
+                jsonStr = pako.ungzip(bytes, { to: 'string' });
+            } catch (e) {
+                jsonStr = decodeURIComponent(binary);
+            }
+            
+            var payload = JSON.parse(jsonStr);
+            if (!payload.fees) {
+                msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 数据格式错误</span>';
+                return;
+            }
+            
+            feesData.segment1 = [];
+            
+            var codeMap = {
+                'WH_P0_STUFFING_20': '内装费(20GP)',
+                'WH_P0_STUFFING_40': '内装费(40GP)',
+                'WH_P0_STUFFING_LCL': '内装费(拼箱)',
+                'WH_P0_STORAGE': '仓储费',
+                'WH_P0_UNSTUFFING_20': '拆箱费(20GP)',
+                'WH_P0_UNSTUFFING_40': '拆箱费(40GP)',
+                'WH_P0_TALLY': '理货费',
+                'WH_P1_SECURITY': '港口安保费',
+                'WH_P1_VGM': 'VGM称重费',
+                'WH_P1_DOC': '系统录入费',
+                'WH_P1_GATE': '进门费',
+                'WH_P1_EDI': 'EDI传输费',
+                'WH_P1_SEAL': '铅封费',
+                'WH_P2_NIGHT': '夜间作业费',
+                'WH_P2_WAITING': '待时费',
+                'WH_P2_PACKING': '加固包装费',
+                'WH_P2_LABELING': '贴唛/换唛费',
+                'WH_P2_FUMIGATION': '熏蒸服务费',
+                'WH_P2_FORKLIFT': '叉车租赁费',
+                'WH_P2_SUPERVISION': '监装服务费',
+                'WH_P2_PHOTO': '拍照/视频服务'
+            };
+            
+            (payload.fees.p0 || []).forEach(function(f) {
+                var name = codeMap[f.code] || f.name;
+                feesData.segment1.push({
+                    name: name, type: 'P0', price: f.amount || 0, currency: 'CNY',
+                    unit: f.unit || '箱', source: '供应商报价'
+                });
+            });
+            (payload.fees.p1 || []).forEach(function(f) {
+                var name = codeMap[f.code] || f.name;
+                feesData.segment1.push({
+                    name: name, type: 'P1', price: f.amount || 0, currency: 'CNY',
+                    unit: f.unit || '箱', source: '供应商报价'
+                });
+            });
+            (payload.fees.p2 || []).forEach(function(f) {
+                var name = codeMap[f.code] || f.name;
+                feesData.segment1.push({
+                    name: name, type: 'P2', price: f.amount || 0, currency: 'CNY',
+                    unit: f.unit || '箱', source: '供应商报价'
+                });
+            });
+            
+            renderFeeList('segment1');
+            updateQuote();
+            saveToStorage();
+            closeImportModal();
+            msgEl.innerHTML = '<span style="color:#38a169;">✅ 导入成功！段1费用已更新。</span>';
+            setTimeout(function(){ msgEl.innerHTML = ''; }, 3000);
+        } catch(e) {
+            msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 解析失败：链接格式错误</span>';
+        }
+    };
     
     loadFromStorage();
     initDefaultData();
