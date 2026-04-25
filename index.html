@@ -244,6 +244,8 @@
             .app-container { flex-direction: column; }
             .quote-preview { min-width: auto; }
         }
+.guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+.guide-text a { color: #64748b; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -352,6 +354,7 @@
             <div class="segment-title">
                 段1：起运地服务
                 <button class="import-btn" onclick="openImportModal()">📦 导入仓库报价</button>
+                <p class="guide-text">💡 由仓库方提供，或使用 <a href="warehouse-tool/" target="_blank">仓库报价器</a> 生成</p>
             </div>
             <div id="segment1-fees"></div>
             <button class="add-btn" onclick="addFee('segment1', 'P0')">+ 添加主体价格</button>
