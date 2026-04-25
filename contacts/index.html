@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人脉快速检索 · CARRIER+OCEAN+AIR</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; }
+h1 { font-size: 1.5rem; color: #0f172a; margin-bottom: 5px; }
+.subtitle { color: #64748b; font-size: 0.85rem; margin-bottom: 20px; }
+.filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.filter-bar select, .filter-bar input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; background: white; }
+.filter-bar input { flex: 1; min-width: 200px; }
+table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
+th { background: #f8fafc; font-weight: 600; color: #475569; position: sticky; top: 0; }
+tr:hover { background: #f1f5f9; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+.tag-port { background: #dbeafe; color: #1e40af; }
+.tag-route { background: #dcfce7; color: #166534; }
+.tag-type { background: #fef3c7; color: #92400e; }
+.count-info { font-size: 0.8rem; color: #64748b; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<h1>📇 人脉快速检索</h1>
+<div class="subtitle">第1批：船东/航空公司/一代销售 | CARRIER + OCEAN + AIR | 共 <span id="totalCount">0</span> 条记录</div>
+<div class="filter-bar">
+    <input type="text" id="searchInput" placeholder="🔍 搜索公司名 / 联系人 / 电话..." oninput="filterTable()">
+    <select id="portFilter" onchange="filterTable()">
+        <option value="全部">全部口岸</option>
+    </select>
+    <select id="routeFilter" onchange="filterTable()">
+        <option value="全部">全部航线</option>
+    </select>
+    <select id="typeFilter" onchange="filterTable()">
+        <option value="全部">全部类型</option>
+    </select>
+</div>
+<div class="count-info" id="resultInfo"></div>
+<table id="contactTable">
+<thead><tr><th>公司名称</th><th>联系人</th><th>职位</th><th>电话</th><th>手机</th><th>邮箱</th><th>口岸</th><th>航线优势</th><th>来源</th></tr></thead>
+<tbody></tbody>
+</table>
+
+<script>
+// ====== 完整联系人数据 ======
+var contacts = [
+    { company:"Maersk", person:"刘楚", title:"销售", tel:"021-23062456", mobile:"13916567467", email:"prefalinsgen@maersk.com", port:"上海", route:"欧地/中南美/中东/印巴/非洲", type:"船东销售", source:"CARRIER" },
+    { company:"Maersk", person:"Roy SHI", title:"特种柜", tel:"021-23062084", mobile:"13918103776", email:"roy.shi@maersk.com", port:"上海", route:"全航线特种柜", type:"船东销售", source:"CARRIER" },
+    { company:"Maersk", person:"汪先生/Nick", title:"中南美销售", tel:"021-23062534", mobile:"13701697559", email:"sghsallat@maersk.com", port:"上海", route:"中南美", type:"船东销售", source:"CARRIER" },
+    { company:"Maersk/MCC", person:"Andreas 朱翼翀", title:"东南亚销售", tel:"021-23062533", mobile:"13764920605", email:"Andreas.Zhu@mcc.com.sg", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"Maersk/MCC", person:"Frank 谭先生", title:"东南亚销售", tel:"021-23062068", mobile:"13817632346", email:"Frank.Tan@mcc.com.sg", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"MSC Shanghai", person:"Tina 盛晓婷", title:"欧地线主管", tel:"021-61043367", mobile:"13917304332", email:"tsheng@nprc.mschkg.com", port:"上海", route:"欧地/西北非", type:"船东销售", source:"CARRIER" },
+    { company:"MSC Shanghai", person:"William 王文彬", title:"销售经理", tel:"021-60969206", mobile:"15061797197", email:"william.wang@msc.com", port:"上海", route:"中南美/印巴/中东/非洲", type:"船东销售", source:"CARRIER" },
+    { company:"MSC Shanghai", person:"Wilson Yan", title:"欧洲线销售", tel:"021-61043374", mobile:"13817596483", email:"wyan@nprc.mschkg.com", port:"上海", route:"欧洲", type:"船东销售", source:"CARRIER" },
+    { company:"MSC Shanghai", person:"MICHAEL 张R", title:"西非销售", tel:"021-61043482", mobile:"13651896876", email:"mizhang@nprc.mschkg.com", port:"上海", route:"西非", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"石龙欢", title:"澳洲线经理", tel:"021-23069696", mobile:"", email:"", port:"上海", route:"澳洲", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"周波", title:"中南美销售", tel:"021-23069430", mobile:"13601808486", email:"shg.rzhou@cma-cgm.com", port:"上海", route:"中南美", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"孙楠楠", title:"东南亚销售", tel:"021-23069428", mobile:"", email:"shg.rsun@cma-cgm.com", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"孙浩华", title:"印巴销售", tel:"021-23069437", mobile:"18621657022", email:"shg.psun@cma-cgm.com", port:"上海", route:"印巴", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"张挺", title:"非洲销售", tel:"021-23069357", mobile:"", email:"shg.mzhang@cma-cgm.com", port:"上海", route:"非洲", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"陈黎 Larry", title:"欧洲销售", tel:"021-23069556", mobile:"13901687365", email:"shg.lli@cma-cgm.com", port:"上海", route:"欧洲", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"Andrew 潘R", title:"美国线销售", tel:"021-23069456", mobile:"13916005475", email:"shg.apan@cma-cgm.com", port:"上海", route:"美加", type:"船东销售", source:"CARRIER" },
+    { company:"CMA", person:"李先生 Roy", title:"南北美洲经理", tel:"021-23069366", mobile:"13801687884", email:"chn.rlee@cma-cgm.com", port:"上海", route:"南北美洲", type:"船东销售", source:"CARRIER" },
+    { company:"COSCO", person:"吴靖", title:"欧地线销售", tel:"021-65967037", mobile:"13661500933", email:"wujing.sh@cscline.com", port:"上海", route:"欧地", type:"船东销售", source:"CARRIER" },
+    { company:"COSCO", person:"金维", title:"美加线销售", tel:"021-65967040", mobile:"13816362201", email:"jinwei.sh@cscline.com", port:"上海", route:"美加", type:"船东销售", source:"CARRIER" },
+    { company:"COSCO", person:"蒋恩明", title:"运价部经理", tel:"021-65968685", mobile:"13801565521", email:"jiangem@coscon.com", port:"上海", route:"全航线", type:"船东销售", source:"CARRIER" },
+    { company:"Hapag Lloyd", person:"Gordon 罗先生", title:"销售经理", tel:"021-23086087", mobile:"18616375890", email:"gordon.luo@hlag.com", port:"上海", route:"欧地/地中海/非洲", type:"船东销售", source:"CARRIER" },
+    { company:"Hapag Lloyd", person:"Danzel 甘先生", title:"USA/Canada 销售经理", tel:"021-26066062", mobile:"13817795204", email:"danzel.gan@hlag.com", port:"上海", route:"美加", type:"船东销售", source:"CARRIER" },
+    { company:"PIL", person:"Robin Yang", title:"欧地黑海销售", tel:"021-61235626", mobile:"13917715958", email:"Robin.yang@sha.pilship.com", port:"上海", route:"欧地/黑海", type:"船东销售", source:"CARRIER" },
+    { company:"PIL", person:"Andy 周炯", title:"非洲销售", tel:"021-61235623", mobile:"13761126342", email:"andy.zhou@sha.pilship.com", port:"上海", route:"非洲", type:"船东销售", source:"CARRIER" },
+    { company:"PIL", person:"Roger 于R", title:"进口销售", tel:"021-61235674", mobile:"13818089560", email:"roger.yu@sha.pilship.com", port:"上海", route:"进口", type:"船东销售", source:"CARRIER" },
+    { company:"WANHAI", person:"张先生", title:"特种箱全航线", tel:"021-51159555", mobile:"13918309986", email:"", port:"上海", route:"全航线特种箱", type:"船东销售", source:"CARRIER" },
+    { company:"WANHAI", person:"李晨", title:"中东印巴销售", tel:"021-51159555", mobile:"13816571237", email:"chan_li@wanhai.com", port:"上海", route:"中东/印巴", type:"船东销售", source:"CARRIER" },
+    { company:"WANHAI", person:"宣先生", title:"东南亚销售", tel:"021-51159555", mobile:"13585809063", email:"", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"WANHAI", person:"蒋先生", title:"欧洲线主管", tel:"", mobile:"18601781629", email:"", port:"上海", route:"欧洲", type:"船东销售", source:"CARRIER" },
+    { company:"ONE", person:"周海曦", title:"西非销售", tel:"", mobile:"13916131994", email:"haixi.zhou@one-line.com", port:"上海", route:"西非", type:"船东销售", source:"CARRIER" },
+    { company:"ONE", person:"Fiona Gong", title:"亚洲/大洋洲销售", tel:"021-51366201", mobile:"13524563695", email:"fiona.gong@one-line.com", port:"上海", route:"亚洲/大洋洲", type:"船东销售", source:"CARRIER" },
+    { company:"YML", person:"汤春霞", title:"欧地/中南美/中东", tel:"021-61206166", mobile:"13818436724", email:"shaily.tang@cn.yangming.com", port:"上海", route:"欧地/中南美/中东", type:"船东销售", source:"CARRIER" },
+    { company:"YML", person:"潘映", title:"美加线", tel:"021-60912163", mobile:"13817926355", email:"bonnie@yml.com.cn", port:"上海", route:"美加", type:"船东销售", source:"CARRIER" },
+    { company:"YML", person:"钱蓉", title:"中东印巴", tel:"021-60912099", mobile:"15618653307", email:"joan.qian@cn.yangming.com", port:"上海", route:"中东/印巴", type:"船东销售", source:"CARRIER" },
+    { company:"YML", person:"居华", title:"东南亚", tel:"021-60912102", mobile:"13564027546", email:"johnney.ju@yml.com.cn", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"YML", person:"吴先生", title:"USA销售", tel:"021-53852819", mobile:"13918867559", email:"", port:"上海", route:"美加", type:"船东销售", source:"CARRIER" },
+    { company:"HMM", person:"唐R Terry", title:"中南美销售", tel:"021-23226774", mobile:"13816780216", email:"shtye@hmm.21.com", port:"上海", route:"中南美", type:"船东销售", source:"CARRIER" },
+    { company:"HMM", person:"沈R", title:"中东销售", tel:"021-23226631", mobile:"13818417147", email:"shsyi@hmm.21.com", port:"上海", route:"中东", type:"船东销售", source:"CARRIER" },
+    { company:"HMM", person:"Gary 王先生", title:"东南亚销售", tel:"021-23226629", mobile:"", email:"", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"ZIM", person:"裘一新", title:"东南亚销售", tel:"021-23278057", mobile:"13817906966", email:"qiu.eason@cn.zim.com", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"ZIM", person:"Benson", title:"欧地销售", tel:"021-23278043", mobile:"13916718620", email:"benson@zimsnh.com", port:"上海", route:"欧地", type:"船东销售", source:"CARRIER" },
+    { company:"ZIM", person:"朱西康", title:"中南美", tel:"021-23278040", mobile:"", email:"", port:"上海", route:"中南美", type:"船东销售", source:"CARRIER" },
+    { company:"EMC", person:"乐先生", title:"南美线", tel:"021-53081080", mobile:"", email:"rogerle@master-agency.com.cn", port:"上海", route:"南美", type:"船东销售", source:"CARRIER" },
+    { company:"OOCL", person:"杨先生", title:"东南亚销售", tel:"021-23018012", mobile:"", email:"jeff.yang@oocl.com", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"OOCL", person:"付先生", title:"欧洲销售", tel:"021-23018004", mobile:"", email:"", port:"上海", route:"欧洲", type:"船东销售", source:"CARRIER" },
+    { company:"OOCL", person:"陈先生", title:"USA销售", tel:"021-23018017", mobile:"13818083037", email:"", port:"上海", route:"美加", type:"船东销售", source:"CARRIER" },
+    { company:"MOL", person:"杨司均", title:"中南美销售", tel:"021-23206000", mobile:"13916610663", email:"sean.yang@mol-liner.com", port:"上海", route:"中南美", type:"船东销售", source:"CARRIER" },
+    { company:"MOL", person:"Roger 管坚华", title:"亚洲销售", tel:"021-23206103", mobile:"13701735545", email:"roger.guan@mol-liner.com", port:"上海", route:"中东/印巴/东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"Hanjin", person:"许先生", title:"欧地线主管", tel:"021-28995529", mobile:"13917966835", email:"ERICXU@CN.HANJIN.COM", port:"上海", route:"欧地", type:"船东销售", source:"CARRIER" },
+    { company:"Hanjin", person:"朱先生", title:"东南亚销售", tel:"021-28995481", mobile:"13764091138", email:"justinzhu@cn.hanjin.com", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"Hanjin", person:"蒋R", title:"非洲销售", tel:"021-28995640", mobile:"13916456978", email:"jeremy@cn.hanjin.com", port:"上海", route:"非洲", type:"船东销售", source:"CARRIER" },
+    { company:"UASC", person:"厉先生", title:"地东/中东/西非", tel:"021-23215347", mobile:"13918225776", email:"daniel.li@uasc.net", port:"上海", route:"地东/中东/西非", type:"船东销售", source:"CARRIER" },
+    { company:"UASC", person:"吴先生", title:"红海销售", tel:"021-23215345", mobile:"13917378599", email:"steven.wu@uasc.net", port:"上海", route:"红海", type:"船东销售", source:"CARRIER" },
+    { company:"HAMBURG-SUD", person:"Philip 肖斐", title:"中南美销售", tel:"021-23228012", mobile:"13817386531", email:"Philip.Shaw@hamburgsud.com", port:"上海", route:"中南美", type:"船东销售", source:"CARRIER" },
+    { company:"Safmarine", person:"王振卫", title:"销售", tel:"", mobile:"13817868496", email:"", port:"上海", route:"欧线", type:"船东销售", source:"CARRIER" },
+    { company:"Safmarine", person:"熊涛", title:"欧/中南美特种箱", tel:"021-23062660", mobile:"13817715543", email:"", port:"上海", route:"欧/中南美", type:"船东销售", source:"CARRIER" },
+    { company:"上海新海丰", person:"郭小姐(Rubi)", title:"东南亚销售", tel:"021-51166946", mobile:"13661879703", email:"ruby.guo@sitclog.com", port:"上海", route:"东南亚/近洋", type:"船东销售", source:"CARRIER" },
+    { company:"RCL", person:"Ms Karen Qi", title:"全航线销售", tel:"021-61324619", mobile:"13817099012", email:"qikar@rclgroup.com", port:"上海", route:"全航线", type:"船东销售", source:"CARRIER" },
+    { company:"RCL", person:"Sally 赵", title:"全航线销售", tel:"", mobile:"13817288825", email:"sally.zhao@rclgroup.com", port:"上海", route:"全航线", type:"船东销售", source:"CARRIER" },
+    { company:"TS-line 德翔", person:"Parker 施岳", title:"东南亚销售", tel:"021-63092547", mobile:"15800359123", email:"parker_shi@tslines.com.cn", port:"上海", route:"东南亚", type:"船东销售", source:"CARRIER" },
+    { company:"TS-line 德翔", person:"方先生", title:"特种箱", tel:"021-63092547", mobile:"", email:"", port:"上海", route:"特种箱", type:"船东销售", source:"CARRIER" },
+    { company:"上海天骏", person:"陈翔", title:"东南亚/台湾", tel:"", mobile:"13901861353", email:"", port:"上海", route:"东南亚/台湾近洋/特种箱", type:"一代庄家", source:"OCEAN" },
+    { company:"上海天骏", person:"王小姐", title:"美国/欧洲/非洲", tel:"021-61406288", mobile:"", email:"ritayang@shpegasus.com.cn", port:"上海", route:"美加/欧洲/非洲", type:"一代庄家", source:"OCEAN" },
+    { company:"上海功杰", person:"JASON", title:"澳新线", tel:"021-51085997", mobile:"13701991041", email:"jason.xu@go2ge.com", port:"上海", route:"澳新", type:"一代庄家", source:"OCEAN" },
+    { company:"德威", person:"李先生 Lino", title:"美国线 MSC/HYNDAI", tel:"021-61031877", mobile:"13761081993", email:"lino.li@sh.de-well.com", port:"上海", route:"美加", type:"一代庄家", source:"OCEAN" },
+    { company:"德威", person:"姚小奇", title:"中南美", tel:"021-61031877", mobile:"", email:"", port:"上海", route:"中南美", type:"一代庄家", source:"OCEAN" },
+    { company:"鸿安国际货运", person:"周先生", title:"USA MSC/CMA/COSCO", tel:"021-63111822", mobile:"13817874155", email:"chowchitaksh@hlsholding.com.cn", port:"上海", route:"美加", type:"一代庄家", source:"OCEAN" },
+    { company:"鸿安国际货运", person:"Angie 张小姐", title:"总经理", tel:"021-61377390", mobile:"13916668038", email:"angiecheung@hlsholding.com.cn", port:"上海", route:"全航线", type:"一代庄家", source:"OCEAN" },
+    { company:"腾达货运/HDS", person:"顾志国", title:"伊朗航运庄", tel:"021-68881038", mobile:"13761054555", email:"guzhiguo_td@126.com", port:"上海", route:"中东/波斯湾", type:"一代庄家", source:"OCEAN" },
+    { company:"腾达货运/HDS", person:"钱宁", title:"销售", tel:"021-68881589", mobile:"15821998091", email:"15821998091@139.com", port:"上海", route:"中东/波斯湾", type:"一代庄家", source:"OCEAN" },
+    { company:"昂泰货运", person:"潘翼 TONY", title:"东南亚 EMC/TS LINE", tel:"", mobile:"13918239876", email:"china_arts4@hotmail.com", port:"上海", route:"东南亚", type:"一代庄家", source:"OCEAN" },
+    { company:"昂泰货运", person:"戚吉毅 JACKY", title:"澳洲/印巴/中东 EMC", tel:"", mobile:"13601908261", email:"jacky_qi80@hotmail.com", port:"上海", route:"澳新/印巴/中东", type:"一代庄家", source:"OCEAN" },
+    { company:"昂泰货运", person:"袁俊 Frank", title:"中南美 EMC", tel:"021-65623825", mobile:"13641965906", email:"frankyj731@hotmail.com", port:"上海", route:"中南美", type:"一代庄家", source:"OCEAN" },
+    { company:"平凡货运", person:"Hanson 胡先生", title:"墨西哥/中南美", tel:"021-53211580", mobile:"13701971961", email:"bvl-hanson@hotmail.com", port:"上海", route:"墨西哥/中南美", type:"一代庄家", source:"OCEAN" },
+    { company:"外经贸", person:"vivian", title:"EMC庄家 欧地", tel:"021-63063501", mobile:"13817721230", email:"", port:"上海", route:"欧地", type:"一代庄家", source:"OCEAN" },
+    { company:"锦海捷亚", person:"黄海霞", title:"拼箱/芝加哥", tel:"021-63191888", mobile:"", email:"haixia.huang@jhj.com.cn", port:"上海", route:"拼箱/芝加哥", type:"一代/拼箱", source:"OCEAN" },
+    { company:"上海新文捷", person:"陈海平", title:"ZIM/Maersk非洲", tel:"021-65876870", mobile:"13801743266", email:"chenhaiping88@hotmail.com", port:"上海", route:"非洲", type:"一代庄家", source:"OCEAN" },
+    { company:"锦雍", person:"洪小姐", title:"空运", tel:"021-63555566", mobile:"", email:"amy_cyy@hotmail.com", port:"上海", route:"空运综合", type:"空运庄家", source:"AIR" },
+    { company:"津乾货运", person:"王培", title:"马来西亚/欧美", tel:"021-35100775", mobile:"13901978747", email:"patrick7713@hotmail.com", port:"上海", route:"东南亚/欧美", type:"空运庄家", source:"AIR" },
+    { company:"上海传盛", person:"唐小姐", title:"包板", tel:"021-51388632", mobile:"13661879426", email:"", port:"上海", route:"空运包板", type:"空运庄家", source:"AIR" },
+    { company:"上海新时代", person:"凡文军", title:"空运销售组长", tel:"", mobile:"13817917675", email:"easyfwjfwj@hotmail.com", port:"上海", route:"空运综合", type:"空运庄家", source:"AIR" },
+    { company:"上海久茂", person:"谭福琦", title:"空运 KL/CA/CZ/6U/SU", tel:"", mobile:"13816237964", email:"", port:"上海", route:"空运欧线/东南亚", type:"空运庄家", source:"AIR" },
+    { company:"飞翔/世双", person:"马先生", title:"空运 KE/欧洲/南美", tel:"021-51905616", mobile:"13764019893", email:"", port:"上海", route:"空运欧洲/南美", type:"空运庄家", source:"AIR" },
+    { company:"中太", person:"朱斌", title:"CZ大庄家", tel:"021-64412433", mobile:"13916385469", email:"zhubing8106251@hotmail.com", port:"上海", route:"空运中东/东南亚/澳新/日韩", type:"空运庄家", source:"AIR" },
+    { company:"上海东方航空MU", person:"董先生", title:"中转转国内", tel:"021-51133706", mobile:"", email:"", port:"上海", route:"国内空运中转", type:"空运庄家", source:"AIR" },
+    { company:"上海玛仕特", person:"许先生", title:"南美/美国", tel:"021-50104977", mobile:"", email:"", port:"上海", route:"空运南美/美国", type:"空运庄家", source:"AIR" },
+    { company:"上海玛仕特", person:"杨先生", title:"日韩", tel:"021-50170962", mobile:"13918460570", email:"", port:"上海", route:"空运日韩", type:"空运庄家", source:"AIR" },
+    { company:"捷迅", person:"黄先生", title:"OZ-FX-FQ-CA", tel:"021-50961059", mobile:"13916026833", email:"tiger133082@hotmail.com", port:"上海", route:"空运欧/美/亚", type:"空运庄家", source:"AIR" },
+    { company:"东方国际", person:"卫长庚", title:"EK庄家/CA美国线", tel:"021-68853641", mobile:"13917620387", email:"", port:"上海", route:"空运美线/欧线", type:"空运庄家", source:"AIR" },
+    { company:"天行健", person:"许鸣", title:"空运庄家", tel:"021-58593926", mobile:"13817906666", email:"philip@etelogis.com", port:"上海", route:"空运综合", type:"空运庄家", source:"AIR" },
+    { company:"上海东航快递", person:"倪家欢", title:"业务", tel:"021-68331059", mobile:"13818238657", email:"eaeimport@163.com", port:"上海", route:"进口清关/退运清关", type:"空运进口", source:"AIR" },
+    { company:"上海宇迪", person:"杨政", title:"危险品专家", tel:"", mobile:"13816774430", email:"", port:"上海", route:"空运危险品", type:"空运庄家", source:"AIR" },
+    { company:"上海瀚航", person:"何强", title:"拼箱", tel:"021-63643399", mobile:"13788965353", email:"", port:"上海", route:"拼箱综合", type:"拼箱庄家", source:"LCL" },
+    { company:"上海环发", person:"朱伟", title:"拼箱销售", tel:"021-63373006", mobile:"", email:"zhuwei@globelinksha.com.cn", port:"上海", route:"拼箱综合", type:"拼箱庄家", source:"LCL" },
+    { company:"上海环发", person:"Jason", title:"销售", tel:"021-63373303", mobile:"13301737121", email:"jason@globelinksha.com.cn", port:"上海", route:"拼箱综合", type:"拼箱庄家", source:"LCL" },
+    { company:"美设物流", person:"刘婷", title:"欧洲进口客服", tel:"021-26026973", mobile:"", email:"liuting.sh@amassfreight.com", port:"上海", route:"拼箱进口/欧洲", type:"拼箱庄家", source:"LCL" }
+];
+
+// ====== 初始化 ======
+function init() {
+    document.getElementById('totalCount').textContent = contacts.length;
+    
+    // 填充筛选下拉
+    var ports = [...new Set(contacts.map(c => c.port))].sort();
+    var routes = [...new Set(contacts.map(c => c.route))].sort();
+    var types = [...new Set(contacts.map(c => c.type))].sort();
+    
+    var portSel = document.getElementById('portFilter');
+    ports.forEach(p => { var o = document.createElement('option'); o.value = p; o.textContent = p; portSel.appendChild(o); });
+    
+    var routeSel = document.getElementById('routeFilter');
+    routes.forEach(r => { var o = document.createElement('option'); o.value = r; o.textContent = r; routeSel.appendChild(o); });
+    
+    var typeSel = document.getElementById('typeFilter');
+    types.forEach(t => { var o = document.createElement('option'); o.value = t; o.textContent = t; typeSel.appendChild(o); });
+    
+    renderTable(contacts);
+}
+
+function filterTable() {
+    var keyword = document.getElementById('searchInput').value.toLowerCase();
+    var port = document.getElementById('portFilter').value;
+    var route = document.getElementById('routeFilter').value;
+    var type = document.getElementById('typeFilter').value;
+    
+    var filtered = contacts.filter(function(c) {
+        var matchKeyword = !keyword || 
+            (c.company && c.company.toLowerCase().indexOf(keyword) > -1) ||
+            (c.person && c.person.toLowerCase().indexOf(keyword) > -1) ||
+            (c.mobile && c.mobile.indexOf(keyword) > -1) ||
+            (c.email && c.email.toLowerCase().indexOf(keyword) > -1) ||
+            (c.tel && c.tel.indexOf(keyword) > -1);
+        var matchPort = port === '全部' || c.port === port;
+        var matchRoute = route === '全部' || c.route === route;
+        var matchType = type === '全部' || c.type === type;
+        return matchKeyword && matchPort && matchRoute && matchType;
+    });
+    
+    document.getElementById('resultInfo').textContent = '显示 ' + filtered.length + ' / ' + contacts.length + ' 条记录';
+    renderTable(filtered);
+}
+
+function renderTable(data) {
+    var tbody = document.querySelector('#contactTable tbody');
+    tbody.innerHTML = '';
+    data.forEach(function(c) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = 
+            '<td>' + (c.company || '') + '</td>' +
+            '<td><strong>' + (c.person || '') + '</strong></td>' +
+            '<td>' + (c.title || '') + '</td>' +
+            '<td>' + (c.tel || '') + '</td>' +
+            '<td>' + (c.mobile || '') + '</td>' +
+            '<td style="font-size:0.8rem;">' + (c.email || '') + '</td>' +
+            '<td><span class="tag tag-port">' + (c.port || '') + '</span></td>' +
+            '<td><span class="tag tag-route">' + (c.route || '') + '</span></td>' +
+            '<td><span class="tag tag-type">' + (c.source || '') + '</span></td>';
+        tbody.appendChild(tr);
+    });
+}
+
+init();
+filterTable();
+</script>
+</body>
+</html>
