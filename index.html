@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -5,7 +6,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>报价单生成器 - 物流三段法工具</title>
     <!-- pako 压缩库 -->
-    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js">
+    // ---- 报价模板导出/导入 (pako gzip + Base64) ----
+    function collectAllData_quote() {
+        var data = {
+            companyName: document.getElementById('companyName').value,
+            companyNameEn: document.getElementById('companyNameEn').value,
+            companyAddr: document.getElementById('companyAddr').value,
+            companyTel: document.getElementById('companyTel').value,
+            companyEmail: document.getElementById('companyEmail').value,
+            signatureName: document.getElementById('signatureName').value,
+            signatureTitle: document.getElementById('signatureTitle').value,
+            customerName: document.getElementById('customerName').value,
+            contactName: document.getElementById('contactName').value,
+            regarding: document.getElementById('regarding').value,
+            commodity: document.getElementById('commodity').value,
+            incoterm: document.getElementById('incotermSelect').value,
+            incotermPlace: document.getElementById('incotermPlace').value,
+            segment1Place: document.getElementById('segment1Place').value,
+            segment2Route: document.getElementById('segment2Route').value,
+            segment3Place: document.getElementById('segment3Place').value,
+            exchangeRate: document.getElementById('exchangeRate').value,
+            fees: JSON.parse(JSON.stringify(feesData)),
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        return data;
+    }
+
+    function fillAllData_quote(data) {
+        document.getElementById('companyName').value = data.companyName || '';
+        document.getElementById('companyNameEn').value = data.companyNameEn || '';
+        document.getElementById('companyAddr').value = data.companyAddr || '';
+        document.getElementById('companyTel').value = data.companyTel || '';
+        document.getElementById('companyEmail').value = data.companyEmail || '';
+        document.getElementById('signatureName').value = data.signatureName || '';
+        document.getElementById('signatureTitle').value = data.signatureTitle || '';
+        document.getElementById('customerName').value = data.customerName || '';
+        document.getElementById('contactName').value = data.contactName || '';
+        document.getElementById('regarding').value = data.regarding || '';
+        document.getElementById('commodity').value = data.commodity || '';
+        document.getElementById('incotermSelect').value = data.incoterm || 'DDP';
+        document.getElementById('incotermPlace').value = data.incotermPlace || '';
+        document.getElementById('segment1Place').value = data.segment1Place || '';
+        document.getElementById('segment2Route').value = data.segment2Route || '';
+        document.getElementById('segment3Place').value = data.segment3Place || '';
+        document.getElementById('exchangeRate').value = data.exchangeRate || '7.5';
+        if (data.fees) {
+            feesData = JSON.parse(JSON.stringify(data.fees));
+        }
+        renderAllFees();
+        saveToStorage();
+        updateQuote();
+    }
+
+    window.exportQuoteTemplate = function() {
+        var data = collectAllData_quote();
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) {
+            binary += String.fromCharCode(compressed[i]);
+        }
+        var base64 = btoa(binary);
+        var customerName = data.customerName || '报价单';
+        var safeName = customerName.replace(/[/\\:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.qte';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importQuoteTemplate = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var base64 = e.target.result;
+                var binary = atob(base64);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                var jsonStr = pako.ungzip(bytes, { to: 'string' });
+                var data = JSON.parse(jsonStr);
+                fillAllData_quote(data);
+            } catch(err) {
+                alert('导入失败：文件格式异常或数据损坏。');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
+</script>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -316,6 +414,8 @@
         </div>
 
         <div class="company-section">
+            <button class="import-btn" onclick="document.getElementById('importQuoteFile').click()" style="margin-bottom:10px;">📂 导入模板</button>
+            <input type="file" id="importQuoteFile" accept=".qte" style="display:none;" onchange="importQuoteTemplate(this)">
             <div class="form-group"><label>公司名称</label><input type="text" id="companyName" value="XX 国际货运代理有限公司"></div>
             <div class="form-group"><label>公司英文名</label><input type="text" id="companyNameEn" value="XX International Logistics Co.,Ltd."></div>
             <div class="form-group"><label>公司地址</label><input type="text" id="companyAddr" value="[您的公司地址]"></div>
@@ -379,6 +479,9 @@
         <button class="print-btn" onclick="window.print()">🖨️ 打印 / 保存PDF</button>
     </div>
 </div>
+        <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
+            <button class="add-btn" onclick="exportQuoteTemplate()" style="background:#2563eb;">📋 导出模板 (.qte)</button>
+        </div>
 <div class="footer-version">
     报价单生成器 v2.0 | 数据保存在本机，刷新不丢失 | 采集-报价闭环
     <br>
@@ -737,6 +840,103 @@
     bindInputEvents();
     saveToStorage();
     document.getElementById('helpContent').style.display = 'none';
+
+    // ---- 报价模板导出/导入 (pako gzip + Base64) ----
+    function collectAllData_quote() {
+        var data = {
+            companyName: document.getElementById('companyName').value,
+            companyNameEn: document.getElementById('companyNameEn').value,
+            companyAddr: document.getElementById('companyAddr').value,
+            companyTel: document.getElementById('companyTel').value,
+            companyEmail: document.getElementById('companyEmail').value,
+            signatureName: document.getElementById('signatureName').value,
+            signatureTitle: document.getElementById('signatureTitle').value,
+            customerName: document.getElementById('customerName').value,
+            contactName: document.getElementById('contactName').value,
+            regarding: document.getElementById('regarding').value,
+            commodity: document.getElementById('commodity').value,
+            incoterm: document.getElementById('incotermSelect').value,
+            incotermPlace: document.getElementById('incotermPlace').value,
+            segment1Place: document.getElementById('segment1Place').value,
+            segment2Route: document.getElementById('segment2Route').value,
+            segment3Place: document.getElementById('segment3Place').value,
+            exchangeRate: document.getElementById('exchangeRate').value,
+            fees: JSON.parse(JSON.stringify(feesData)),
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        return data;
+    }
+
+    function fillAllData_quote(data) {
+        document.getElementById('companyName').value = data.companyName || '';
+        document.getElementById('companyNameEn').value = data.companyNameEn || '';
+        document.getElementById('companyAddr').value = data.companyAddr || '';
+        document.getElementById('companyTel').value = data.companyTel || '';
+        document.getElementById('companyEmail').value = data.companyEmail || '';
+        document.getElementById('signatureName').value = data.signatureName || '';
+        document.getElementById('signatureTitle').value = data.signatureTitle || '';
+        document.getElementById('customerName').value = data.customerName || '';
+        document.getElementById('contactName').value = data.contactName || '';
+        document.getElementById('regarding').value = data.regarding || '';
+        document.getElementById('commodity').value = data.commodity || '';
+        document.getElementById('incotermSelect').value = data.incoterm || 'DDP';
+        document.getElementById('incotermPlace').value = data.incotermPlace || '';
+        document.getElementById('segment1Place').value = data.segment1Place || '';
+        document.getElementById('segment2Route').value = data.segment2Route || '';
+        document.getElementById('segment3Place').value = data.segment3Place || '';
+        document.getElementById('exchangeRate').value = data.exchangeRate || '7.5';
+        if (data.fees) {
+            feesData = JSON.parse(JSON.stringify(data.fees));
+        }
+        renderAllFees();
+        saveToStorage();
+        updateQuote();
+    }
+
+    window.exportQuoteTemplate = function() {
+        var data = collectAllData_quote();
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) {
+            binary += String.fromCharCode(compressed[i]);
+        }
+        var base64 = btoa(binary);
+        var customerName = data.customerName || '报价单';
+        var safeName = customerName.replace(/[/\\:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.qte';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importQuoteTemplate = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var base64 = e.target.result;
+                var binary = atob(base64);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                var jsonStr = pako.ungzip(bytes, { to: 'string' });
+                var data = JSON.parse(jsonStr);
+                fillAllData_quote(data);
+            } catch(err) {
+                alert('导入失败：文件格式异常或数据损坏。');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
 </script>
 </body>
 </html>
