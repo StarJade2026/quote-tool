@@ -1,3 +1,6 @@
+html
+仓库工具_v0.3_含条款版权.html
+
 
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -5,7 +8,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>仓库报价速填 · 地面产品报价器</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    
     // ---- 仓库模板导出/导入 (pako gzip + Base64) ----
     window.exportWhTemplate = function() {
         var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
@@ -94,95 +99,7 @@
     };
 
 </script>
-    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js">
-    // ---- 仓库模板导出/导入 (pako gzip + Base64) ----
-    window.exportWhTemplate = function() {
-        var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
-        var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
-        var p2 = currentFees.p2.filter(function(f) { return f.checked; }).map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: true }; });
-        // Also include unchecked p2 items so nothing is lost
-        currentFees.p2.forEach(function(f) {
-            if (!f.checked) {
-                p2.push({ code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: false });
-            }
-        });
-        var data = {
-            supplier: {
-                name: document.getElementById('supplierName').value || '',
-                contact: document.getElementById('contactPerson').value || '',
-                phone: document.getElementById('contactPhone').value || '',
-                location: document.getElementById('serviceLocation').value || '',
-                validUntil: document.getElementById('validUntil').value || ''
-            },
-            fees: { p0: p0, p1: p1, p2: p2 },
-            _exportTime: new Date().toISOString(),
-            _version: '1'
-        };
-        var jsonStr = JSON.stringify(data);
-        var compressed = pako.gzip(jsonStr);
-        var binary = '';
-        for (var i = 0; i < compressed.length; i++) {
-            binary += String.fromCharCode(compressed[i]);
-        }
-        var base64 = btoa(binary);
-        var supplierName = data.supplier.name || '仓库报价';
-        var safeName = supplierName.replace(/[/\\:*?"<>|]/g, '_');
-        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = safeName + '-模板.whs';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    window.importWhTemplate = function(input) {
-        var file = input.files[0];
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                var base64 = e.target.result;
-                var binary = atob(base64);
-                var bytes = new Uint8Array(binary.length);
-                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                var jsonStr = pako.ungzip(bytes, { to: 'string' });
-                var data = JSON.parse(jsonStr);
-                // Fill supplier info
-                if (data.supplier) {
-                    document.getElementById('supplierName').value = data.supplier.name || '';
-                    document.getElementById('contactPerson').value = data.supplier.contact || '';
-                    document.getElementById('contactPhone').value = data.supplier.phone || '';
-                    document.getElementById('serviceLocation').value = data.supplier.location || '';
-                    document.getElementById('validUntil').value = data.supplier.validUntil || '';
-                }
-                // Fill fees
-                if (data.fees) {
-                    currentFees.p0 = currentFees.p0.map(function(def) {
-                        var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
-                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
-                    });
-                    currentFees.p1 = currentFees.p1.map(function(def) {
-                        var m = (data.fees.p1 || []).find(function(f) { return f.code === def.code; });
-                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
-                    });
-                    currentFees.p2 = currentFees.p2.map(function(def) {
-                        var m = (data.fees.p2 || []).find(function(f) { return f.code === def.code; });
-                        return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true }) : def;
-                    });
-                }
-                renderTables();
-            } catch(err) {
-                alert('导入失败：文件格式异常或数据损坏。');
-            }
-        };
-        reader.readAsText(file);
-        input.value = '';
-    };
-
-</script>
+    
     <style>
         /* 公共基础样式（原 shared.css 内嵌） */
         body {
@@ -297,6 +214,7 @@
         <button onclick="generateShareLink()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">🔗 生成分享链接</button>
         <p class="guide-text">💡 分享给货代，对方可在报价工具中一键导入</p>
         <p class="guide-text" style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">💡 分享给货代，对方可在报价工具中一键导入</p>
+    <p style="font-size:0.75rem; color:#94a3b8; margin-top:6px;"><span onclick="document.getElementById('whTermsModal').style.display='block';document.getElementById('whTermsOverlay').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span> | Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.</p>
     </div>
     <div class="note">
         • "复制摘要"将生成格式化文本，可直接粘贴给客户。<br>
@@ -540,95 +458,17 @@ window.toggleInfoCard = function(card) {
     }
 
     initFeeData(); renderTables(); loadFromURL();
-})();
 
-    // ---- 仓库模板导出/导入 (pako gzip + Base64) ----
-    window.exportWhTemplate = function() {
-        var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
-        var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
-        var p2 = currentFees.p2.filter(function(f) { return f.checked; }).map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: true }; });
-        // Also include unchecked p2 items so nothing is lost
-        currentFees.p2.forEach(function(f) {
-            if (!f.checked) {
-                p2.push({ code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: false });
-            }
-        });
-        var data = {
-            supplier: {
-                name: document.getElementById('supplierName').value || '',
-                contact: document.getElementById('contactPerson').value || '',
-                phone: document.getElementById('contactPhone').value || '',
-                location: document.getElementById('serviceLocation').value || '',
-                validUntil: document.getElementById('validUntil').value || ''
-            },
-            fees: { p0: p0, p1: p1, p2: p2 },
-            _exportTime: new Date().toISOString(),
-            _version: '1'
-        };
-        var jsonStr = JSON.stringify(data);
-        var compressed = pako.gzip(jsonStr);
-        var binary = '';
-        for (var i = 0; i < compressed.length; i++) {
-            binary += String.fromCharCode(compressed[i]);
-        }
-        var base64 = btoa(binary);
-        var supplierName = data.supplier.name || '仓库报价';
-        var safeName = supplierName.replace(/[/\\:*?"<>|]/g, '_');
-        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = safeName + '-模板.whs';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
 
-    window.importWhTemplate = function(input) {
-        var file = input.files[0];
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                var base64 = e.target.result;
-                var binary = atob(base64);
-                var bytes = new Uint8Array(binary.length);
-                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                var jsonStr = pako.ungzip(bytes, { to: 'string' });
-                var data = JSON.parse(jsonStr);
-                // Fill supplier info
-                if (data.supplier) {
-                    document.getElementById('supplierName').value = data.supplier.name || '';
-                    document.getElementById('contactPerson').value = data.supplier.contact || '';
-                    document.getElementById('contactPhone').value = data.supplier.phone || '';
-                    document.getElementById('serviceLocation').value = data.supplier.location || '';
-                    document.getElementById('validUntil').value = data.supplier.validUntil || '';
-                }
-                // Fill fees
-                if (data.fees) {
-                    currentFees.p0 = currentFees.p0.map(function(def) {
-                        var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
-                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
-                    });
-                    currentFees.p1 = currentFees.p1.map(function(def) {
-                        var m = (data.fees.p1 || []).find(function(f) { return f.code === def.code; });
-                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
-                    });
-                    currentFees.p2 = currentFees.p2.map(function(def) {
-                        var m = (data.fees.p2 || []).find(function(f) { return f.code === def.code; });
-                        return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true }) : def;
-                    });
-                }
-                renderTables();
-            } catch(err) {
-                alert('导入失败：文件格式异常或数据损坏。');
-            }
-        };
-        reader.readAsText(file);
-        input.value = '';
-    };
-
-</script>
+<!-- 使用条款弹窗 -->
+<div class="terms-modal" id="whTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
+    <span onclick="document.getElementById('whTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
+    <h4>📜 使用条款</h4>
+    <p>欢迎使用仓库报价器。</p>
+    <p>本工具是一个报价信息生成助手，专为仓库服务供应商设计，帮助你快速生成标准化的三层（P0/P1/P2）费用报价单。生成的报价信息不构成具有法律约束力的要约，最终服务价格和条款请以双方盖章的书面合同为准。</p>
+    <p>你在使用过程中输入的所有供应商信息和费用数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
+    <p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
+</div>
+<div id="whTermsOverlay" onclick="document.getElementById('whTermsModal').style.display='none'" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.3); z-index:999;"></div>
 </body>
 </html>
