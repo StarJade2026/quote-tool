@@ -1,0 +1,354 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人脉索引 v2.0 — 国外代理 Batch 2</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f6fa; color: #2c3e50; padding: 20px; }
+.header { max-width: 1400px; margin: 0 auto 20px; }
+.header h1 { font-size: 22px; color: #1a1a2e; }
+.header p { font-size: 13px; color: #888; margin-top: 4px; }
+.toolbar { max-width: 1400px; margin: 0 auto 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.toolbar input, .toolbar select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff; }
+.toolbar input { flex: 1; min-width: 200px; }
+.toolbar select { min-width: 160px; }
+.toolbar .count { font-size: 13px; color: #666; margin-left: auto; }
+.container { max-width: 1400px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: #1a1a2e; color: #fff; position: sticky; top: 0; z-index: 10; }
+th { padding: 10px 8px; text-align: left; font-weight: 500; cursor: pointer; white-space: nowrap; user-select: none; }
+th:hover { background: #16213e; }
+th .arrow { font-size: 10px; margin-left: 4px; }
+td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+tr:hover { background: #f8f9ff; }
+tr.hidden { display: none; }
+.company { font-weight: 600; color: #1a1a2e; }
+.person { font-weight: 500; }
+.title { color: #666; font-size: 12px; }
+.tel { color: #333; font-size: 12px; white-space: pre-wrap; }
+.email { color: #3498db; font-size: 12px; word-break: break-all; }
+.email a { color: #3498db; text-decoration: none; }
+.email a:hover { text-decoration: underline; }
+.location { color: #666; font-size: 12px; }
+.country-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #e8f4fd; color: #2980b9; }
+.type-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #f0f0f0; color: #555; }
+@media (max-width: 768px) {
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr { position: absolute; top: -9999px; left: -9999px; }
+    td { position: relative; padding-left: 120px; min-height: 28px; }
+    td::before { position: absolute; left: 8px; top: 8px; font-weight: 600; font-size: 12px; color: #999; content: attr(data-label); }
+}
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>🌍 国外代理联系人索引 v2.0</h1>
+    <p>来源：Hartrodt（192条）+ ISL（44条）| 去重后共计 206 条 | 覆盖 48 个国家/地区</p>
+</div>
+
+<div class="toolbar">
+    <input type="text" id="searchInput" placeholder="🔍 搜索公司/联系人/邮箱…" oninput="filter()">
+    <select id="countryFilter" onchange="filter()">
+        <option value="">所有国家</option>
+    </select>
+    <span class="count" id="countDisplay">共 206 条</span>
+</div>
+
+<div class="container">
+<table>
+<thead>
+<tr>
+    <th onclick="sortBy(0)">公司 <span class="arrow">▼</span></th>
+    <th onclick="sortBy(1)">联系人 <span class="arrow">▼</span></th>
+    <th onclick="sortBy(2)">职位 <span class="arrow">▼</span></th>
+    <th onclick="sortBy(3)">电话 <span class="arrow">▼</span></th>
+    <th onclick="sortBy(4)">邮箱 <span class="arrow">▼</span></th>
+    <th onclick="sortBy(5)">所在地 <span class="arrow">▼</span></th>
+    <th onclick="sortBy(6)">国家 <span class="arrow">▼</span></th>
+    <th onclick="sortBy(7)">类型 <span class="arrow">▼</span></th>
+</tr>
+</thead>
+<tbody id="contactsBody"></tbody>
+</table>
+</div>
+
+<script>
+const contacts = [
+    {company:'WCA', person:'name : intsha', title:'', tel:'', email:'code : bqss', location:'', country:'', type:'国外代理'},
+    {company:'A.hartrodt', person:'Candy', title:'Customs service', tel:'0532-85973017/18/19  86678533', email:'candy-qingdao@hartrodt.com.cn', location:'Qingdao', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Nancy', title:'Customs service', tel:'0532-86678533', email:'', location:'Qingdao', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Kelly Liu', title:'Import', tel:'', email:'ahkdao@163171.net', location:'Qingdao', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Yien / 欧', title:'', tel:'0755-82157832', email:'yien.yang@hartrodt.com.hk', location:'Shenzhen', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'kayjee zeng', title:'', tel:'0755-82157758*8004', email:'', location:'Shenzhen', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'john huang', title:'', tel:'0755 82157758-8019 / 25153170', email:'', location:'Shenzhen', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'alan li', title:'', tel:'00852-28122928', email:'alan.li@hartrodt.com.hk', location:'Shenzhen', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'ada tang', title:'Customs service', tel:'0757-83307911', email:'ada.tang@hartrodt.com.hk', location:'Foshan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Herman Mui', title:'sea exp', tel:'', email:'herman.mui@hartrodt.com.hk', location:'guangzhou', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Jacky Tang', title:'customer service', tel:'20 8104 5128', email:'jacky.tang@hartrodt.com.hk', location:'guangzhou', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'David', title:'manager', tel:'0574-27810801/03 Cell:13586562341', email:'david.qian@hartrodt.com.cn', location:'Ningbo', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Anson Yang / 杨勇', title:'', tel:'cell：13882184825', email:'ansonyeung1205@hotmail.com', location:'Chengdu', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Liang Winne', title:'', tel:'028-86634802*802 cell:15902816852', email:'', location:'Chengdu', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Cuper Gao', title:'', tel:'0411 8278 9326 / 13050555927', email:'cuper.gao@hartrodt.com.cn', location:'Dalian', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Hollace', title:'', tel:'22 23201559*807 / 010-65157645*865 / 13920009756', email:'hollace.an@hartrodt.com.cn', location:'Tianjin', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Apple Wang', title:'', tel:'010-65157645', email:'apple.wang@hartrodt.com.cn', location:'Beijing', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Fan Luo', title:'', tel:'0592-5323635', email:'fan.luo@hartrodt.com.hk', location:'Xiamen', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Helen Pan', title:'', tel:'0592- 5323625', email:'helen.pan@hartrodt.com.hk', location:'Xiamen', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Eric Wei 魏海', title:'manager', tel:'027-82703110  / cell:13871303311', email:'eric.wei@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'christina Liu 刘婷', title:'customer service', tel:'027-82703133 / cell:13971661667', email:'christina.liu@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'lucy Xiao 肖杨', title:'', tel:'027-82703133', email:'lucy.xiao@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Minmin Lee 李必敏', title:'', tel:'027-82703100 / cell:15827320349', email:'minmin.lee@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Helen Lee 李娟', title:'', tel:'027-82703112', email:'helen.lee@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Daniel Wu 吴丹', title:'', tel:'027-82703115', email:'daniel.wu@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Medson Fang 方意丰', title:'', tel:'027-82703115', email:'medson.fang@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'A.hartrodt', person:'Kai Xu 徐凯', title:'', tel:'027-82703115', email:'kai.xu@hartrodt.com.cn', location:'Wuhan', country:'China', type:'国外代理-China'},
+    {company:'Bonvoyage', person:'Robert Fan', title:'sea import', tel:'886-2-25097818   ext.  888', email:'robert@bonvoyage.com.tw', location:'Taipei', country:'Taiwan', type:'国外代理-Taiwan'},
+    {company:'Bonvoyage', person:'Rita Lu', title:'air export', tel:'', email:'<rita@bonvoyage.com.tw>', location:'Taipei', country:'Taiwan', type:'国外代理-Taiwan'},
+    {company:'Bonvoyage', person:'Eva Hsu', title:'sea export', tel:'', email:'<eva@bonvoyage.com.tw>', location:'Taipei', country:'Taiwan', type:'国外代理-Taiwan'},
+    {company:'A.hartrodt', person:'Walter Cerchiara', title:'AIR IMP', tel:'', email:'walter.cerchiara@hartrodt.com.au', location:'Melbourne', country:'Australia', type:'国外代理-Australia'},
+    {company:'A.hartrodt', person:'Tamsyn van Prooyen', title:'OCEAN IMP', tel:'', email:'tamsyn.vanprooyen@hartrodt.com.au', location:'Melbourne', country:'Australia', type:'国外代理-Australia'},
+    {company:'A.hartrodt', person:'Nancy Phillips', title:'custom service', tel:'', email:'nancy.phillips@hartrodt.com.au', location:'Sydney', country:'Australia', type:'国外代理-Australia'},
+    {company:'A.hartrodt', person:'Yonas Pranoto', title:'Customs service', tel:'', email:'fm june 01', location:'Sydney', country:'Australia', type:'国外代理-Australia'},
+    {company:'A.hartrodt', person:'Heather Macdonald', title:'', tel:'', email:'heather.macdonald@hartrodt.com.au', location:'Fremantle', country:'Australia', type:'国外代理-Australia'},
+    {company:'A.hartrodt', person:'Fiona Paterson', title:'Branch Manager', tel:'(+61-8) 8343 5101 / 8343 5100', email:'fiona.paterson@hartrodt.com.au', location:'Adelaide', country:'Australia', type:'国外代理-Australia'},
+    {company:'A.hartrodt', person:'christopher Meacham', title:'', tel:'', email:'christopher.meacham@hartrodt.com.au', location:'Brisbane', country:'Australia', type:'国外代理-Australia'},
+    {company:'A.hartrodt', person:'Mr. Schaefer, Mike', title:'President', tel:'Tel.: 516-203-3100 ext', email:'mschaefer@hartrodtusa.com', location:'NEW YORK', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Mr. Moreno, Mike', title:'Mgr. Int\'l Freight Operations', tel:'', email:'mmoreno@hartrodtusa.com', location:'NEW YORK', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Mr.Richard Russell', title:'(Air-Export dept.)', tel:'', email:'rrussell@hartrodtusa.com', location:'NEW YORK', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Mr. Andreas Reiche', title:'Air-Imp', tel:'1-516-203-3120', email:'areiche@hartrodtusa.com', location:'NEW YORK', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Anthony Prevosti', title:'Clearance Operations / Asst. Vice President CHB', tel:'1-516-203-3100 ext 118', email:'aprevosti@hartrodtusa.com', location:'NEW YORK', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Clinton Caritan', title:'sales & marketing dept', tel:'', email:'ccaritan@hartrodtusa.com', location:'NEW YORK', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Mr. Matthies, Alexander', title:'Branch Manager', tel:'Tel.: 1-310-645-0357 ext234', email:'amatthies@hartrodtusa.com', location:'LOS ANGELES', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Christiane Rohrberg', title:'Manager Int\'l Freight Operations', tel:'Tel.: 1-310-645-0357 ext 222', email:'crohrberg@hartrodtusa.com', location:'LOS ANGELES', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Ms. Ortiz, Claudia', title:'Ocean Export', tel:'230', email:'cortiz@hartrodtusa.com', location:'LOS ANGELES', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Ms. Ortiz, Angelica', title:'Ocean Export', tel:'229', email:'aortiz@hartrodtusa.com', location:'LOS ANGELES', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Benjamin Frantz', title:'Manager Intl. Freight Operations', tel:'1-(310) 645-0357', email:'bfrantz@hartrodtusa.com', location:'LOS ANGELES', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Ms. Ouch, Sophie', title:'Ocean Import', tel:'224', email:'souch@hartrodtusa.com', location:'LOS ANGELES', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Ms.nadine Fischer', title:'Branch Manager / Ocean Export', tel:'1-847-956-6857 * 101', email:'nfischer@HARTRODTUSA.com', location:'Chicago', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Ms. Mondro, Elizabeth (Liz)', title:'Air Export', tel:'1-847-956-6857 * 130', email:'emondro@hartrodtusa.com', location:'Chicago', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Mr. Rainer, Hachenberg', title:'Ocean Import', tel:'1-847-956-6857 * 131', email:'rhachenberg@hartrodtusa.com', location:'Chicago', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Ms. Horn, Jolene', title:'Air/ Ocean Import', tel:'1-847-956-6857 * 120', email:'jhorn@hartrodtusa.com', location:'Chicago', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Mr. Frantz, Benjamin', title:'Air/ Ocean Import', tel:'1-847-956-6857 * 121', email:'bfrantz@hartrodtusa.com', location:'Chicago', country:'USA', type:'国外代理-USA'},
+    {company:'A.hartrodt', person:'Chantal Bertrand', title:'Import manager', tel:'Tel: +32 3 202 40 57', email:'chantal.bertrand@hartrodt.be', location:'Antwerp', country:'Belgium', type:'国外代理-Belgium'},
+    {company:'A.hartrodt', person:'Mr. Rainer, Hachenberg', title:'Ocean Import', tel:'', email:'', location:'Antwerp', country:'Belgium', type:'国外代理-Belgium'},
+    {company:'A.hartrodt', person:'Iris Kenis', title:'Export', tel:'', email:'iris.kenis@hartrodt.be', location:'Antwerp', country:'Belgium', type:'国外代理-Belgium'},
+    {company:'A.hartrodt', person:'Darren.graham', title:'', tel:'', email:'Darren.graham-lon@hartrodt.co.uk', location:'London', country:'UK', type:'国外代理-UK'},
+    {company:'Celtic Forwarding Ltd', person:'Ken Behan', title:'Air rates', tel:'+353-(0)-1-865 6000', email:'ken@celticfwd.ie', location:'Dublin', country:'Ireland', type:'国外代理-Ireland'},
+    {company:'Celtic Forwarding Ltd', person:'Martin Jordan', title:'Sea FCL', tel:'+353-(0)-1-865 6000', email:'martin@celticfwd.ie', location:'Dublin', country:'Ireland', type:'国外代理-Ireland'},
+    {company:'Celtic Forwarding Ltd', person:'James Cully', title:'Sea LCL', tel:'+353-(0)-1-865 6000', email:'james@celticfwd.ie', location:'Dublin', country:'Ireland', type:'国外代理-Ireland'},
+    {company:'Celtic Forwarding Ltd', person:'Eunan Gaffney', title:'Sea LCL', tel:'+353-(0)-1-865 6000', email:'eunan@celticfwd.ie', location:'Dublin', country:'Ireland', type:'国外代理-Ireland'},
+    {company:'Celtic Forwarding Ltd', person:'Gerry Kiernan', title:'Manager', tel:'+353-(0)-1-865 6000  Mobile: +353-(0) 87-2568140', email:'gerry@celticfwd.ie / info@celticfwd.ie', location:'Dublin', country:'Ireland', type:'国外代理-Ireland'},
+    {company:'A.hartrodt', person:'Pascale Nony', title:'', tel:'', email:'pascale.nony-cdg@hartrodt.fr', location:'Paris', country:'France', type:'国外代理-France'},
+    {company:'A.hartrodt', person:'Mathieu Macco', title:'', tel:'', email:'commercial@hartrodt.fr', location:'Paris', country:'France', type:'国外代理-France'},
+    {company:'A.hartrodt', person:'Holger Glas', title:'Manager', tel:'', email:'holger.glas@stuttgart.hartrodt.com', location:'Stuttgart', country:'Germany', type:'国外代理-Germany'},
+    {company:'A.hartrodt', person:'Erika Almaschi', title:'air exp CS', tel:'', email:'Erika.Almaschi@frankfurt.hartrodt.com', location:'Frankfurt', country:'Germany', type:'国外代理-Germany'},
+    {company:'A.hartrodt', person:'Peter Hischer', title:'air exp manager', tel:'', email:'peter.hischer@frankfurt.hartrodt.com', location:'Frankfurt', country:'Germany', type:'国外代理-Germany'},
+    {company:'BHS', person:'Heike Hadlak', title:'import', tel:'+ 49 (0) 421 - 5952-220', email:'heike.hadlak@bhs-spedition.com', location:'Bremen', country:'Germany', type:'国外代理-Germany'},
+    {company:'A.hartrodt', person:'Nerio Carassini', title:'import Air', tel:'(+39-051) - 6466244', email:'nerio.carassini@hartrodt.it', location:'', country:'Italy', type:'国外代理-Italy'},
+    {company:'A.hartrodt', person:'Franco Lisciotto', title:'Import Business Development Manager', tel:'(+39) 010  2497204', email:'franco.lisciotto@hartrodt.it', location:'Genova', country:'Italy', type:'国外代理-Italy'},
+    {company:'A.hartrodt', person:'Paolo Lorenzi', title:'Import LCL', tel:'', email:'paolo.lorenzi@hartrodt.it', location:'Genova', country:'Italy', type:'国外代理-Italy'},
+    {company:'A.hartrodt', person:'Lorenzo Massoletti', title:'Finance', tel:'', email:'lorenzo.massoletti@hartrodt.it', location:'Genova', country:'Italy', type:'国外代理-Italy'},
+    {company:'A.hartrodt', person:'Ana Belen Martinez', title:'', tel:'', email:'<ana_belen.martinez@hartrodt.es>', location:'Valencia', country:'Spain', type:'国外代理-Spain'},
+    {company:'A.hartrodt', person:'Jose Cordero', title:'', tel:'', email:'jose.cordero@hartrodt.es', location:'Barcelona', country:'Spain', type:'国外代理-Spain'},
+    {company:'Spedman', person:'Tommy Jensen', title:'Air-exp - Operations Manager', tel:'Tel. +46 8 410 20 597', email:'airexport@spedman.se', location:'', country:'Sweden', type:'国外代理-Sweden'},
+    {company:'Spedman', person:'Erik Forssberg', title:'Director Operations', tel:'Tel. +46 31 761 00 55', email:'erik.forssberg@spedman.se', location:'', country:'Sweden', type:'国外代理-Sweden'},
+    {company:'A.hartrodt', person:'Hisanori.kinoshita', title:'sales', tel:'+81-(0)3-3596-8170', email:'hisanori.kinoshita@hartrodt.co.jp', location:'Tokyo', country:'Japan', type:'国外代理-Japan'},
+    {company:'A.hartrodt', person:'Mr.Helder.dasilva', title:'sales', tel:'', email:'helder.dasilva@hartrodt.co.jp', location:'Tokyo', country:'Japan', type:'国外代理-Japan'},
+    {company:'A.hartrodt', person:'Tengku M Iqbal Bustamam', title:'Sales & Marketing Division', tel:'+62 61 4577003 / 4553013 / HP  : +62 811 65 46 49', email:'iqbal.bustamam@ppl.co.id', location:'Belawan', country:'Indonesia', type:'国外代理-Indonesia'},
+    {company:'A.hartrodt', person:'Attaturk Ali', title:'Customer Service', tel:'+6221  571-3891', email:'ali@ppl.co.id', location:'Jakarta', country:'Indonesia', type:'国外代理-Indonesia'},
+    {company:'PT.Panah Perdana Logisindo', person:'Thomas W Malecki', title:'Managing Director', tel:'6221-5713891 / 08121014060', email:'thomas.malecki@ppl.co.id', location:'Jakarta', country:'Indonesia', type:'国外代理-Indonesia'},
+    {company:'PT.Panah Perdana Logisindo', person:'Jemmy Tutuhatunewa', title:'Import Sea', tel:'08128187562', email:'jemmy.tutuhatunewa@ppl.co.id', location:'Jakarta', country:'Indonesia', type:'国外代理-Indonesia'},
+    {company:'PT.Panah Perdana Logisindo', person:'Marcia Siti Soendari', title:'Import Sea', tel:'0817809519', email:'marcia.siti.soendari@ppl.co.id', location:'Jakarta', country:'Indonesia', type:'国外代理-Indonesia'},
+    {company:'PT.Panah Perdana Logisindo', person:'Dedi Zabidi', title:'Import Sea', tel:'081319644828', email:'dedi.zabidi@ppl.co.id', location:'Jakarta', country:'Indonesia', type:'国外代理-Indonesia'},
+    {company:'Beweship', person:'Keijo Flinkman', title:'seafreight manager', tel:'', email:'keijo.flinkman@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'Beweship', person:'petra nakari', title:'import manage', tel:'', email:'petra.nakari@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'Beweship', person:'virpi orda', title:'export', tel:'', email:'virpi.orda@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'Beweship', person:'Christa Ahokas', title:'export', tel:'', email:'christa.ahokas@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'Beweship', person:'Ritva Ojaniemi', title:'Import dept', tel:'', email:'ritva.ojaniemi@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'Beweship', person:'Pirjo Lappi', title:'Import dept', tel:'', email:'pirjo.lappi@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'Beweship', person:'Jin Hui', title:'Import dept', tel:'', email:'jin.hui@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'Beweship', person:'Rasmus Lonnberg', title:'Import dept', tel:'', email:'rasmus.lonnberg@beweship.com', location:'Helsinki', country:'Finland', type:'国外代理-Finland'},
+    {company:'A.hartrodt', person:'Mr. Ashwan Shetty', title:'Export-air', tel:'91 22 6697 8370\n cell: 91 99870 69492', email:'ashwan.shetty@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Ms. Bhavika Parpani', title:'Export-air', tel:'91 22 6697 8370\n cell:91 98670 01897', email:'bhavika.parpani@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Ms. Vidhi Palkar', title:'Export-sea', tel:'91 22 40361846\n cell:91 98675 54988', email:'vidhi.palkar@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Ms. Sonal Parpani', title:'Export-sea', tel:'+ 91 22 4036 1819 \n cell: 91 98670 01864', email:'sonal.parpani@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Mini', title:'Import-sea', tel:'91 22 4036 1872 / cell:91 98671 57803', email:'mini.joseph@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Ms. Mahalakshmi', title:'Import-sea', tel:'91 22 4036 1820 / cell: 91  98675 01087', email:'m.lakshmi@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Ms. Nandini Nair', title:'Import-sea / Sales coordinators', tel:'91 22 4036 1845\n cell: 91 98675 59547', email:'nandini.n@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Ms. Monica D\'Souza', title:'Import-air', tel:'91 22 6697 8370\n   cell: 91 98675 01084', email:'monica.dsouza@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'A.hartrodt', person:'Mr. Makarand Ranade', title:'Import-air', tel:'91 22 6697 8370\n   cell: 91 98670 00215', email:'makarand.ranade@linksin.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'P&L PROYECTOS & LOGISTICA INTL', person:'ALICIA CARRASCO LEAL', title:'P&L PROYECTOS & LOGISTICA INTL', tel:'PH (507) 430-1559/430-1660  CEL (507) 66163261', email:'aliciacarpl@cwpanama.net', location:'', country:'Panama', type:'国外代理-Panama'},
+    {company:'A.hartrodt', person:'Ozlem AYKUT', title:'Airfreight Dept.', tel:'T：+90 216 546 0 444', email:'ozlem.aykut@aht.com.tr', location:'Istanbul', country:'Turkey', type:'国外代理-Turkey'},
+    {company:'A.hartrodt', person:'Hulya GUNSUR', title:'Seafreight Dept.', tel:'T:+90 216 546 0 444', email:'', location:'Istanbul', country:'Turkey', type:'国外代理-Turkey'},
+    {company:'TRADINTER S.A.  www.tradinter-ec.com', person:'WENDY SANCHEZ PARKER', title:'COMMERCIAL DPT.', tel:'T：5934-2-454300/454700 /  cell：5939-9400318', email:'wsanchez@tradinter-ec.com/wendysanchezp@hotmail.com', location:'GUAYAQUIL', country:'Ecuador', type:'国外代理-Ecuador'},
+    {company:'A.hartrodt', person:'Levente Farkas', title:'', tel:'(+40-21) 7782850', email:'levente.farkas@hartrodt.ro', location:'Bucharest', country:'Romania', type:'国外代理-Romania'},
+    {company:'A.hartrodt', person:'Svetlana Lebedeva', title:'Commercial Director', tel:'+7 812 335-66-20, (-19 )', email:'Svetlana.Lebedeva@hartrodt.ru', location:'St. Petersburg', country:'Russia', type:'国外代理-Russia'},
+    {company:'Rais Hassan Saadi & Co.  LLC', person:'Antony Varghese', title:'Executive - Sales', tel:'+971 2 6446747 / Dir Tel: +971 50 1230157', email:'antony.v@rhs_auh.com', location:'Abu Dhabi', country:'UAE', type:'国外代理-UAE'},
+    {company:'A.hartrodt', person:'Michal Prokopowicz', title:'seafreight manager', tel:'(+48 58) 621 13 74 ext 14/ (+48 58) 621 11 84 ext 14', email:'michal.prokopowicz@hartrodt.pl', location:'Gdynia', country:'Poland', type:'国外代理-Poland'},
+    {company:'A.hartrodt', person:'Piotr Krempski', title:'Customs service', tel:'', email:'piotr.krempski@hartrodt.pl', location:'Szczecin', country:'Poland', type:'国外代理-Poland'},
+    {company:'A.hartrodt', person:'Kamila Stasik', title:'Export/ import:', tel:'', email:'kamila.stasik@hartrodt.pl', location:'Szczecin', country:'Poland', type:'国外代理-Poland'},
+    {company:'A.hartrodt', person:'Monika Szczygiel', title:'Import:', tel:'', email:'monika.szczygiel@hartrodt.pl', location:'Szczecin', country:'Poland', type:'国外代理-Poland'},
+    {company:'A.hartrodt', person:'Piotr Torbe', title:'Import:', tel:'', email:'piotr.torbe@hartrodt.pl', location:'Szczecin', country:'Poland', type:'国外代理-Poland'},
+    {company:'A.hartrodt', person:'Tomasz Szmajdzinski', title:'Import:', tel:'', email:'tomasz.szmajdzinski@hartrodt.pl', location:'Szczecin', country:'Poland', type:'国外代理-Poland'},
+    {company:'A.hartrodt', person:'wojciech Bryszewski', title:'air manager', tel:'+48 22 8468687 / cell:+48 501274328', email:'wojciech.bryszewski@hartrodt.pl', location:'Wasaw', country:'Poland', type:'国外代理-Poland'},
+    {company:'INTERLOGISTICA LTD.', person:'Lyubomir Tsanev', title:'', tel:'00359 52 / 600 659 / 632 193', email:'containers@interlogistica.bg', location:'Varna', country:'Bulgaria', type:'国外代理-Bulgaria'},
+    {company:'Arch Global Logistics', person:'Mohammed Shakhtour', title:'Business Development Manager', tel:'00962 6 5608881,2,3,', email:'Shakhtour@Archagl.com', location:'Amman', country:'Jordan', type:'国外代理-Jordan'},
+    {company:'AH Volan Kft.', person:'Mr. Juergen Kirrbach', title:'Managing Director', tel:'Tel.: 814-2524', email:'j.kirrbach@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Ms. Zita Zanyi', title:'FCL General Manager', tel:'Tel.: 814-2524', email:'z.zanyi@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Ms. Orsolya Hetenyi (Orsi)', title:'FCL', tel:'Tel.: 814-2524', email:'o.hetenyi@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Mrs. Zsuzsa Erdelyi', title:'FCL', tel:'Tel.: 814-2524', email:'zs.erdelyi@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Mrs. Zita Toth', title:'LCL (import)', tel:'Tel.: 814-2524', email:'zita.toth@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Mrs. Zsuzsa Vegvari', title:'LCL (export)', tel:'Tel.: 814-2524', email:'vegvari@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Mr. Zoltan Peternics,', title:'Sales Manager', tel:'Tel.: 814-2524', email:'z.peternics@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Ms. Sarolta Lukacs', title:'sales', tel:'Tel.: 814-2524', email:'s.lukacs@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Mr. Peter Viczko,', title:'Account Manager', tel:'Tel.: 814-2524', email:'sociotax@netroller.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'AH Volan Kft.', person:'Mrs. Erika Keglovits', title:'account', tel:'Tel.: 814-2524', email:'e.keglovits@ahvolan.hu', location:'Budapest', country:'Hungary', type:'国外代理-Hungary'},
+    {company:'A.hartrodt', person:'Katrin Morgenthaler', title:'sales', tel:'', email:'katrin.morgenthaler@hartrodt.ch', location:'Basle', country:'Switzerland', type:'国外代理-Switzerland'},
+    {company:'A.hartrodt', person:'Bear Huerzeler', title:'sales', tel:'', email:'beat.huerzeler@hartrodt.ch', location:'Basle', country:'Switzerland', type:'国外代理-Switzerland'},
+    {company:'KGL Logistics', person:'George Keyrouz', title:'Country Manager', tel:'00965 845455*136 / cell:00965 6911584', email:'george.keyrouz@kgllogistics.com', location:'', country:'Kuwait', type:'国外代理-Kuwait'},
+    {company:'TRANSLAGO LTDA. AVDA  CALLE 100 NO. 19-61 PISO 9, BOGOTA COLOMBIA ,PHONE 5716512193 , 5716512200 ,CTC ANA BEATRIZ IBAÑEZ M', person:'Maria Lucia Uribe', title:'', tel:'5716512193 , 5716512200', email:'mluribe@translago.com', location:'Buenaventura', country:'Colombia', type:'国外代理-Colombia'},
+    {company:'TRANSLAGO LTDA. AVDA  CALLE 100 NO. 19-61 PISO 9, BOGOTA COLOMBIA ,PHONE 5716512193 , 5716512200 ,CTC ANA BEATRIZ IBAÑEZ M', person:'ANA BEATRIZ IBAÑEZ', title:'', tel:'', email:'', location:'Buenaventura', country:'Colombia', type:'国外代理-Colombia'},
+    {company:'Wisma Forwarding Limited', person:'Malee', title:'quotation / both imp/exp', tel:'', email:'malee@wisma.co.th', location:'Bangkok/Leam Chabang', country:'Thailand', type:'国外代理-Thailand'},
+    {company:'Wisma Forwarding Limited', person:'Viparat', title:'maybe manager', tel:'02-237 0720 ( 14 lines auto)', email:'wisma@wismaforwarding.com', location:'Bangkok/Leam Chabang', country:'Thailand', type:'国外代理-Thailand'},
+    {company:'Wisma Forwarding Limited', person:'Khun Phanlop', title:'Sea-Imp', tel:'', email:'phanlop@wisma.co.th', location:'Bangkok', country:'Thailand', type:'国外代理-Thailand'},
+    {company:'A.hartrodt', person:'Ulrich Kristensen', title:'', tel:'45 75101324 /  cell:+45 60933758', email:'ulrich.kristensen@hartrodt.dk', location:'', country:'Denmark', type:'国外代理-Denmark'},
+    {company:'SFS-Speed Forward Shipping', person:'Nabih Alhafez', title:'', tel:'(+963-11) 23 22 6 78 / 87', email:'nabih@sfs-sy.com', location:'Damascus', country:'Syria', type:'国外代理-Syria'},
+    {company:'América Global Logistics S.A.', person:'José Mario Escobar', title:'', tel:'503 2227.4690 / cell:503 7854-9262', email:'mep@americagl.com', location:'San Salvador', country:'El Salvador', type:'国外代理-El Salvador'},
+    {company:'Compañía Oceanica El Salvador S.A. de C.V.', person:'Silke Grabs:', title:'', tel:'503-2263-2405', email:'sgrabs@oceanica.ws', location:'San Salvador', country:'El Salvador', type:'国外代理-El Salvador'},
+    {company:'Compañía Oceanica El Salvador S.A. de C.V.', person:'Alma Reyes:', title:'', tel:'503-2263-2405', email:'Areyes@oceanica.ws', location:'San Salvador', country:'El Salvador', type:'国外代理-El Salvador'},
+    {company:'A.hartrodt', person:'Maria Georgiou', title:'sales manager Thessaloniki', tel:'+30 2310 530 500 / Mobile: +30 6970 676 668', email:'maria.georgiu@ahg.gr / grskg@ahg.gr', location:'Thessaloniki', country:'Greece', type:'国外代理-Greece'},
+    {company:'A.hartrodt', person:'Ms. Alice Benveniste', title:'Customer Service / Sales Executive', tel:'Mobile: +30 6970 070 190', email:'Alice.Benveniste@ahg.gr', location:'Thessaloniki', country:'Greece', type:'国外代理-Greece'},
+    {company:'A.hartrodt', person:'Christos Economou', title:'Managing Director Piraeus and Thessaloniki', tel:'', email:'christos.economou@ahg.gr', location:'Piraeus and Thessaloniki', country:'Greece', type:'国外代理-Greece'},
+    {company:'A.hartrodt', person:'Mr. Benjamin Andrist', title:'General Director', tel:'+84(8)38209260', email:'ben.andrist@hartrodt.com.vn', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'A.hartrodt', person:'Mr. Malte Schumann', title:'Deputy Director', tel:'+84(8)38209260', email:'malte.schumann@hartrodt.com.vn', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'A.hartrodt', person:'Mrs. Chi Tran', title:'Operation Supervisor', tel:'+84(8)38209260', email:'chi.tran@hartrodt.com.vn', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'A.hartrodt', person:'Ms. Truc Nguyen', title:'Import Customer Service', tel:'+84(8)38209260', email:'truc.nguyen@hartrodt.com.vn', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'A.hartrodt', person:'Mr. Huy Bui', title:'Documentation', tel:'+84(8)38209260', email:'huy.bui@hartrodt.com.vn', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'A.hartrodt', person:'Mrs. Nhi Phan Tran Thuy', title:'Sales Executive', tel:'+84(8)38209260', email:'nhi.phan@hartrodt.com.vn', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'A.hartrodt', person:'Mr. Thanh Nguyen Tuan', title:'Sales Executive', tel:'+84(8)38209260', email:'thanh.nguyen@hartrodt.com.vn', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'A.hartrodt', person:'Vanessa Burns', title:'Operations Manager', tel:'09 275 6655 / Mobile: 0274 399 660', email:'vanessa.burns@hartrodt.co.nz', location:'Auckland International Airport', country:'New Zealand', type:'国外代理-New Zealand'},
+    {company:'A.hartrodt', person:'Karen Gao', title:'Customer Service', tel:'09 275 6655', email:'Customer.Service@hartrodt.co.nz', location:'Auckland International Airport', country:'New Zealand', type:'国外代理-New Zealand'},
+    {company:'Natco-Saudi Arabia International Freight Forwarders', person:'arief', title:'', tel:'+966 3 8349972 / 8340416', email:'dmmoperation@natcosa.com', location:'Damman', country:'Saudi Arabia', type:'国外代理-Saudi Arabia'},
+    {company:'Natco-Saudi Arabia International Freight Forwarders', person:'aziz', title:'', tel:'+966 3 8349972 / 8340416', email:'aziz@natcosa.com', location:'Damman', country:'Saudi Arabia', type:'国外代理-Saudi Arabia'},
+    {company:'A.hartrodt', person:'Malte Schumann', title:'', tel:'+ 52 55 5251 - 3818', email:'Malte.schumann@hartrodt.com', location:'Manzanillo', country:'Mexico', type:'国外代理-Mexico'},
+    {company:'Toledo Cargo', person:'Hugo Toledo', title:'', tel:'+52 55 55 96 15 51', email:'toledo.cargo@toledocargo.com', location:'Manzanillo', country:'Mexico', type:'国外代理-Mexico'},
+    {company:'Reexpedidora Internacional de Carga Concorde Sa de CV', person:'Tilman Schumacher', title:'Director', tel:'+52 55 57 84 05 56', email:'ricadmon@terra.com.mx', location:'Mexico city', country:'Mexico', type:'国外代理-Mexico'},
+    {company:'A.hartrodt', person:'Ivan Ogoshi', title:'import sea', tel:'', email:'iogoshi@hartrodt.com.pe', location:'callao', country:'Peru', type:'国外代理-Peru'},
+    {company:'A.hartrodt', person:'margaret Tham', title:'customer service', tel:'(+65) 6464 5601 / dir:(+65) 6464 5620', email:'margaret.tham@hartrodt.com.sg', location:'singapore', country:'Singapore', type:'国外代理-Singapore'},
+    {company:'TICSA CARGO', person:'Mónica Padilla A.', title:'Operations Department', tel:'593-2-2-481-930, 593-2-2-485-375 / Mobile:  593-9-6-802-485', email:'monica.padilla@ticsa-ec.com', location:'', country:'Ecuador', type:'国外代理-Ecuador'},
+    {company:'TICSA CARGO', person:'Nicolás Chávez Palacios', title:'Presidente', tel:'593 2 2481928 / cel. 593 9 9552139', email:'nicolaschavez@grupo-atlas.com', location:'', country:'Ecuador', type:'国外代理-Ecuador'},
+    {company:'Trans Asia Express Limited', person:'Khairul Bari', title:'', tel:'+880 2 956 4447-9  / cell:880 1713 083 128', email:'k.bari@cargobd.com / mak@cargobd.com', location:'Chittagong / Dhaka', country:'Bangladesh', type:'国外代理-Bangladesh'},
+    {company:'Bellack-Roe Logistics Inc.', person:'Leo Malatino', title:'Account Manager', tel:'(215) 923-7570 / (215) 923-7504', email:'', location:'', country:'', type:'国外代理'},
+    {company:'Coop TPE', person:'Phyllis', title:'', tel:'', email:'', location:'Taiwan', country:'China', type:'国外代理-China'},
+    {company:'MBA SHIPPING AGENCIES LLC', person:'MR.Bala', title:'manager', tel:'971 4 29 57 905/(MOBILE)+971 50 67 81　105', email:'bala@mbashipping.ae', location:'Jebel Ali', country:'UAE', type:'国外代理-UAE'},
+    {company:'MBA SHIPPING AGENCIES LLC', person:'Shaheer', title:'operator', tel:'', email:'', location:'Jebel Ali', country:'UAE', type:'国外代理-UAE'},
+    {company:'BAR KALA INT\'L TRANSPORT CO', person:'Ali Monesali', title:'', tel:'9821 8832 5772,5', email:'monesali@yahoo.com   or   monesali@cavalier-tehran.com', location:'Tehran', country:'Iran', type:'国外代理-Iran'},
+    {company:'Siri Shipping Co.', person:'Nahid Rahimi (Ms.),', title:'', tel:'98 21 88848757-60', email:'marketing@siri-isf.com', location:'', country:'', type:'国外代理'},
+    {company:'Saving Transped Srl', person:'FLAVIA', title:'customer service', tel:'', email:'flavia@savingtransped.it', location:'Florenza', country:'Italy', type:'国外代理-Italy'},
+    {company:'Saving Transped Srl', person:'Maurizio Fareri', title:'', tel:'39-055-375599', email:'maurizio@savingtransped.it', location:'Florenza', country:'Italy', type:'国外代理-Italy'},
+    {company:'Highland Air & Ocean Logistics Pvt. Ltd.', person:'Milan Karmacharya', title:'', tel:'977 1 4440900 / 4416225', email:'milan.karmacharya@highlandnepal.com, karmacharya@subisu.net.np', location:'Kathmandu', country:'Nepal', type:'国外代理-Nepal'},
+    {company:'HUY LAM S.G CO.,LTD / International Freight Forwarder & Logistics', person:'Thanh Lam (David)', title:'Director', tel:'84-8 -  62962640 - 62728296 (direct line)  Mobile No.: 0933.295.292  /  0913.875.285', email:'Email    :  thanhlam@huylamsg.com', location:'Hochiminh City', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'Swift Global Logistics (SPRL)', person:'Mr. Ben Ilunga', title:'Branch Manager', tel:'Mobile: +243 9999 39 190', email:'Email: ben.ilunga@swiftfreight.com, sfikin.sales@swiftfreight.com\nKindly copy all messages to:  m.swamy@swiftfreight.com', location:'Kinshasa', country:'Congo', type:'国外代理-Congo'},
+    {company:'Ingo E.Gallmeister GmbH', person:'Joachim Luedicke', title:'', tel:'Tel. 040/73 61 52 40', email:'Luedicke@ingo-gallmeister.de', location:'Hamburg', country:'Germany', type:'国外代理-Germany'},
+    {company:'CATEGORY 5 Inc. OF THE AMERICAS', person:'Stefan H. Werschkull', title:'Senior Managing Partner', tel:'', email:'shw@category5solution.com', location:'MIAMI', country:'USA', type:'国外代理-USA'},
+    {company:'ISL BEIJING', person:'elyn wu', title:'customer service', tel:'010-85610756', email:'elyn.wu.bjs@islcn.com', location:'BEIJING', country:'China', type:'国外代理-China'},
+    {company:'Tokyo sanyu shipping co.,ltd.', person:'Mr. Inoue', title:'Manager', tel:'03-3551-6280', email:'inoue@tokyosanyu.co.jp', location:'Tokyo', country:'Japan', type:'国外代理-Japan'},
+    {company:'Asian Shipping (Thailand) Co.,Ltd.', person:'Orathai Ketdee (POO)', title:'Operation', tel:'+662 9335593 #11 / Mobile: +668 96841299', email:'orathai@asianshippingthai.com', location:'Bangkok', country:'Thailand', type:'国外代理-Thailand'},
+    {company:'Asian Shipping (Thailand) Co.,Ltd.', person:'Annz', title:'sales', tel:'', email:'gy_jun@hotmail.com', location:'Bangkok', country:'Thailand', type:'国外代理-Thailand'},
+    {company:'SEA-VOYAGE CARRIERS PVT.LTD.', person:'Anu', title:'sales', tel:'011-25418032', email:'info@sea-voyage.com', location:'New Delhi', country:'India', type:'国外代理-India'},
+    {company:'STrans Co.', person:'Anar Yusifov', title:'sales', tel:'99412-4087610\ncell1: 99450-2124068\ncell2: 99455-7663366', email:'anar@strans.ws', location:'Azerbaijan', country:'Azerbaijan', type:'国外代理-Azerbaijan'},
+    {company:'GLOBAL LINK SERVICE PTE LTD', person:'Por Sour', title:'Manager Director', tel:'+855-23-99 88 05/6', email:'por-sour@gls.com.kh', location:'Phnom Penh', country:'Cambodia', type:'国外代理-Cambodia'},
+    {company:'Swift Freight Logistics Limited 连运物流有限公司', person:'Kheng Leang 连玉卿', title:'Manager Director', tel:'+855 12 876800 / 15 876800 cell:+84 169 332 8777', email:'kheng.leang@swiftfreightlogistics.com', location:'Phnom Penh', country:'Cambodia', type:'国外代理-Cambodia'},
+    {company:'Swift Freight Logistics Limited 连运物流有限公司', person:'Tahsinul Huq', title:'General Manager', tel:'+855 15 28 00 88 / 95 28 00 88 cell:+84 16 933 07 888', email:'tahsinul.huq@swiftfreightlogistics.com', location:'Phnom Penh', country:'Cambodia', type:'国外代理-Cambodia'},
+    {company:'Swift Freight Logistics Limited 连运物流有限公司', person:'OFFICE LINE', title:'', tel:'+84 8 399 02808 / 8 399 55800 / 8 399 54566 / 8 399 01680', email:'', location:'Phnom Penh', country:'Cambodia', type:'国外代理-Cambodia'},
+    {company:'SHA TRANSPORT EXPRESS CO.,LTD', person:'SIN SORYA', title:'CEO', tel:'cell: +855 12 719 239 / 86 587 777 / tel: 855 23 987 892 / 992 189 / 844 916', email:'sorya@shatransportexpress.com', location:'Phnom Penh', country:'Cambodia', type:'国外代理-Cambodia'},
+    {company:'SUMAN AIR FREIGHT PVT LTD', person:'(Anoop)Annup Kuumar Balodi', title:'', tel:'91 26225028,26225029,26225049', email:'anoop@sumanair.com', location:'New Delhi', country:'India', type:'国外代理-India'},
+    {company:'SUMAN AIR FREIGHT PVT LTD', person:'Anoop', title:'', tel:'', email:'ajayrana@sumanair.com ;  anoop@sumanair.com', location:'Mumbai/Nhava Sheva', country:'India', type:'国外代理-India'},
+    {company:'Lloyd Manex Shipping', person:'Karolina Jonsson', title:'CONCEPT LADY', tel:'Tel: 0203 475 5050', email:'karolinaj@lloydmanex.com', location:'LONDON', country:'UK', type:'国外代理-UK'},
+    {company:'Lloyd Manex Shipping', person:'Richard Naylor', title:'OP', tel:'', email:'operations@lloydmanex.com', location:'LONDON', country:'UK', type:'国外代理-UK'},
+    {company:'Lloyd Manex Shipping', person:'Oliver', title:'OP Manager', tel:'', email:'operations@lloydmanex.com', location:'LONDON', country:'UK', type:'国外代理-UK'},
+    {company:'TBI', person:'Patrick', title:'BOSS', tel:'', email:'tbi8@tbihk.com', location:'hongkong', country:'China', type:'国外代理-China'},
+    {company:'LBP SA(PTY)Ltd', person:'Gerhard Botha', title:'Operator', tel:'', email:'Gerhard@lbp.co.za', location:'Cape Town', country:'South Africa', type:'国外代理-South Africa'},
+    {company:'Global Logistics Solutions India Pvt Ltd', person:'Naveen Prakash', title:'Director', tel:'HP + 91 98400 32012', email:'naveen.prakash@globallogistics.co.in', location:'Chennai', country:'India', type:'国外代理-India'},
+    {company:'EES Freight Services Pte Ltd  "Since 1983"', person:'Jean Chuang', title:'Director', tel:'(65) 6272-7878 Office', email:'', location:'Singapore', country:'Singapore', type:'国外代理-Singapore'},
+    {company:'SILK EXPRESS FREIGHT PTE LTD', person:'Cleo Tan', title:'Assistant Customer Service Manager', tel:'+65 6542 8081 / Mobile: +65 98155455', email:'', location:'singapore', country:'Singapore', type:'国外代理-Singapore'},
+    {company:'CTI Logistics Pte Ltd', person:'Kelwen Tan', title:'(Sales Support)', tel:'Tel : +65-66920455', email:'', location:'Singapore', country:'Singapore', type:'国外代理-Singapore'},
+    {company:'Transporter International Logistics Co.,Ltd', person:'Teresa Thao (Ms)', title:'customer service', tel:'Tel: +84 8 38495715 ext:26                        hp:+84 903885811/1679983157', email:'teresa_thao@transportervn.com', location:'HCMC', country:'Vietnam', type:'国外代理-Vietnam'},
+    {company:'SPEED CONTAINER LINE(S) PTE LTD', person:'Helen', title:'', tel:'tel：6221 6238 mobile:9437 9200', email:'""Helen " " <helen@speedline.sg> "speed main" <main@speedline.sg>, "vincent" <ops@speedline.sg>,', location:'Singapore', country:'Singapore', type:'国外代理-Singapore'},
+    {company:'ITAL FREIGHT TRANSIT INTERNATIONAL', person:'Anne CANDELA', title:'General Manager', tel:'0033 174 25 24 91 / Cel :   +33616163778', email:'italfreight@italfreight.fr', location:'PARIS', country:'France', type:'国外代理-France'},
+    {company:'GLOBAL FREIGHT SERVICES PTY LTD', person:'William', title:'sales manager', tel:'03 9836 5855', email:'William@globalfreight.com.au', location:'Melboune', country:'Australia', type:'国外代理-Australia'},
+    {company:'BC lines', person:'Tomas Gerasimovič', title:'Operations assistant', tel:'Mob.: +370 637 61259', email:'vnoop14@bcline.eu', location:'Klaipeida', country:'Lithuania', type:'国外代理-Lithuania'},
+    {company:'Konekta cargo UAB', person:'Mr. Luksa Arnold', title:'Project manager', tel:'+370 5231 0073', email:'al.vno@konektacargo.com', location:'', country:'Lithuania', type:'国外代理-Lithuania'},
+    {company:'Konekta cargo UAB', person:'Mrs Pnevska Irena', title:'Sea freight', tel:'+370 5231 0073', email:'ip.vno@konektacargo.com', location:'', country:'Lithuania', type:'国外代理-Lithuania'},
+    {company:'Arijus UAB', person:'Jelena Kisiele', title:'', tel:'+370 46 21 31 49\nmobile: +370 698 74 431', email:'mail: j.kisiele@arijus.lt', location:'', country:'Lithuania', type:'国外代理-Lithuania'}
+];
+
+const countries = ['Australia','Azerbaijan','Bangladesh','Belgium','Bulgaria','Cambodia','China','Colombia','Congo','Denmark','Ecuador','El Salvador','Finland','France','Germany','Greece','Hungary','India','Indonesia','Iran','Ireland','Italy','Japan','Jordan','Kuwait','Lithuania','Mexico','Nepal','New Zealand','Panama','Peru','Poland','Romania','Russia','Saudi Arabia','Singapore','South Africa','Spain','Sweden','Switzerland','Syria','Taiwan','Thailand','Turkey','UAE','UK','USA','Vietnam'].filter(Boolean);
+const countrySel = document.getElementById('countryFilter');
+countries.sort().forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    countrySel.appendChild(opt);
+});
+
+let sortCol = 0;
+let sortAsc = true;
+
+function render(list) {
+    const tbody = document.getElementById('contactsBody');
+    tbody.innerHTML = '';
+    for (const c of list) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td data-label="公司" class="company">${c.company}</td>
+            <td data-label="联系人" class="person">${c.person}</td>
+            <td data-label="职位" class="title">${c.title}</td>
+            <td data-label="电话" class="tel">${c.tel}</td>
+            <td data-label="邮箱" class="email">${c.email ? ('<a href="mailto:' + c.email.replace(/<[^>]+>/g,'') + '">' + c.email.replace(/<[^>]+>/g,'') + '</a>') : ''}</td>
+            <td data-label="所在地" class="location">${c.location}</td>
+            <td data-label="国家"><span class="country-tag">${c.country}</span></td>
+            <td data-label="类型"><span class="type-tag">${c.type}</span></td>`;
+        tbody.appendChild(tr);
+    }
+    document.getElementById('countDisplay').textContent = `共 ${list.length} 条`;
+}
+
+function filter() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const cf = document.getElementById('countryFilter').value;
+    let filtered = contacts;
+    if (cf) filtered = filtered.filter(c => c.country === cf);
+    if (q) filtered = filtered.filter(c =>
+        c.company.toLowerCase().includes(q) ||
+        c.person.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q) ||
+        c.tel.includes(q) ||
+        c.location.toLowerCase().includes(q) ||
+        c.country.toLowerCase().includes(q) ||
+        c.title.toLowerCase().includes(q)
+    );
+    render(filtered);
+}
+
+function sortBy(col) {
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = true; }
+    const keys = ['company','person','title','tel','email','location','country','type'];
+    const k = keys[col];
+    contacts.sort((a, b) => {
+        const va = (a[k] || '').toLowerCase();
+        const vb = (b[k] || '').toLowerCase();
+        return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+    filter();
+    // Update arrow
+    document.querySelectorAll('th .arrow').forEach(el => el.textContent = '▼');
+    document.querySelectorAll('th')[col].querySelector('.arrow').textContent = sortAsc ? '▲' : '▼';
+}
+
+render(contacts);
+</script>
+</body>
+</html>
