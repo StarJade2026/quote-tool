@@ -1,3 +1,6 @@
+html
+报价工具_v2.0_含导入优化+条款版权.html
+
 
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -334,7 +337,7 @@
             cursor: pointer;
         }
         @media print {
-            .form-panel, .print-btn, .quote-preview h2, .help-panel, .feedback-btn, .feedback-modal, .terms-modal, .import-modal, .footer-version { display: none; }
+            .form-panel, .print-btn, .quote-preview h2, .help-panel, .feedback-btn, .feedback-modal, .terms-modal, .import-modal, .footer-version, .copyright-print { display: none; }
             .quote-preview { box-shadow: none; padding: 0; margin: 0; width: 100%; }
             .quote-container { border: none; }
         }
@@ -360,24 +363,40 @@
 <div class="terms-modal" id="termsModal">
     <span class="close-modal" id="closeTermsModal">&times;</span>
     <h4>📜 使用条款</h4>
-    <p>欢迎使用本工具。</p>
-    <p>本工具是一个信息生成助手，只帮你快速生成报价单的格式，不参与任何实际交易。</p>
-    <p>你在使用生成的报价单前，请务必自行核对所有信息的准确性与合法性。</p>
+    <p>欢迎使用链式报价工具。</p>
+    <p>本工具是一个报价信息生成助手，帮助你快速生成标准化的三段式报价单格式。由本工具生成的报价信息不构成具有法律约束力的要约，最终交易价格和条款请以双方盖章的书面合同为准。</p>
+    <p>你在使用过程中输入的所有业务数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
+    <p>工具内预填的示例数据（如公司名、货物品名等）均为匿名化占位符，请务必替换为你和客户的实际信息。</p>
     <p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
-    <p>工具内的所有示例数据（如公司名、货物品名等）都是匿名占位符，请记得替换为你的实际信息。</p>
 </div>
 
-<!-- 导入仓库报价弹窗 -->
+<!-- 导入报价弹窗 -->
 <div class="import-modal" id="importModal">
     <span class="close-modal" id="closeImportModal">&times;</span>
-    <h4>📦 导入仓库报价</h4>
-    <p style="font-size:13px; color:#666;">粘贴仓库工具生成的「分享链接」，自动填充到段1费用表。</p>
-    <input type="text" id="importUrlInput" placeholder="https://starjade2026.github.io/quote-tool/warehouse-tool/?data=..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin:10px 0;">
+    <h4>📥 导入报价</h4>
+    <div style="margin:12px 0;">
+        <label style="display:block; font-weight:500; font-size:0.85rem; margin-bottom:4px; color:#475569;">费用来源</label>
+        <select id="importSourceSelect" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="warehouse">仓库报价器</option>
+        </select>
+    </div>
+    <div style="margin:12px 0;">
+        <label style="display:block; font-weight:500; font-size:0.85rem; margin-bottom:4px; color:#475569;">导入到</label>
+        <select id="importTargetSelect" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="segment1">段1（起运地服务）</option>
+            <option value="segment3">段3（目的地服务）</option>
+        </select>
+    </div>
+    <div style="margin:12px 0;">
+        <label style="display:block; font-weight:500; font-size:0.85rem; margin-bottom:4px; color:#475569;">粘贴分享链接</label>
+        <input type="text" id="importUrlInput" placeholder="https://starjade2026.github.io/quote-tool/warehouse-tool/?data=..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+    </div>
     <div style="display:flex; gap:10px; justify-content:flex-end;">
         <button onclick="importFromWarehouse()" style="background:#0071e3; color:white; border:none; padding:8px 20px; border-radius:20px; cursor:pointer;">导入</button>
         <button onclick="closeImportModal()" style="background:#e2e8f0; border:none; padding:8px 20px; border-radius:20px; cursor:pointer;">取消</button>
     </div>
-    <p id="importMsg" style="font-size:12px; margin-top:10px;"></p>
+    <p style="font-size:12px; margin-top:10px; color:#94a3b8;">💡 支持导入由供应商通过采集链接生成的标准化报价。建议优先使用国内已验证供应商的链接，以降低录错风险。海外供应商费用可手动录入。</p>
+    <p id="importMsg" style="font-size:12px; margin-top:4px;"></p>
 </div>
 
 <div class="app-container">
@@ -395,7 +414,7 @@
                     <li>1. 填写公司信息、客户信息、贸易条款。</li>
                     <li>2. 填写三段地理描述（段1起点、段2路线、段3终点）。</li>
                     <li>3. 在各段内添加费用项（支持自定义名称、价格、币种）。</li>
-                    <li>4. 右侧报价单实时更新，点击「打印/保存PDF」导出。</li>
+                    <li>4. ���侧报价单实时更新，点击「打印/保存PDF」导出。</li>
                     <li>5. 所有数据自动保存在本机浏览器，刷新不丢失。</li>
                 </ul>
                 <div class="rule-box">
@@ -450,11 +469,13 @@
 
         <div class="form-group"><label>汇率 (USD/CNY)</label><input type="number" id="exchangeRate" value="7.5" step="0.01"></div>
 
+        <div style="margin:10px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button class="import-btn" onclick="openImportModal()">📥 导入报价</button>
+        </div>
+
         <div class="segment-card">
             <div class="segment-title">
                 段1：起运地服务
-                <button class="import-btn" onclick="openImportModal()">📦 导入仓库报价</button>
-                <p class="guide-text">💡 由仓库方提供，或使用 <a href="warehouse-tool/" target="_blank">仓库报价器</a> 生成</p>
             </div>
             <div id="segment1-fees"></div>
             <button class="add-btn" onclick="addFee('segment1', 'P0')">+ 添加主体价格</button>
@@ -487,7 +508,7 @@
     <br>
     🧰 工具箱：📄 报价 | <a href="warehouse-tool/" style="color:#64748b;">🏭 仓库报价</a> | <a href="workflow/" style="color:#64748b;">📋 流转单</a>
     <br>
-    <a id="termsLink" style="cursor: pointer;">📜 使用条款</a>
+    <a id="termsLink" style="cursor: pointer;">📜 使用条款</a> | Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.
 </div>
 
 <script>
@@ -505,7 +526,7 @@
             'FCA': `卖方负责将货物运至 ${seg1}（指定地点仓前），买方负责仓后运输至 ${originPort}、报关、订舱及后续所有费用（包括海运费从 ${originPort} 到 ${destPort} 及目的港后的一切）。`,
             'FOB': `卖方负责将货物运至 ${seg1}（起运港）并装上船，买方负责海运费（从 ${originPort} 到 ${destPort}）及目的港后的一切，包括清关和送货至 ${seg3}。`,
             'CFR': `卖方负责将货物运至 ${seg1} 并支付海运费至 ${destPort}，买方负责目的港卸货、清关及送货至 ${seg3}。`,
-            'CIF': `卖方负责将货物运至 ${seg1}、支付海运费至 ${destPort} 并购买保险，买方负责目的港卸货、清关及送货至 ${seg3}。`,
+            'CIF': `卖方负责将货物运至 ${seg1}、支付��运费至 ${destPort} 并购买保险，买方负责目的港卸货、清关及送货至 ${seg3}。`,
             'CPT': `卖方负责将货物运至 ${seg3}（主运费已付，从 ${originPort} 到 ${destPort}），但风险在 ${originPort} 交给第一承运人时转移。买方负责目的港换单及清关，卖方负责内陆送货到 ${seg3}。`,
             'DAP': `卖方负责将货物运至 ${seg3}（指定地点不含卸货），买方负责卸货及后续。`,
             'DDP': `卖方负责全部费用及风险，包括关税，直至货物交付至 ${seg3}。`
@@ -691,6 +712,7 @@
             
             '<div style="margin-top:30px; text-align:right; border-top:1px solid #ddd; padding-top:20px; font-size:14px;">With kind regards,<br><strong>'+escapeHtml(signatureName)+'</strong><br>'+escapeHtml(signatureTitle)+'</div>'+
             '<div style="margin-top:20px; text-align:center; font-size:11px; color:#718096;">'+escapeHtml(companyName)+'<br>Phone: '+escapeHtml(companyTel)+' &nbsp; Email: '+escapeHtml(companyEmail)+'</div>'+
+            '<div class="copyright-print" style="margin-top:10px; text-align:center; font-size:10px; color:#94a3b8;">Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.</div>'+
             '</div>';
         document.getElementById('quoteContainer').innerHTML = html;
     }
@@ -775,7 +797,8 @@
                 return;
             }
             
-            feesData.segment1 = [];
+            var importTarget = document.getElementById('importTargetSelect').value;
+            feesData[importTarget] = [];
             
             var codeMap = {
                 'WH_P0_STUFFING_20': '内装费(20GP)',
@@ -803,21 +826,21 @@
             
             (payload.fees.p0 || []).forEach(function(f) {
                 var name = codeMap[f.code] || f.name;
-                feesData.segment1.push({
+                feesData[importTarget].push({
                     name: name, type: 'P0', price: f.amount || 0, currency: 'CNY',
                     unit: f.unit || '箱', source: '供应商报价'
                 });
             });
             (payload.fees.p1 || []).forEach(function(f) {
                 var name = codeMap[f.code] || f.name;
-                feesData.segment1.push({
+                feesData[importTarget].push({
                     name: name, type: 'P1', price: f.amount || 0, currency: 'CNY',
                     unit: f.unit || '箱', source: '供应商报价'
                 });
             });
             (payload.fees.p2 || []).forEach(function(f) {
                 var name = codeMap[f.code] || f.name;
-                feesData.segment1.push({
+                feesData[importTarget].push({
                     name: name, type: 'P2', price: f.amount || 0, currency: 'CNY',
                     unit: f.unit || '箱', source: '供应商报价'
                 });
