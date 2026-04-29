@@ -6,13 +6,6 @@
     <title>仓库报价速填 · 地面产品报价器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
-    
-    // ---- 仓库模板导出/导入 (pako gzip + Base64) ----
-        input.value = '';
-    };
-
-</script>
-    
     <style>
         /* 公共基础样式（原 shared.css 内嵌） */
         body {
@@ -69,9 +62,6 @@
         .info-card .expand-icon { font-size: 18px; transition: transform 0.2s; }
         .info-card .content { margin-top: 15px; color: #333; font-size: 14px; line-height: 1.6; border-top: 1px dashed #e0c060; padding-top: 12px; }
         .info-card .content strong { color: #7d6608; }
-        .guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
-        .guide-text a { color: #64748b; text-decoration: underline; }
-        .guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -102,10 +92,7 @@
 
     <!-- 供应商信息区 -->
     <div style="background: #f0f7ff; padding: 20px; border-radius: 12px; margin: 25px 0;">
-        <strong style="font-size: 16px;">📋 供应商信息</strong>
-        <button onclick="document.getElementById('importWhFile').click()" style="float:right; background:#38a169; color:white; border:none; padding:5px 14px; border-radius:16px; cursor:pointer; font-size:13px;">📂 导入模板</button>
-        <input type="file" id="importWhFile" accept=".whs" style="display:none;" onchange="importWhTemplate(this)">
-        <br><br>
+        <strong style="font-size: 16px;">📋 供应商信息</strong><br><br>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
             <label>名称：<input type="text" id="supplierName" placeholder="如：壮力仓库" style="width: 100%;"></label>
             <label>联系人：<input type="text" id="contactPerson" placeholder="姓名" style="width: 100%;"></label>
@@ -122,12 +109,8 @@
 
     <div class="action-buttons">
         <button onclick="previewPDF()" style="background-color: #0071e3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📄 预览报价单 (PDF)</button>
-        <button onclick="exportWhTemplate()" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 导出模板</button>
         <button onclick="copySummary()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 复制报价摘要</button>
         <button onclick="generateShareLink()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">🔗 生成分享链接</button>
-        <p class="guide-text">💡 分享给货代，对方可在报价工具中一键导入</p>
-        <p class="guide-text" style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">💡 分享给货代，对方可在报价工具中一键导入</p>
-    <p style="font-size:0.75rem; color:#94a3b8; margin-top:6px;"><span onclick="document.getElementById('whTermsModal').style.display='block';document.getElementById('whTermsOverlay').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span> | Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.</p>
     </div>
     <div class="note">
         • "复制摘要"将生成格式化文本，可直接粘贴给客户。<br>
@@ -371,17 +354,19 @@ window.toggleInfoCard = function(card) {
     }
 
     initFeeData(); renderTables(); loadFromURL();
-
-
-<!-- 使用条款弹窗 -->
-<div class="terms-modal" id="whTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
-    <span onclick="document.getElementById('whTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
-    <h4>📜 使用条款</h4>
-    <p>欢迎使用仓库报价器。</p>
-    <p>本工具是一个报价信息生成助手，专为仓库服务供应商设计，帮助你快速生成标准化的三层（P0/P1/P2）费用报价单。生成的报价信息不构成具有法律约束力的要约，最终服务价格和条款请以双方盖章的书面合同为准。</p>
-    <p>你在使用过程中输入的所有供应商信息和费用数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
-    <p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
+})();
+</script>
+<div style="text-align:center; font-size:0.75rem; color:#94a3b8; padding:10px 0; border-top:1px solid #e2e8f0; margin-top:20px;">
+<span onclick="document.getElementById('whTermsModal').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span>
+&nbsp;|&nbsp;Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.
 </div>
-<div id="whTermsOverlay" onclick="document.getElementById('whTermsModal').style.display='none'" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.3); z-index:999;"></div>
+<div id="whTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
+<span onclick="document.getElementById('whTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
+<h4>📜 使用条款</h4>
+<p>欢迎使用仓库报价器。</p>
+<p>本工具是一个报价信息生成助手，专为仓库服务供应商设计，帮助你快速生成标准化的三层（P0/P1/P2）费用报价单。生成的报价信息不构成具有法律约束力的要约，最终服务价格和条款请以双方盖章的书面合同为准。</p>
+<p>你在使用过程中输入的所有供应商信息和费用数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
+<p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
+</div>
 </body>
 </html>
