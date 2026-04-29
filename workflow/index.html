@@ -1,9 +1,128 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>货代业务流转单</title>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js">
+    // ---- 模板导出/导入 (pako gzip + Base64) ----
+    function collectAllData_workflow() {
+        var data = {
+            projectName: document.getElementById('projectName').value,
+            customerName: document.getElementById('customerName').value,
+            version: document.getElementById('versionDisplay').value,
+            isSpecified: isSpecified,
+            tradeTerm: document.getElementById('tradeTerm').value,
+            containerInfo: document.getElementById('containerInfo').value,
+            deliveryDate: document.getElementById('deliveryDate').value,
+            etdDate: document.getElementById('etdDate').value,
+            geo1: document.getElementById('geo1').value,
+            geo2: document.getElementById('geo2').value,
+            geo3: document.getElementById('geo3').value,
+            seg2Carrier: document.getElementById('seg2Carrier').value,
+            seg1Note: document.getElementById('seg1Note') ? document.getElementById('seg1Note').value : '',
+            seg2Note: document.getElementById('seg2Note') ? document.getElementById('seg2Note').value : '',
+            seg3Note: document.getElementById('seg3Note') ? document.getElementById('seg3Note').value : '',
+            receivable: {
+                desc: document.getElementById('receivableDesc') ? document.getElementById('receivableDesc').value : '',
+                amt: document.getElementById('receivableAmount') ? document.getElementById('receivableAmount').value : ''
+            },
+            seg1Pay: document.getElementById('seg1Pay') ? document.getElementById('seg1Pay').value : '',
+            seg2Pay: document.getElementById('seg2Pay') ? document.getElementById('seg2Pay').value : '',
+            seg3Pay: document.getElementById('seg3Pay') ? document.getElementById('seg3Pay').value : '',
+            upstreamCards: JSON.parse(JSON.stringify(upstreamCards)),
+            seg1SupplierCards: JSON.parse(JSON.stringify(seg1SupplierCards)),
+            seg3SupplierCards: JSON.parse(JSON.stringify(seg3SupplierCards)),
+            tasks: JSON.parse(JSON.stringify(tasks)),
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        return data;
+    }
+
+    function fillAllData_workflow(data) {
+        document.getElementById('projectName').value = data.projectName || '';
+        document.getElementById('customerName').value = data.customerName || '';
+        document.getElementById('versionDisplay').value = data.version || 'V1';
+        isSpecified = !!data.isSpecified;
+        var tagEl = document.getElementById('specifiedTagSwitch');
+        tagEl.textContent = isSpecified ? '🔴 指定货 (已开启)' : '🔘 指定货';
+        tagEl.style.color = isSpecified ? '#dc2626' : '';
+        document.getElementById('tradeTerm').value = data.tradeTerm || 'DDP';
+        document.getElementById('containerInfo').value = data.containerInfo || '';
+        document.getElementById('deliveryDate').value = data.deliveryDate || '';
+        document.getElementById('etdDate').value = data.etdDate || '';
+        document.getElementById('geo1').value = data.geo1 || '';
+        document.getElementById('geo2').value = data.geo2 || '';
+        document.getElementById('geo3').value = data.geo3 || '';
+        document.getElementById('seg2Carrier').value = data.seg2Carrier || '';
+        if (document.getElementById('seg1Note')) document.getElementById('seg1Note').value = data.seg1Note || '';
+        if (document.getElementById('seg2Note')) document.getElementById('seg2Note').value = data.seg2Note || '';
+        if (document.getElementById('seg3Note')) document.getElementById('seg3Note').value = data.seg3Note || '';
+        if (data.receivable) {
+            if (document.getElementById('receivableDesc')) document.getElementById('receivableDesc').value = data.receivable.desc || '';
+            if (document.getElementById('receivableAmount')) document.getElementById('receivableAmount').value = data.receivable.amt || '';
+        }
+        if (document.getElementById('seg1Pay')) document.getElementById('seg1Pay').value = data.seg1Pay || '';
+        if (document.getElementById('seg2Pay')) document.getElementById('seg2Pay').value = data.seg2Pay || '';
+        if (document.getElementById('seg3Pay')) document.getElementById('seg3Pay').value = data.seg3Pay || '';
+        upstreamCards = data.upstreamCards || [{ type:'domestic', company:'', contact:'', phone:'' }];
+        seg1SupplierCards = data.seg1SupplierCards || [{ company:'', contact:'', phone:'' }];
+        seg3SupplierCards = data.seg3SupplierCards || [{ type:'换单代理', company:'', contact:'', phone:'' }];
+        tasks = data.tasks || { seg1:[], seg2:[], seg3:[] };
+        renderUpstreamCards();
+        renderSeg1SupplierCards();
+        renderSeg3SupplierCards();
+        renderTasks();
+        calcWindow();
+        updatePreview();
+    }
+
+    window.exportTemplate = function() {
+        var data = collectAllData_workflow();
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) {
+            binary += String.fromCharCode(compressed[i]);
+        }
+        var base64 = btoa(binary);
+        var projectName = data.projectName || '流转单';
+        var safeName = projectName.replace(/[/\\:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.sop';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importTemplate = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var base64 = e.target.result;
+                var binary = atob(base64);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                var jsonStr = pako.ungzip(bytes, { to: 'string' });
+                var data = JSON.parse(jsonStr);
+                fillAllData_workflow(data);
+            } catch(err) {
+                alert('导入失败：文件格式异常或数据损坏。');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
+</script>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -149,12 +268,15 @@
         <!-- 版本管理栏 -->
         <div class="version-bar">
             <label>项目:</label><input type="text" id="projectName" value="XX项目">
+            <button class="btn" onclick="document.getElementById('importFileInput').click()" style="font-size:0.8rem;">📂 导入模板</button>
+            <input type="file" id="importFileInput" accept=".sop" style="display:none;" onchange="importTemplate(this)">
             <span>|</span>
             <label>客户:</label><input type="text" id="customerName" value="XX供应链有限公司">
             <span>|</span>
             <label>版本:</label><input type="text" id="versionDisplay" value="V1" readonly style="width:50px; background:#f1f5f9;">
             <span id="specifiedTagSwitch" style="cursor:pointer; user-select:none;" onclick="toggleSpecifiedTag()">🔘 指定货</span>
-            <button class="btn" onclick="saveAsNewVersion()" style="margin-left:auto;">💾 保存为新版本</button>
+            <button class="btn" onclick="exportTemplate()" style="margin-left:auto;">📋 导出模板</button>
+            <button class="btn" onclick="saveAsNewVersion()">💾 保存为新版本</button>
             <button class="btn" onclick="loadHistory()">📂 历史</button>
         </div>
 
@@ -749,6 +871,123 @@ BAF 300 USD</textarea>
     calcWindow();
     updatePreview();
     document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('input', ()=>{ calcWindow(); updatePreview(); }));
+
+    // ---- 模板导出/导入 (pako gzip + Base64) ----
+    function collectAllData_workflow() {
+        var data = {
+            projectName: document.getElementById('projectName').value,
+            customerName: document.getElementById('customerName').value,
+            version: document.getElementById('versionDisplay').value,
+            isSpecified: isSpecified,
+            tradeTerm: document.getElementById('tradeTerm').value,
+            containerInfo: document.getElementById('containerInfo').value,
+            deliveryDate: document.getElementById('deliveryDate').value,
+            etdDate: document.getElementById('etdDate').value,
+            geo1: document.getElementById('geo1').value,
+            geo2: document.getElementById('geo2').value,
+            geo3: document.getElementById('geo3').value,
+            seg2Carrier: document.getElementById('seg2Carrier').value,
+            seg1Note: document.getElementById('seg1Note') ? document.getElementById('seg1Note').value : '',
+            seg2Note: document.getElementById('seg2Note') ? document.getElementById('seg2Note').value : '',
+            seg3Note: document.getElementById('seg3Note') ? document.getElementById('seg3Note').value : '',
+            receivable: {
+                desc: document.getElementById('receivableDesc') ? document.getElementById('receivableDesc').value : '',
+                amt: document.getElementById('receivableAmount') ? document.getElementById('receivableAmount').value : ''
+            },
+            seg1Pay: document.getElementById('seg1Pay') ? document.getElementById('seg1Pay').value : '',
+            seg2Pay: document.getElementById('seg2Pay') ? document.getElementById('seg2Pay').value : '',
+            seg3Pay: document.getElementById('seg3Pay') ? document.getElementById('seg3Pay').value : '',
+            upstreamCards: JSON.parse(JSON.stringify(upstreamCards)),
+            seg1SupplierCards: JSON.parse(JSON.stringify(seg1SupplierCards)),
+            seg3SupplierCards: JSON.parse(JSON.stringify(seg3SupplierCards)),
+            tasks: JSON.parse(JSON.stringify(tasks)),
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        return data;
+    }
+
+    function fillAllData_workflow(data) {
+        document.getElementById('projectName').value = data.projectName || '';
+        document.getElementById('customerName').value = data.customerName || '';
+        document.getElementById('versionDisplay').value = data.version || 'V1';
+        isSpecified = !!data.isSpecified;
+        var tagEl = document.getElementById('specifiedTagSwitch');
+        tagEl.textContent = isSpecified ? '🔴 指定货 (已开启)' : '🔘 指定货';
+        tagEl.style.color = isSpecified ? '#dc2626' : '';
+        document.getElementById('tradeTerm').value = data.tradeTerm || 'DDP';
+        document.getElementById('containerInfo').value = data.containerInfo || '';
+        document.getElementById('deliveryDate').value = data.deliveryDate || '';
+        document.getElementById('etdDate').value = data.etdDate || '';
+        document.getElementById('geo1').value = data.geo1 || '';
+        document.getElementById('geo2').value = data.geo2 || '';
+        document.getElementById('geo3').value = data.geo3 || '';
+        document.getElementById('seg2Carrier').value = data.seg2Carrier || '';
+        if (document.getElementById('seg1Note')) document.getElementById('seg1Note').value = data.seg1Note || '';
+        if (document.getElementById('seg2Note')) document.getElementById('seg2Note').value = data.seg2Note || '';
+        if (document.getElementById('seg3Note')) document.getElementById('seg3Note').value = data.seg3Note || '';
+        if (data.receivable) {
+            if (document.getElementById('receivableDesc')) document.getElementById('receivableDesc').value = data.receivable.desc || '';
+            if (document.getElementById('receivableAmount')) document.getElementById('receivableAmount').value = data.receivable.amt || '';
+        }
+        if (document.getElementById('seg1Pay')) document.getElementById('seg1Pay').value = data.seg1Pay || '';
+        if (document.getElementById('seg2Pay')) document.getElementById('seg2Pay').value = data.seg2Pay || '';
+        if (document.getElementById('seg3Pay')) document.getElementById('seg3Pay').value = data.seg3Pay || '';
+        upstreamCards = data.upstreamCards || [{ type:'domestic', company:'', contact:'', phone:'' }];
+        seg1SupplierCards = data.seg1SupplierCards || [{ company:'', contact:'', phone:'' }];
+        seg3SupplierCards = data.seg3SupplierCards || [{ type:'换单代理', company:'', contact:'', phone:'' }];
+        tasks = data.tasks || { seg1:[], seg2:[], seg3:[] };
+        renderUpstreamCards();
+        renderSeg1SupplierCards();
+        renderSeg3SupplierCards();
+        renderTasks();
+        calcWindow();
+        updatePreview();
+    }
+
+    window.exportTemplate = function() {
+        var data = collectAllData_workflow();
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) {
+            binary += String.fromCharCode(compressed[i]);
+        }
+        var base64 = btoa(binary);
+        var projectName = data.projectName || '流转单';
+        var safeName = projectName.replace(/[/\\:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.sop';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importTemplate = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var base64 = e.target.result;
+                var binary = atob(base64);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                var jsonStr = pako.ungzip(bytes, { to: 'string' });
+                var data = JSON.parse(jsonStr);
+                fillAllData_workflow(data);
+            } catch(err) {
+                alert('导入失败：文件格式异常或数据损坏。');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
 </script>
 </body>
 </html>
