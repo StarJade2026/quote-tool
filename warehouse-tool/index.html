@@ -1,11 +1,188 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>仓库报价速填 · 地面产品报价器</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    // ---- 仓库模板导出/导入 (pako gzip + Base64) ----
+    window.exportWhTemplate = function() {
+        var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p2 = currentFees.p2.filter(function(f) { return f.checked; }).map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: true }; });
+        // Also include unchecked p2 items so nothing is lost
+        currentFees.p2.forEach(function(f) {
+            if (!f.checked) {
+                p2.push({ code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: false });
+            }
+        });
+        var data = {
+            supplier: {
+                name: document.getElementById('supplierName').value || '',
+                contact: document.getElementById('contactPerson').value || '',
+                phone: document.getElementById('contactPhone').value || '',
+                location: document.getElementById('serviceLocation').value || '',
+                validUntil: document.getElementById('validUntil').value || ''
+            },
+            fees: { p0: p0, p1: p1, p2: p2 },
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) {
+            binary += String.fromCharCode(compressed[i]);
+        }
+        var base64 = btoa(binary);
+        var supplierName = data.supplier.name || '仓库报价';
+        var safeName = supplierName.replace(/[/\\:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.whs';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importWhTemplate = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var base64 = e.target.result;
+                var binary = atob(base64);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                var jsonStr = pako.ungzip(bytes, { to: 'string' });
+                var data = JSON.parse(jsonStr);
+                // Fill supplier info
+                if (data.supplier) {
+                    document.getElementById('supplierName').value = data.supplier.name || '';
+                    document.getElementById('contactPerson').value = data.supplier.contact || '';
+                    document.getElementById('contactPhone').value = data.supplier.phone || '';
+                    document.getElementById('serviceLocation').value = data.supplier.location || '';
+                    document.getElementById('validUntil').value = data.supplier.validUntil || '';
+                }
+                // Fill fees
+                if (data.fees) {
+                    currentFees.p0 = currentFees.p0.map(function(def) {
+                        var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
+                    });
+                    currentFees.p1 = currentFees.p1.map(function(def) {
+                        var m = (data.fees.p1 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
+                    });
+                    currentFees.p2 = currentFees.p2.map(function(def) {
+                        var m = (data.fees.p2 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true }) : def;
+                    });
+                }
+                renderTables();
+            } catch(err) {
+                alert('导入失败：文件格式异常或数据损坏。');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js">
+    // ---- 仓库模板导出/导入 (pako gzip + Base64) ----
+    window.exportWhTemplate = function() {
+        var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p2 = currentFees.p2.filter(function(f) { return f.checked; }).map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: true }; });
+        // Also include unchecked p2 items so nothing is lost
+        currentFees.p2.forEach(function(f) {
+            if (!f.checked) {
+                p2.push({ code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: false });
+            }
+        });
+        var data = {
+            supplier: {
+                name: document.getElementById('supplierName').value || '',
+                contact: document.getElementById('contactPerson').value || '',
+                phone: document.getElementById('contactPhone').value || '',
+                location: document.getElementById('serviceLocation').value || '',
+                validUntil: document.getElementById('validUntil').value || ''
+            },
+            fees: { p0: p0, p1: p1, p2: p2 },
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) {
+            binary += String.fromCharCode(compressed[i]);
+        }
+        var base64 = btoa(binary);
+        var supplierName = data.supplier.name || '仓库报价';
+        var safeName = supplierName.replace(/[/\\:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.whs';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importWhTemplate = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var base64 = e.target.result;
+                var binary = atob(base64);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                var jsonStr = pako.ungzip(bytes, { to: 'string' });
+                var data = JSON.parse(jsonStr);
+                // Fill supplier info
+                if (data.supplier) {
+                    document.getElementById('supplierName').value = data.supplier.name || '';
+                    document.getElementById('contactPerson').value = data.supplier.contact || '';
+                    document.getElementById('contactPhone').value = data.supplier.phone || '';
+                    document.getElementById('serviceLocation').value = data.supplier.location || '';
+                    document.getElementById('validUntil').value = data.supplier.validUntil || '';
+                }
+                // Fill fees
+                if (data.fees) {
+                    currentFees.p0 = currentFees.p0.map(function(def) {
+                        var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
+                    });
+                    currentFees.p1 = currentFees.p1.map(function(def) {
+                        var m = (data.fees.p1 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
+                    });
+                    currentFees.p2 = currentFees.p2.map(function(def) {
+                        var m = (data.fees.p2 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true }) : def;
+                    });
+                }
+                renderTables();
+            } catch(err) {
+                alert('导入失败：文件格式异常或数据损坏。');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
+</script>
     <style>
         /* 公共基础样式（原 shared.css 内嵌） */
         body {
@@ -95,7 +272,10 @@
 
     <!-- 供应商信息区 -->
     <div style="background: #f0f7ff; padding: 20px; border-radius: 12px; margin: 25px 0;">
-        <strong style="font-size: 16px;">📋 供应商信息</strong><br><br>
+        <strong style="font-size: 16px;">📋 供应商信息</strong>
+        <button onclick="document.getElementById('importWhFile').click()" style="float:right; background:#38a169; color:white; border:none; padding:5px 14px; border-radius:16px; cursor:pointer; font-size:13px;">📂 导入模板</button>
+        <input type="file" id="importWhFile" accept=".whs" style="display:none;" onchange="importWhTemplate(this)">
+        <br><br>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
             <label>名称：<input type="text" id="supplierName" placeholder="如：壮力仓库" style="width: 100%;"></label>
             <label>联系人：<input type="text" id="contactPerson" placeholder="姓名" style="width: 100%;"></label>
@@ -112,6 +292,7 @@
 
     <div class="action-buttons">
         <button onclick="previewPDF()" style="background-color: #0071e3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📄 预览报价单 (PDF)</button>
+        <button onclick="exportWhTemplate()" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 导出模板</button>
         <button onclick="copySummary()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 复制报价摘要</button>
         <button onclick="generateShareLink()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">🔗 生成分享链接</button>
         <p class="guide-text">💡 分享给货代，对方可在报价工具中一键导入</p>
@@ -360,6 +541,94 @@ window.toggleInfoCard = function(card) {
 
     initFeeData(); renderTables(); loadFromURL();
 })();
+
+    // ---- 仓库模板导出/导入 (pako gzip + Base64) ----
+    window.exportWhTemplate = function() {
+        var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p2 = currentFees.p2.filter(function(f) { return f.checked; }).map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: true }; });
+        // Also include unchecked p2 items so nothing is lost
+        currentFees.p2.forEach(function(f) {
+            if (!f.checked) {
+                p2.push({ code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: false });
+            }
+        });
+        var data = {
+            supplier: {
+                name: document.getElementById('supplierName').value || '',
+                contact: document.getElementById('contactPerson').value || '',
+                phone: document.getElementById('contactPhone').value || '',
+                location: document.getElementById('serviceLocation').value || '',
+                validUntil: document.getElementById('validUntil').value || ''
+            },
+            fees: { p0: p0, p1: p1, p2: p2 },
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) {
+            binary += String.fromCharCode(compressed[i]);
+        }
+        var base64 = btoa(binary);
+        var supplierName = data.supplier.name || '仓库报价';
+        var safeName = supplierName.replace(/[/\\:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.whs';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importWhTemplate = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var base64 = e.target.result;
+                var binary = atob(base64);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                var jsonStr = pako.ungzip(bytes, { to: 'string' });
+                var data = JSON.parse(jsonStr);
+                // Fill supplier info
+                if (data.supplier) {
+                    document.getElementById('supplierName').value = data.supplier.name || '';
+                    document.getElementById('contactPerson').value = data.supplier.contact || '';
+                    document.getElementById('contactPhone').value = data.supplier.phone || '';
+                    document.getElementById('serviceLocation').value = data.supplier.location || '';
+                    document.getElementById('validUntil').value = data.supplier.validUntil || '';
+                }
+                // Fill fees
+                if (data.fees) {
+                    currentFees.p0 = currentFees.p0.map(function(def) {
+                        var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
+                    });
+                    currentFees.p1 = currentFees.p1.map(function(def) {
+                        var m = (data.fees.p1 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount }) : def;
+                    });
+                    currentFees.p2 = currentFees.p2.map(function(def) {
+                        var m = (data.fees.p2 || []).find(function(f) { return f.code === def.code; });
+                        return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true }) : def;
+                    });
+                }
+                renderTables();
+            } catch(err) {
+                alert('导入失败：文件格式异常或数据损坏。');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
 </script>
 </body>
 </html>
