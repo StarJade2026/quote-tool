@@ -358,7 +358,7 @@ window.toggleInfoCard = function(card) {
 
     window.previewPDF = function() {
         var data = collectFormData();
-        var doc = new window.jspdf.jsPDF();
+        var doc = new jspdf.jsPDF();
         var y = 20;
         doc.setFontSize(16); doc.text('仓库服务报价单', 105, y, { align: 'center' }); y += 12;
         doc.setFontSize(11);
@@ -437,6 +437,9 @@ window.toggleInfoCard = function(card) {
 <div style="text-align:center; font-size:0.75rem; color:#94a3b8; padding:10px 0; border-top:1px solid #e2e8f0; margin-top:20px;">
 <span onclick="document.getElementById('whTermsModal').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span>
 &nbsp;|&nbsp;Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.
+</div>
+    <div style="text-align:center; font-size:0.75rem; color:#94a3b8; margin-top:6px;">
+🧰 工具箱：<a href="https://starjade2026.github.io/quote-tool/" style="color:#64748b;">📄 报价</a> | <a href="workflow/" style="color:#64748b;">📋 流转单</a>
 </div>
 <div id="whTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
 <span onclick="document.getElementById('whTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
