@@ -842,11 +842,12 @@
                 });
             });
             
-            renderFeeList('segment1');
+            renderFeeList(importTarget);
             updateQuote();
             saveToStorage();
             closeImportModal();
-            msgEl.innerHTML = '<span style="color:#38a169;">✅ 导入成功！段1费用已更新。</span>';
+           var targetLabel = importTarget === 'segment1' ? '段1' : '段3';
+msgEl.innerHTML = '<span style="color:#38a169;">✅ 导入成功！' + targetLabel + '费用已更新。</span>';
             setTimeout(function(){ msgEl.innerHTML = ''; }, 3000);
         } catch(e) {
             msgEl.innerHTML = '<span style="color:#e53e3e;">❌ 解析失败：链接格式错误</span>';
