@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
     <style>
-        /* 公共基础样式（原 shared.css 内嵌） */
+        /* 公共基础样式 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.5;
@@ -62,6 +62,8 @@
         .info-card .expand-icon { font-size: 18px; transition: transform 0.2s; }
         .info-card .content { margin-top: 15px; color: #333; font-size: 14px; line-height: 1.6; border-top: 1px dashed #e0c060; padding-top: 12px; }
         .info-card .content strong { color: #7d6608; }
+        .guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+        .guide-text a { color: #64748b; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -92,9 +94,10 @@
 
     <!-- 供应商信息区 -->
     <div style="background: #f0f7ff; padding: 20px; border-radius: 12px; margin: 25px 0;">
-        <strong style="font-size: 16px;">📋 供应商信息</strong><br><br>
+        <strong style="font-size: 16px;">📋 供应商信息</strong>
         <button onclick="document.getElementById('importWhFile').click()" style="float:right; background:#38a169; color:white; border:none; padding:5px 14px; border-radius:16px; cursor:pointer; font-size:13px;">📂 导入模板</button>
-<input type="file" id="importWhFile" accept=".whs" style="display:none;" onchange="importWhTemplate(this)">
+        <input type="file" id="importWhFile" accept=".whs" style="display:none;" onchange="importWhTemplate(this)">
+        <br><br>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
             <label>名称：<input type="text" id="supplierName" placeholder="如：壮力仓库" style="width: 100%;"></label>
             <label>联系人：<input type="text" id="contactPerson" placeholder="姓名" style="width: 100%;"></label>
@@ -111,9 +114,10 @@
 
     <div class="action-buttons">
         <button onclick="previewPDF()" style="background-color: #0071e3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📄 预览报价单 (PDF)</button>
+        <button onclick="exportWhTemplate()" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 导出模板</button>
         <button onclick="copySummary()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 复制报价摘要</button>
-        <button onclick="exportWhTemplate()" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-right: 10px;">📋 导出模板</button>
         <button onclick="generateShareLink()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">🔗 生成分享链接</button>
+        <p class="guide-text">💡 分享给货代，对方可在报价工具中一键导入</p>
     </div>
     <div class="note">
         • "复制摘要"将生成格式化文本，可直接粘贴给客户。<br>
@@ -121,10 +125,31 @@
     </div>
 
     <textarea id="summaryHidden" style="position: absolute; left: -9999px;"></textarea>
+    
+    <!-- 使用条款与版权声明 -->
+    <div style="text-align:center; font-size:0.75rem; color:#94a3b8; padding:10px 0; border-top:1px solid #e2e8f0; margin-top:20px;">
+    <span onclick="document.getElementById('whTermsModal').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span>
+    &nbsp;|&nbsp;Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.
+    </div>
+    
+    <!-- 工具箱导航 -->
+    <div style="text-align:center; font-size:0.75rem; color:#94a3b8; margin-top:6px;">
+    🧰 工具箱：<a href="https://starjade2026.github.io/quote-tool/" style="color:#64748b;">📄 报价</a> | <a href="../workflow/" style="color:#64748b;">📋 流转单</a>
+    </div>
+</div>
+
+<!-- 使用条款弹窗 -->
+<div id="whTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
+    <span onclick="document.getElementById('whTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
+    <h4>📜 使用条款</h4>
+    <p>欢迎使用仓库报价器。</p>
+    <p>本工具是一个报价信息生成助手，专为仓库服务供应商设计，帮助你快速生成标准化的三层（P0/P1/P2）费用报价单。生成的报价信息不构成具有法律约束力的要约，最终服务价格和条款请以双方盖章的书面合同为准。</p>
+    <p>你在使用过程中输入的所有供应商信息和费用数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
+    <p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
 </div>
 
 <script>
-// ========== 内嵌费用库（原 ../shared/fee-library.js） ==========
+// ========== 内嵌费用库 ==========
 const FEE_LIBRARY = {
     warehouse: {
         p0: [
@@ -161,39 +186,44 @@ function getFeeLibrary(serviceType) {
     serviceType = serviceType || 'warehouse';
     return FEE_LIBRARY[serviceType] || FEE_LIBRARY.warehouse;
 }
-// ---- 仓库模板导出/导入 (pako gzip + Base64) ----
+
+// ========== 模板导出/导入 ==========
 window.exportWhTemplate = function() {
-    var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
-    var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
-    var p2 = currentFees.p2.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: f.checked }; });
-    var data = {
-        supplier: {
-            name: document.getElementById('supplierName').value || '',
-            contact: document.getElementById('contactPerson').value || '',
-            phone: document.getElementById('contactPhone').value || '',
-            location: document.getElementById('serviceLocation').value || '',
-            validUntil: document.getElementById('validUntil').value || ''
-        },
-        fees: { p0: p0, p1: p1, p2: p2 },
-        _exportTime: new Date().toISOString(),
-        _version: '1'
-    };
-    var jsonStr = JSON.stringify(data);
-    var compressed = pako.gzip(jsonStr);
-    var binary = '';
-    for (var i = 0; i < compressed.length; i++) { binary += String.fromCharCode(compressed[i]); }
-    var base64 = btoa(binary);
-    var supplierName = data.supplier.name || '仓库报价';
-    var safeName = supplierName.replace(/[/\\:*?"<>|]/g, '_');
-    var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = safeName + '-模板.whs';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+        var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
+        var p2 = currentFees.p2.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: f.checked }; });
+        var data = {
+            supplier: {
+                name: document.getElementById('supplierName').value || '',
+                contact: document.getElementById('contactPerson').value || '',
+                phone: document.getElementById('contactPhone').value || '',
+                location: document.getElementById('serviceLocation').value || '',
+                validUntil: document.getElementById('validUntil').value || ''
+            },
+            fees: { p0: p0, p1: p1, p2: p2 },
+            _exportTime: new Date().toISOString(),
+            _version: '1'
+        };
+        var jsonStr = JSON.stringify(data);
+        var compressed = pako.gzip(jsonStr);
+        var binary = '';
+        for (var i = 0; i < compressed.length; i++) { binary += String.fromCharCode(compressed[i]); }
+        var base64 = btoa(binary);
+        var supplierName = data.supplier.name || '仓库报价';
+        var safeName = supplierName.replace(/[\\/:*?"<>|]/g, '_');
+        var blob = new Blob([base64], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '-模板.whs';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch(e) {
+        alert('导出失败：' + e.message);
+    }
 };
 
 window.importWhTemplate = function(input) {
@@ -237,10 +267,11 @@ window.importWhTemplate = function(input) {
     reader.readAsText(file);
     input.value = '';
 };
+
 // ========== 页面核心逻辑 ==========
 window.toggleInfoCard = function(card) {
-    const content = card.querySelector('.content');
-    const icon = card.querySelector('.expand-icon');
+    var content = card.querySelector('.content');
+    var icon = card.querySelector('.expand-icon');
     if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
         icon.textContent = '▼';
@@ -250,204 +281,189 @@ window.toggleInfoCard = function(card) {
     }
 };
 
-(function(){
-    let currentFees = { p0: [], p1: [], p2: [] };
-    let p2Collapsed = true;
+var currentFees = { p0: [], p1: [], p2: [] };
+var p2Collapsed = true;
 
-    function initFeeData() {
-        const lib = getFeeLibrary('warehouse');
-        currentFees.p0 = lib.p0.map(function(item) { return Object.assign({}, item, { amount: item.default || 0 }); });
-        currentFees.p1 = lib.p1.map(function(item) { return Object.assign({}, item, { amount: item.default || 0 }); });
-        currentFees.p2 = lib.p2.map(function(item) { return Object.assign({}, item, { amount: item.default || 0, checked: false }); });
-    }
+function initFeeData() {
+    var lib = getFeeLibrary('warehouse');
+    currentFees.p0 = lib.p0.map(function(item) { return Object.assign({}, item, { amount: item.default || 0 }); });
+    currentFees.p1 = lib.p1.map(function(item) { return Object.assign({}, item, { amount: item.default || 0 }); });
+    currentFees.p2 = lib.p2.map(function(item) { return Object.assign({}, item, { amount: item.default || 0, checked: false }); });
+}
 
-    function renderTables() {
-        var container = document.getElementById('feeTablesContainer');
-        var html = '';
-        html += renderTableSection('P0 主体服务费（基础服务）', 'p0', currentFees.p0, false);
-        html += renderTableSection('P1 固定附加费（行业必收）', 'p1', currentFees.p1, true);
-        html += renderP2Section();
-        container.innerHTML = html;
-        bindTableEvents();
-    }
+function renderTables() {
+    var container = document.getElementById('feeTablesContainer');
+    var html = '';
+    html += renderTableSection('P0 主体服务费（基础服务）', 'p0', currentFees.p0, false);
+    html += renderTableSection('P1 固定附加费（行业必收）', 'p1', currentFees.p1, true);
+    html += renderP2Section();
+    container.innerHTML = html;
+    bindTableEvents();
+}
 
-    function renderTableSection(title, type, items, locked) {
-        var html = '<div class="section-title">' + title + '</div>';
-        html += '<table class="fee-table" id="table-' + type + '"><thead><tr><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>';
-        items.forEach(function(item, index) {
-            html += '<tr data-type="' + type + '" data-index="' + index + '" data-code="' + item.code + '">';
-            html += '<td>' + item.name + (locked ? '<span class="lock-icon">🔒</span>' : '') + '</td>';
-            html += '<td>' + item.unit + '</td>';
-            html += '<td><input type="number" step="0.01" min="0" value="' + item.amount + '" data-field="amount"></td>';
-            html += '<td>' + (locked ? '<span style="color:#ccc;">—</span>' : '<button class="delete-btn" data-action="delete">🗑️</button>') + '</td>';
-            html += '</tr>';
+function renderTableSection(title, type, items, locked) {
+    var html = '<div class="section-title">' + title + '</div>';
+    html += '<table class="fee-table" id="table-' + type + '"><thead><tr><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>';
+    items.forEach(function(item, index) {
+        html += '<tr data-type="' + type + '" data-index="' + index + '" data-code="' + item.code + '">';
+        html += '<td>' + item.name + (locked ? '<span class="lock-icon">🔒</span>' : '') + '</td>';
+        html += '<td>' + item.unit + '</td>';
+        html += '<td><input type="number" step="0.01" min="0" value="' + item.amount + '" data-field="amount"></td>';
+        html += '<td>' + (locked ? '<span style="color:#ccc;">—</span>' : '<button class="delete-btn" data-action="delete">🗑️</button>') + '</td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    if (!locked) html += '<button class="add-btn" data-add-type="' + type + '">+ 添加其他服务</button>';
+    return html;
+}
+
+function renderP2Section() {
+    var html = '<div class="section-title">P2 增值附加费（差异化服务） <span class="toggle-btn" onclick="toggleP2()">' + (p2Collapsed ? '▶ 展开' : '▼ 折叠') + '</span></div>';
+    html += '<div id="p2Content" class="collapsible-content' + (p2Collapsed ? ' hidden' : '') + '">';
+    html += '<table class="fee-table" id="table-p2"><thead><tr><th style="width:40px;">选用</th><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>';
+    currentFees.p2.forEach(function(item, index) {
+        html += '<tr data-type="p2" data-index="' + index + '" data-code="' + item.code + '">';
+        html += '<td style="text-align:center;"><input type="checkbox" data-field="checked"' + (item.checked ? ' checked' : '') + '></td>';
+        html += '<td>' + item.name + '</td><td>' + item.unit + '</td>';
+        html += '<td><input type="number" step="0.01" min="0" value="' + item.amount + '" data-field="amount"></td>';
+        html += '<td><button class="delete-btn" data-action="delete">🗑️</button></td></tr>';
+    });
+    html += '</tbody></table><button class="add-btn" data-add-type="p2">+ 自定义增值服务</button></div>';
+    return html;
+}
+
+window.toggleP2 = function() { p2Collapsed = !p2Collapsed; renderTables(); };
+
+function bindTableEvents() {
+    document.querySelectorAll('[data-action="delete"]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            var row = e.target.closest('tr');
+            var type = row.dataset.type;
+            var index = row.dataset.index;
+            if (type && index !== undefined) { currentFees[type].splice(index, 1); renderTables(); }
         });
-        html += '</tbody></table>';
-        if (!locked) html += '<button class="add-btn" data-add-type="' + type + '">+ 添加其他服务</button>';
-        return html;
-    }
-
-    function renderP2Section() {
-        var html = '<div class="section-title">P2 增值附加费（差异化服务） <span class="toggle-btn" onclick="toggleP2()">' + (p2Collapsed ? '▶ 展开' : '▼ 折叠') + '</span></div>';
-        html += '<div id="p2Content" class="collapsible-content' + (p2Collapsed ? ' hidden' : '') + '">';
-        html += '<table class="fee-table" id="table-p2"><thead><tr><th style="width:40px;">选用</th><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:60px;">操作</th></tr></thead><tbody>';
-        currentFees.p2.forEach(function(item, index) {
-            html += '<tr data-type="p2" data-index="' + index + '" data-code="' + item.code + '">';
-            html += '<td style="text-align:center;"><input type="checkbox" data-field="checked"' + (item.checked ? ' checked' : '') + '></td>';
-            html += '<td>' + item.name + '</td><td>' + item.unit + '</td>';
-            html += '<td><input type="number" step="0.01" min="0" value="' + item.amount + '" data-field="amount"></td>';
-            html += '<td><button class="delete-btn" data-action="delete">🗑️</button></td></tr>';
+    });
+    document.querySelectorAll('input[data-field="amount"]').forEach(function(input) {
+        input.addEventListener('input', function(e) {
+            var row = e.target.closest('tr');
+            var type = row.dataset.type;
+            var index = row.dataset.index;
+            if (type && index !== undefined) { currentFees[type][index].amount = parseFloat(e.target.value) || 0; }
         });
-        html += '</tbody></table><button class="add-btn" data-add-type="p2">+ 自定义增值服务</button></div>';
-        return html;
-    }
-
-    window.toggleP2 = function() { p2Collapsed = !p2Collapsed; renderTables(); };
-
-    function bindTableEvents() {
-        document.querySelectorAll('[data-action="delete"]').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                var row = e.target.closest('tr');
-                var type = row.dataset.type;
-                var index = row.dataset.index;
-                if (type && index !== undefined) { currentFees[type].splice(index, 1); renderTables(); }
-            });
+    });
+    document.querySelectorAll('input[data-field="checked"]').forEach(function(chk) {
+        chk.addEventListener('change', function(e) {
+            var row = e.target.closest('tr');
+            var type = row.dataset.type;
+            var index = row.dataset.index;
+            if (type && index !== undefined) { currentFees[type][index].checked = e.target.checked; }
         });
-        document.querySelectorAll('input[data-field="amount"]').forEach(function(input) {
-            input.addEventListener('input', function(e) {
-                var row = e.target.closest('tr');
-                var type = row.dataset.type;
-                var index = row.dataset.index;
-                if (type && index !== undefined) { currentFees[type][index].amount = parseFloat(e.target.value) || 0; }
-            });
+    });
+    document.querySelectorAll('[data-add-type]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            var type = btn.dataset.addType;
+            var newName = prompt('请输入新增费用名称：'); if (!newName) return;
+            var newUnit = prompt('请输入计价单位（如：元/票）：'); if (!newUnit) return;
+            var newItem = { code: 'CUSTOM_' + Date.now() + '_' + Math.random().toString(36), name: newName, unit: newUnit, amount: 0, deletable: true };
+            if (type === 'p2') newItem.checked = true;
+            currentFees[type].push(newItem); renderTables();
         });
-        document.querySelectorAll('input[data-field="checked"]').forEach(function(chk) {
-            chk.addEventListener('change', function(e) {
-                var row = e.target.closest('tr');
-                var type = row.dataset.type;
-                var index = row.dataset.index;
-                if (type && index !== undefined) { currentFees[type][index].checked = e.target.checked; }
-            });
-        });
-        document.querySelectorAll('[data-add-type]').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                var type = btn.dataset.addType;
-                var newName = prompt('请输入新增费用名称：'); if (!newName) return;
-                var newUnit = prompt('请输入计价单位（如：元/票）：'); if (!newUnit) return;
-                var newItem = { code: 'CUSTOM_' + Date.now() + '_' + Math.random().toString(36), name: newName, unit: newUnit, amount: 0, deletable: true };
-                if (type === 'p2') newItem.checked = true;
-                currentFees[type].push(newItem); renderTables();
-            });
-        });
-    }
+    });
+}
 
-    function collectFormData() {
-        return {
-            supplier: {
-                name: document.getElementById('supplierName').value || '未填写',
-                contact: document.getElementById('contactPerson').value || '',
-                phone: document.getElementById('contactPhone').value || '',
-                location: document.getElementById('serviceLocation').value || '',
-                validUntil: document.getElementById('validUntil').value || ''
-            },
-            p0: currentFees.p0.filter(function(f) { return f.amount > 0 || f.code.indexOf('WH_P0') === 0; }),
-            p1: currentFees.p1,
-            p2: currentFees.p2.filter(function(f) { return f.checked; })
-        };
-    }
-
-    window.previewPDF = function() {
-        var data = collectFormData();
-        var doc = new jspdf.jsPDF();
-        var y = 20;
-        doc.setFontSize(16); doc.text('仓库服务报价单', 105, y, { align: 'center' }); y += 12;
-        doc.setFontSize(11);
-        doc.text('供应商：' + data.supplier.name, 20, y); y += 6;
-        if (data.supplier.contact) { doc.text('联系人：' + data.supplier.contact + '  ' + data.supplier.phone, 20, y); y += 6; }
-        doc.text('服务地点：' + data.supplier.location, 20, y); y += 6;
-        if (data.supplier.validUntil) { doc.text('有效期至：' + data.supplier.validUntil, 20, y); y += 6; }
-        y += 8;
-        doc.setFontSize(13); doc.text('P0 主体服务费', 20, y); y += 8;
-        data.p0.forEach(function(f) { doc.text(f.name + '：' + f.amount + ' ' + f.unit, 25, y); y += 6; });
-        y += 4;
-        doc.text('P1 固定附加费', 20, y); y += 8;
-        data.p1.forEach(function(f) { doc.text(f.name + '：' + f.amount + ' ' + f.unit, 25, y); y += 6; });
-        y += 4;
-        if (data.p2.length > 0) { doc.text('P2 增值附加费', 20, y); y += 8; data.p2.forEach(function(f) { doc.text(f.name + '：' + f.amount + ' ' + f.unit, 25, y); y += 6; }); }
-        doc.save('仓库报价单.pdf');
+function collectFormData() {
+    return {
+        supplier: {
+            name: document.getElementById('supplierName').value || '未填写',
+            contact: document.getElementById('contactPerson').value || '',
+            phone: document.getElementById('contactPhone').value || '',
+            location: document.getElementById('serviceLocation').value || '',
+            validUntil: document.getElementById('validUntil').value || ''
+        },
+        p0: currentFees.p0.filter(function(f) { return f.amount > 0 || f.code.indexOf('WH_P0') === 0; }),
+        p1: currentFees.p1,
+        p2: currentFees.p2.filter(function(f) { return f.checked; })
     };
+}
 
-    window.copySummary = function() {
-        var data = collectFormData();
-        var text = '供应商：' + data.supplier.name;
-        if (data.supplier.contact) text += '\n联系人：' + data.supplier.contact + '  ' + data.supplier.phone;
-        text += '\n服务地点：' + data.supplier.location;
-        if (data.supplier.validUntil) text += '\n有效期至：' + data.supplier.validUntil;
-        text += '\n\n【P0 主体服务费】'; data.p0.forEach(function(f) { text += '\n  ' + f.name + '：' + f.amount + ' ' + f.unit; });
-        text += '\n\n【P1 固定附加费】'; data.p1.forEach(function(f) { text += '\n  ' + f.name + '：' + f.amount + ' ' + f.unit; });
-        if (data.p2.length > 0) { text += '\n\n【P2 增值附加费】'; data.p2.forEach(function(f) { text += '\n  ' + f.name + '：' + f.amount + ' ' + f.unit; }); }
-        var hiddenTextarea = document.getElementById('summaryHidden');
-        hiddenTextarea.value = text; hiddenTextarea.select(); document.execCommand('copy');
-        alert('报价摘要已复制到剪贴板！');
-    };
+window.previewPDF = function() {
+    var data = collectFormData();
+    var doc = new jspdf.jsPDF();
+    var y = 20;
+    doc.setFontSize(16); doc.text('仓库服务报价单', 105, y, { align: 'center' }); y += 12;
+    doc.setFontSize(11);
+    doc.text('供应商：' + data.supplier.name, 20, y); y += 6;
+    if (data.supplier.contact) { doc.text('联系人：' + data.supplier.contact + '  ' + data.supplier.phone, 20, y); y += 6; }
+    doc.text('服务地点：' + data.supplier.location, 20, y); y += 6;
+    if (data.supplier.validUntil) { doc.text('有效期至：' + data.supplier.validUntil, 20, y); y += 6; }
+    y += 8;
+    doc.setFontSize(13); doc.text('P0 主体服务费', 20, y); y += 8;
+    data.p0.forEach(function(f) { doc.text(f.name + '：' + f.amount + ' ' + f.unit, 25, y); y += 6; });
+    y += 4;
+    doc.text('P1 固定附加费', 20, y); y += 8;
+    data.p1.forEach(function(f) { doc.text(f.name + '：' + f.amount + ' ' + f.unit, 25, y); y += 6; });
+    y += 4;
+    if (data.p2.length > 0) { doc.text('P2 增值附加费', 20, y); y += 8; data.p2.forEach(function(f) { doc.text(f.name + '：' + f.amount + ' ' + f.unit, 25, y); y += 6; }); }
+    doc.setFontSize(8);
+    doc.text('Copyright © 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.', 105, 290, { align: 'center' });
+    doc.save('仓库报价单.pdf');
+};
 
-    window.generateShareLink = function() {
-        var data = collectFormData();
-        var payload = { v: '1.1', supplier: data.supplier, fees: { p0: data.p0, p1: data.p1, p2: data.p2 } };
-        var jsonStr = JSON.stringify(payload);
-        var compressed = pako.gzip(jsonStr);
-        var base64 = btoa(String.fromCharCode.apply(null, compressed));
-        var url = new URL(window.location.href);
-        url.searchParams.set('data', base64);
-        prompt('🔗 复制以下链接发送给货代，对方可一键导入：', url.toString());
-    };
+window.copySummary = function() {
+    var data = collectFormData();
+    var text = '供应商：' + data.supplier.name;
+    if (data.supplier.contact) text += '\n联系人：' + data.supplier.contact + '  ' + data.supplier.phone;
+    text += '\n服务地点：' + data.supplier.location;
+    if (data.supplier.validUntil) text += '\n有效期至：' + data.supplier.validUntil;
+    text += '\n\n【P0 主体服务费】'; data.p0.forEach(function(f) { text += '\n  ' + f.name + '：' + f.amount + ' ' + f.unit; });
+    text += '\n\n【P1 固定附加费】'; data.p1.forEach(function(f) { text += '\n  ' + f.name + '：' + f.amount + ' ' + f.unit; });
+    if (data.p2.length > 0) { text += '\n\n【P2 增值附加费】'; data.p2.forEach(function(f) { text += '\n  ' + f.name + '：' + f.amount + ' ' + f.unit; }); }
+    var hiddenTextarea = document.getElementById('summaryHidden');
+    hiddenTextarea.value = text; hiddenTextarea.select(); document.execCommand('copy');
+    alert('报价摘要已复制到剪贴板！');
+};
 
-    function loadFromURL() {
-        var params = new URLSearchParams(window.location.search);
-        var dataParam = params.get('data');
-        if (dataParam) {
-            try {
-                var binary = atob(dataParam);
-                var bytes = new Uint8Array(binary.length);
-                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                var jsonStr;
-                try { jsonStr = pako.ungzip(bytes, { to: 'string' }); }
-                catch (e) { jsonStr = decodeURIComponent(binary); }
-                var payload = JSON.parse(jsonStr);
-                if (payload.supplier) {
-                    document.getElementById('supplierName').value = payload.supplier.name || '';
-                    document.getElementById('contactPerson').value = payload.supplier.contact || '';
-                    document.getElementById('contactPhone').value = payload.supplier.phone || '';
-                    document.getElementById('serviceLocation').value = payload.supplier.location || '';
-                    document.getElementById('validUntil').value = payload.supplier.validUntil || '';
-                }
-                if (payload.fees) {
-                    currentFees.p0 = currentFees.p0.map(function(def) { var m = (payload.fees.p0 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount }) : def; });
-                    currentFees.p1 = currentFees.p1.map(function(def) { var m = (payload.fees.p1 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount }) : def; });
-                    currentFees.p2 = currentFees.p2.map(function(def) { var m = (payload.fees.p2 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked }) : def; });
-                }
-                renderTables();
-            } catch(e) { console.warn('解析分享链接失败', e); }
-        }
+window.generateShareLink = function() {
+    var data = collectFormData();
+    var payload = { v: '1.1', supplier: data.supplier, fees: { p0: data.p0, p1: data.p1, p2: data.p2 } };
+    var jsonStr = JSON.stringify(payload);
+    var compressed = pako.gzip(jsonStr);
+    var base64 = btoa(String.fromCharCode.apply(null, compressed));
+    var url = new URL(window.location.href);
+    url.searchParams.set('data', base64);
+    prompt('🔗 复制以下链接发送给货代，对方可一键导入：', url.toString());
+};
+
+function loadFromURL() {
+    var params = new URLSearchParams(window.location.search);
+    var dataParam = params.get('data');
+    if (dataParam) {
+        try {
+            var binary = atob(dataParam);
+            var bytes = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            var jsonStr;
+            try { jsonStr = pako.ungzip(bytes, { to: 'string' }); }
+            catch (e) { jsonStr = decodeURIComponent(binary); }
+            var payload = JSON.parse(jsonStr);
+            if (payload.supplier) {
+                document.getElementById('supplierName').value = payload.supplier.name || '';
+                document.getElementById('contactPerson').value = payload.supplier.contact || '';
+                document.getElementById('contactPhone').value = payload.supplier.phone || '';
+                document.getElementById('serviceLocation').value = payload.supplier.location || '';
+                document.getElementById('validUntil').value = payload.supplier.validUntil || '';
+            }
+            if (payload.fees) {
+                currentFees.p0 = currentFees.p0.map(function(def) { var m = (payload.fees.p0 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount }) : def; });
+                currentFees.p1 = currentFees.p1.map(function(def) { var m = (payload.fees.p1 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount }) : def; });
+                currentFees.p2 = currentFees.p2.map(function(def) { var m = (payload.fees.p2 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked }) : def; });
+            }
+            renderTables();
+        } catch(e) { console.warn('解析分享链接失败', e); }
     }
+}
 
-    initFeeData(); renderTables(); loadFromURL();
-})();
+initFeeData(); renderTables(); loadFromURL();
 </script>
-<div style="text-align:center; font-size:0.75rem; color:#94a3b8; padding:10px 0; border-top:1px solid #e2e8f0; margin-top:20px;">
-<span onclick="document.getElementById('whTermsModal').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span>
-&nbsp;|&nbsp;Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.
-</div>
-    <div style="text-align:center; font-size:0.75rem; color:#94a3b8; margin-top:6px;">
-🧰 工具箱：<a href="https://starjade2026.github.io/quote-tool/" style="color:#64748b;">📄 报价</a> | <a href="../workflow/" style="color:#64748b;">📋 流转单</a>
-</div>
-<div id="whTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
-<span onclick="document.getElementById('whTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
-<h4>📜 使用条款</h4>
-<p>欢迎使用仓库报价器。</p>
-<p>本工具是一个报价信息生成助手，专为仓库服务供应商设计，帮助你快速生成标准化的三层（P0/P1/P2）费用报价单。生成的报价信息不构成具有法律约束力的要约，最终服务价格和条款请以双方盖章的书面合同为准。</p>
-<p>你在使用过程中输入的所有供应商信息和费用数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
-<p>因使用本工具生成的报价单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
-</div>
 </body>
 </html>
