@@ -64,6 +64,23 @@
         .info-card .content strong { color: #7d6608; }
         .guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
         .guide-text a { color: #64748b; text-decoration: underline; }
+        @media print {
+    body * {
+        visibility: hidden;
+    }
+    #feeTablesContainer, #feeTablesContainer * {
+        visibility: visible;
+    }
+    #feeTablesContainer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    .action-buttons, .note, .guide-text {
+        display: none;
+    }
+}
     </style>
 </head>
 <body>
@@ -114,6 +131,7 @@
 
     <div class="action-buttons">
         <button onclick="previewPDF()" style="background-color: #0071e3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📄 预览报价单 (PDF)</button>
+        <button onclick="window.print()" style="background-color:#0071e3;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;">🖨️ 打印为PDF</button>
         <button onclick="exportWhTemplate()" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 导出模板</button>
         <button onclick="copySummary()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📋 复制报价摘要</button>
         <button onclick="generateShareLink()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">🔗 生成分享链接</button>
@@ -190,6 +208,7 @@ function getFeeLibrary(serviceType) {
 // ========== 模板导出/导入 ==========
 window.exportWhTemplate = function() {
     try {
+        var currentFees = window.currentFees;
         var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
         var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
         var p2 = currentFees.p2.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: f.checked }; });
