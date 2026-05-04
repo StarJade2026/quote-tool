@@ -62,7 +62,8 @@
  .collapsible-content { overflow: hidden; }
  .hidden { display: none; }
  /* Modal */
- .fee-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+ .fee-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 2000; }
+ .fee-modal:not(.hidden) { display: flex; }
  .fee-modal .modal-content { background: white; border-radius: 12px; min-width: 420px; max-width: 520px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
  .fee-modal .modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 600; }
  .fee-modal .modal-body { padding: 20px; }
