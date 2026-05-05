@@ -912,85 +912,143 @@ window.backImportStep1 = function() {
  document.getElementById('importBtn4').style.display = 'none';
 };
 
-window.previewImport = function() {
- var raw = document.getElementById('importRaw').value.trim();
- if (!raw) { alert('请先粘贴表格内容'); return; }
+// ========== v0.4.2 AI解析 ==========
+var AI_API_URL = 'https://token-plan-cn.xiaomimimo.com/v1/chat/completions';
+var AI_API_KEY = 'sk-cxatvoyslyuy7mrf4yu9vcr68f18jc1t2a8qiop02kbpntj6';
+var AI_MODEL = 'mimo-v2-pro';
+var AI_TIMEOUT = 8000;
+var AI_SYSTEM_PROMPT = '你是一个物流报价表格解析器。用户会粘贴一份仓库报价表格，你需要从中提取费用项。\n\n' +
+'规则：\n' +
+'1. 找到表头行（包含"20\'"、"40\'"、"40HQ"等箱型关键词的行）\n' +
+'2. 表头行之后的所有行中，提取费用名称（第一列）+ 各箱型对应的价格\n' +
+'3. 跳过空行、纯数字序号行、分隔线、说明文字行\n' +
+'4. 清洗非标准数字格式：如"400元"→400、"全掏：20\'500元/箱"→500、"200元/托"→200\n' +
+'5. 如果某行只有费用名称但没有有效数字，跳过该行\n' +
+'6. 对于"实报实销"、"按实际确认"、"case by case"等非数字报价，价格填0并在note中注明\n\n' +
+'请只返回JSON格式，不要任何解释文字。JSON结构如下：\n' +
+'{"headers":["费用名称","20\'\",\"40\'\",\"40HQ\"],\"items\":[{\"name\":\"CFS 内装费\",\"prices\":[400,700,700]},{\"name\":\"洋山附加费\",\"prices\":[400,700,700]}]}';
 
- // 第一步：预处理和结构检测
+function aiParseTable(rawText, callback) {
+ var xhr = new XMLHttpRequest();
+ xhr.open('POST', AI_API_URL, true);
+ xhr.setRequestHeader('Content-Type', 'application/json');
+ xhr.setRequestHeader('Authorization', 'Bearer ' + AI_API_KEY);
+ xhr.timeout = AI_TIMEOUT;
+ xhr.onload = function() {
+  if (xhr.status === 200) {
+   try {
+    var response = JSON.parse(xhr.responseText);
+    var content = response.choices[0].message.content;
+    var jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+     var parsed = JSON.parse(jsonMatch[0]);
+     callback(null, parsed);
+    } else {
+     callback(new Error('AI返回格式异常'));
+    }
+   } catch(e) { callback(e); }
+  } else {
+   callback(new Error('API返回状态码: ' + xhr.status));
+  }
+ };
+ xhr.onerror = function() { callback(new Error('网络请求失败')); };
+ xhr.ontimeout = function() { callback(new Error('请求超时')); };
+ var body = JSON.stringify({
+  model: AI_MODEL,
+  messages: [
+   { role: 'system', content: AI_SYSTEM_PROMPT },
+   { role: 'user', content: rawText }
+  ],
+  temperature: 0.1,
+  max_tokens: 2000
+ });
+ xhr.send(body);
+}
+
+function renderAIPreview(aiResult) {
+ var headers = aiResult.headers || [];
+ var items = aiResult.items || [];
+ var firstDataCol = 1;
+ window._importParsed = items.map(function(item) {
+  return { name: item.name, prices: item.prices || [] };
+ });
+ window._importHeaders = headers;
+ window._importFirstDataCol = firstDataCol;
+ window._importAISource = true;
+ var html = '';
+ items.forEach(function(item) {
+  html += '<div class="parse-item"><span class="item-name">🤖 ' + escapeHtml(item.name) + '</span>';
+  html += '<div class="item-detail">';
+  if (item.prices && item.prices.length > 0) {
+   html += '价格: ';
+   var priceStrs = [];
+   for (var j = 1; j < headers.length && j - 1 < item.prices.length; j++) {
+    priceStrs.push((headers[j] || '列'+(j+1)) + ':' + (item.prices[j-1] !== null ? item.prices[j-1] : '—'));
+   }
+   html += priceStrs.join(', ');
+  }
+  if (item.note) html += ' | 备注: ' + escapeHtml(item.note);
+  html += '</div></div>';
+ });
+ document.getElementById('importPreview').innerHTML = html || '<p style="color:#888;">未识别到费用项</p>';
+ var confidence = items.length > 0 ? 4 : 0;
+ document.getElementById('importConfidence').textContent = '🤖 AI解析 | 识别置信度: ' + '★★★★★'.substring(0, Math.min(5, confidence)) + ' (' + items.length + ' 项费用)';
+ document.getElementById('importUnrecognised').textContent = '';
+ document.getElementById('importBtn2').style.display = 'inline-block';
+ document.getElementById('importBtn3').style.display = 'inline-block';
+ document.getElementById('importBtn4').style.display = 'inline-block';
+}
+
+function localParseAndPreview(raw) {
+ // 本地规则解析降级（原始previewImport逻辑）
  var lines = raw.split(/\r?\n/);
  var isTabFormat = raw.indexOf('\t') > -1;
  var headers = [];
  var dataLines = [];
  var firstDataCol = 0;
-
  if (isTabFormat) {
-  // TSV格式检测
   for (var i = 0; i < lines.length; i++) {
    var cols = lines[i].split('\t');
    var cleanCols = cols.map(function(c) { return c.replace(/^["']|["']$/g, '').trim(); });
-   // 检测表头行（包含20'/40'/40HQ/收费标准等关键词）
    if (cleanCols.some(function(c) { return /20'|40'|40HQ|收费标准/i.test(c); })) {
     headers = cleanCols;
-    for (var j = 0; j < headers.length; j++) {
-     if (/20'|40'|40HQ/i.test(headers[j])) {
-      firstDataCol = j;
-      break;
-     }
-    }
-    for (var k = i + 1; k < lines.length; k++) {
-     dataLines.push(lines[k].split('\t'));
-    }
+    for (var j = 0; j < headers.length; j++) { if (/20'|40'|40HQ/i.test(headers[j])) { firstDataCol = j; break; } }
+    for (var k = i + 1; k < lines.length; k++) { dataLines.push(lines[k].split('\t')); }
     break;
    }
   }
  } else {
-  // 空格对齐格式（纯文本）
   for (var i = 0; i < lines.length; i++) {
    var cols = lines[i].split(/\s{2,}/);
    if (cols.some(function(c) { return /20'|40'|40HQ|收费标准/i.test(c); })) {
     headers = cols.map(function(c) { return c.trim(); });
-    for (var j = 0; j < headers.length; j++) {
-     if (/20'|40'|40HQ/i.test(headers[j])) {
-      firstDataCol = j;
-      break;
-     }
-    }
-    for (var k = i + 1; k < lines.length; k++) {
-     dataLines.push(lines[k].split(/\s{2,}/));
-    }
+    for (var j = 0; j < headers.length; j++) { if (/20'|40'|40HQ/i.test(headers[j])) { firstDataCol = j; break; } }
+    for (var k = i + 1; k < lines.length; k++) { dataLines.push(lines[k].split(/\s{2,}/)); }
     break;
    }
   }
  }
-
- // 第二步：逐行解析，跳过非数据行
+ window._importAISource = false;
  var parsed = [];
  for (var i = 0; i < dataLines.length; i++) {
   var cols = dataLines[i].map(function(c) { return c.replace(/^["']|["']$/g, '').trim(); });
   if (cols.length === 0 || (cols.length === 1 && cols[0] === '')) continue;
-  // 提取费用名称（跳过纯数字序号行，如"1."、"2、"等）
   var rawName = cols[0] || '';
   var cleanName = rawName.replace(/^\d+[\.\、\s]*/, '').trim();
   if (!cleanName || /^[-—]+$/.test(cleanName)) continue;
-  // 从首列数据列开始提取价格
   var prices = [];
   for (var j = firstDataCol; j < cols.length && j < firstDataCol + 3; j++) {
    var cell = cols[j] || '';
    if (!cell) { prices.push(null); continue; }
-   var cleaned = cell.replace(/[¥￥,\s]/g, '');
-   cleaned = cleaned.replace(/元\/.*$/, '').replace(/元$/, '');
+   var cleaned = cell.replace(/[¥￥,\s]/g, '').replace(/元\/.*$/, '').replace(/元$/, '');
    var match = cleaned.match(/(\d+\.?\d*)/);
    if (match) { prices.push(parseFloat(match[1])); } else { prices.push(null); }
   }
   parsed.push({ name: cleanName, prices: prices });
  }
-
- // 第三步：生成预览并存储待导入数据
  window._importParsed = parsed;
  window._importHeaders = headers;
  window._importFirstDataCol = firstDataCol;
-
- // 显示预览
  var html = '';
  parsed.forEach(function(item) {
   html += '<div class="parse-item"><span class="item-name">✓ ' + escapeHtml(item.name) + '</span>';
@@ -1005,14 +1063,35 @@ window.previewImport = function() {
  });
  document.getElementById('importPreview').innerHTML = html || '<p style="color:#888;">未识别到费用项</p>';
  var starCount = parsed.length > 0 ? Math.min(4, 1 + Math.floor(parsed.length / 3)) : 0;
- document.getElementById('importConfidence').textContent = '识别置信度: ' + ('★★★★☆☆☆☆☆'.substring(0, starCount) + '★★★★☆☆☆☆☆'.substring(0, 4 - starCount)).substring(0, 4) + ' (' + parsed.length + ' 项费用)';
+ var stars = '★★★★☆☆☆☆☆'.substring(0, starCount) + '★★★★☆☆☆☆☆'.substring(0, 4 - starCount);
+ document.getElementById('importConfidence').textContent = '本地规则解析 | 识别置信度: ' + stars.substring(0, 4) + ' (' + parsed.length + ' 项费用)';
  document.getElementById('importUnrecognised').textContent = (parsed.length === 0 ? '未能解析表格，请检查格式' : '');
- document.getElementById('importStep1').style.display = 'none';
- document.getElementById('importStep2').style.display = 'block';
- document.getElementById('importBtn1').style.display = 'none';
  document.getElementById('importBtn2').style.display = 'inline-block';
  document.getElementById('importBtn3').style.display = 'inline-block';
  document.getElementById('importBtn4').style.display = 'inline-block';
+}
+
+window.previewImport = function() {
+ var raw = document.getElementById('importRaw').value.trim();
+ if (!raw) { alert('请先粘贴表格内容'); return; }
+ // 显示加载状态
+ document.getElementById('importPreview').innerHTML = '<p style="text-align:center;color:#888;">⏳ AI正在解析表格...</p>';
+ document.getElementById('importConfidence').textContent = '正在调用AI解析...';
+ document.getElementById('importStep1').style.display = 'none';
+ document.getElementById('importStep2').style.display = 'block';
+ document.getElementById('importBtn1').style.display = 'none';
+ document.getElementById('importBtn2').style.display = 'none';
+ document.getElementById('importBtn3').style.display = 'none';
+ document.getElementById('importBtn4').style.display = 'none';
+ // 优先尝试AI解析，失败则降级本地规则
+ aiParseTable(raw, function(err, aiResult) {
+  if (err) {
+   console.warn('AI解析失败，降级使用本地规则解析:', err.message);
+   localParseAndPreview(raw);
+   return;
+  }
+  renderAIPreview(aiResult);
+ });
 };
 
 window.confirmImport = function(mode) {
