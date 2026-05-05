@@ -62,8 +62,8 @@
  .collapsible-content { overflow: hidden; }
  .hidden { display: none; }
  /* Modal */
-.fee-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 2000; }
-.fee-modal:not(.hidden) { display: flex; }
+ .fee-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 2000; }
+ .fee-modal:not(.hidden) { display: flex; }
  .fee-modal .modal-content { background: white; border-radius: 12px; min-width: 420px; max-width: 520px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
  .fee-modal .modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 600; }
  .fee-modal .modal-body { padding: 20px; }
@@ -73,6 +73,9 @@
  .fee-modal .modal-cancel { background: #f0f0f0; color: #333; }
  .fee-modal .modal-confirm { background: #0071e3; color: white; }
  .fee-modal .modal-close-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #888; padding: 0; margin: 0; }
+ #condModal .modal-content { max-width: 600px; }
+ #condList { margin: 10px 0; }
+ #condList .cond-row { display: flex; gap: 8px; align-items: center; margin: 4px 0; background: #f8f8f8; padding: 6px 10px; border-radius: 6px; }
  .action-buttons { display: flex; gap: 15px; flex-wrap: wrap; margin: 25px 0; }
  .note { color: #666; font-size: 13px; margin-top: 5px; }
  .info-card { background: #fef9e7; border-left: 5px solid #f1c40f; padding: 12px 18px; margin: 20px 0; border-radius: 8px; cursor: pointer; user-select: none; }
@@ -191,6 +194,45 @@
  </div>
 </div>
 
+<!-- 条件管理弹窗 -->
+<div id="condModal" class="fee-modal hidden">
+ <div class="modal-content">
+  <div class="modal-header">
+   <span>条件管理 · <span id="condFeeName"></span></span>
+   <button class="modal-close-btn" onclick="closeCondModal()">✕</button>
+  </div>
+  <div class="modal-body">
+   <label>默认单价（无匹配条件时使用）</label>
+   <input type="number" id="condDefaultAmount" step="0.01" min="0" value="0">
+   <label>条件列表</label>
+   <div id="condList"></div>
+   <hr>
+   <div id="condAddRow">
+    <label>添加条件</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+     <select id="condTypeSelect">
+      <option value="container">箱型</option>
+      <option value="port">港区</option>
+      <option value="time">时段</option>
+      <option value="cargo">货物类型</option>
+      <option value="service">附加服务</option>
+      <option value="weight">重量超过(吨)</option>
+     </select>
+     <input type="text" id="condValueInput" placeholder="如：20GP" style="flex:1;min-width:80px;">
+     <span>单价:</span>
+     <input type="number" id="condPriceInput" step="0.01" min="0" value="0" style="width:100px;">
+     <button onclick="addCondRow()" style="padding:6px 12px;font-size:13px;">添加</button>
+    </div>
+    <input type="text" id="condNoteInput" placeholder="备注（选填）" style="width:100%;margin-top:6px;box-sizing:border-box;">
+   </div>
+  </div>
+  <div class="modal-footer">
+   <button class="modal-cancel" onclick="closeCondModal()">取消</button>
+   <button class="modal-confirm" onclick="saveCondModal()">确认保存</button>
+  </div>
+ </div>
+</div>
+
 <script>
 // ========== 内嵌费用库 ==========
 const FEE_LIBRARY = {
@@ -234,9 +276,9 @@ function getFeeLibrary(serviceType) {
 window.exportWhTemplate = function() {
  try {
  var currentFees = window.currentFees;
- var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
- var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount }; });
- var p2 = currentFees.p2.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: f.checked }; });
+ var p0 = currentFees.p0.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, conditions: f.conditions || [] }; });
+ var p1 = currentFees.p1.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, conditions: f.conditions || [] }; });
+ var p2 = currentFees.p2.map(function(f) { return { code: f.code, name: f.name, unit: f.unit, amount: f.amount, checked: f.checked, conditions: f.conditions || [] }; });
  var data = {
  supplier: {
  name: document.getElementById('supplierName').value || '',
@@ -276,7 +318,7 @@ function mergeCustomItems(type, importedArr) {
  importedArr.forEach(function(f) {
   if (f.code && f.code.indexOf('CUSTOM_') === 0) {
    if (!currentFees[type].find(function(x) { return x.code === f.code; })) {
-    var newItem = { code: f.code, name: f.name, unit: f.unit || '—', amount: f.amount || 0, deletable: true };
+    var newItem = { code: f.code, name: f.name, unit: f.unit || '—', amount: f.amount || 0, deletable: true, conditions: f.conditions || [] };
     if (type === 'p2') newItem.checked = (f.checked !== false);
     currentFees[type].push(newItem);
    }
@@ -306,15 +348,15 @@ window.importWhTemplate = function(input) {
  if (data.fees) {
  currentFees.p0 = currentFees.p0.map(function(def) {
  var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
- return m ? Object.assign({}, def, { amount: m.amount }) : def;
+ return m ? Object.assign({}, def, { amount: m.amount, conditions: m.conditions || [] }) : def;
  });
  currentFees.p1 = currentFees.p1.map(function(def) {
  var m = (data.fees.p1 || []).find(function(f) { return f.code === def.code; });
- return m ? Object.assign({}, def, { amount: m.amount }) : def;
+ return m ? Object.assign({}, def, { amount: m.amount, conditions: m.conditions || [] }) : def;
  });
  currentFees.p2 = currentFees.p2.map(function(def) {
  var m = (data.fees.p2 || []).find(function(f) { return f.code === def.code; });
- return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true }) : def;
+ return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true, conditions: m.conditions || [] }) : def;
  });
  // v0.4.0: 合并自定义项
  mergeCustomItems('p0', data.fees.p0);
@@ -348,9 +390,9 @@ var p2Collapsed = true;
 
 function initFeeData() {
  var lib = getFeeLibrary('warehouse');
- currentFees.p0 = lib.p0.map(function(item) { return Object.assign({}, item, { amount: item.default || 0 }); });
- currentFees.p1 = lib.p1.map(function(item) { return Object.assign({}, item, { amount: item.default || 0 }); });
- currentFees.p2 = lib.p2.map(function(item) { return Object.assign({}, item, { amount: item.default || 0, checked: false }); });
+ currentFees.p0 = lib.p0.map(function(item) { return Object.assign({}, item, { amount: item.default || 0, conditions: [] }); });
+ currentFees.p1 = lib.p1.map(function(item) { return Object.assign({}, item, { amount: item.default || 0, conditions: [] }); });
+ currentFees.p2 = lib.p2.map(function(item) { return Object.assign({}, item, { amount: item.default || 0, checked: false, conditions: [] }); });
 }
 
 function renderTables() {
@@ -365,11 +407,12 @@ function renderTables() {
 
 function renderTableSection(title, type, items, locked) {
  var html = '<div class="section-title">' + title + '</div>';
- html += '<table class="fee-table" id="table-' + type + '"><thead><tr><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:80px;">操作</th></tr></thead><tbody>';
+ html += '<table class="fee-table" id="table-' + type + '"><thead><tr><th>费用名称</th><th>计价单位</th><th>条件</th><th>单价 (¥)</th><th style="width:80px;">操作</th></tr></thead><tbody>';
  items.forEach(function(item, index) {
  html += '<tr data-type="' + type + '" data-index="' + index + '" data-code="' + item.code + '">';
  html += '<td>' + item.name + (locked ? '<span class="lock-icon">🔒</span>' : '') + '</td>';
  html += '<td>' + item.unit + '</td>';
+ html += '<td style="font-size:12px;cursor:pointer;" onclick="window.openCondModal(\'' + type + '\',' + index + ');event.stopPropagation();">' + condSummary(item) + ' <button style="font-size:11px;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;cursor:pointer;padding:1px 4px;" onclick="event.stopPropagation();window.openCondModal(\'' + type + '\',' + index + ');">+</button></td>';
  html += '<td><input type="number" step="0.01" min="0" value="' + item.amount + '" data-field="amount"></td>';
  html += '<td>' +
   '<button class="edit-btn" onclick="window.editFee(\'' + type + '\',' + index + ');event.stopPropagation();" title="编辑">✏️</button>' +
@@ -385,11 +428,12 @@ function renderTableSection(title, type, items, locked) {
 function renderP2Section() {
  var html = '<div class="section-title">P2 增值附加费（差异化服务） <span class="toggle-btn" onclick="toggleP2()">' + (p2Collapsed ? '▶ 展开' : '▼ 折叠') + '</span></div>';
  html += '<div id="p2Content" class="collapsible-content' + (p2Collapsed ? ' hidden' : '') + '">';
- html += '<table class="fee-table" id="table-p2"><thead><tr><th style="width:40px;">选用</th><th>费用名称</th><th>计价单位</th><th>单价 (¥)</th><th style="width:80px;">操作</th></tr></thead><tbody>';
+ html += '<table class="fee-table" id="table-p2"><thead><tr><th style="width:40px;">选用</th><th>费用名称</th><th>计价单位</th><th>条件</th><th>单价 (¥)</th><th style="width:80px;">操作</th></tr></thead><tbody>';
  currentFees.p2.forEach(function(item, index) {
  html += '<tr data-type="p2" data-index="' + index + '" data-code="' + item.code + '">';
  html += '<td style="text-align:center;"><input type="checkbox" data-field="checked"' + (item.checked ? ' checked' : '') + '></td>';
  html += '<td>' + item.name + '</td><td>' + item.unit + '</td>';
+ html += '<td style="font-size:12px;cursor:pointer;" onclick="window.openCondModal(\'p2\',' + index + ');event.stopPropagation();">' + condSummary(item) + ' <button style="font-size:11px;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;cursor:pointer;padding:1px 4px;" onclick="event.stopPropagation();window.openCondModal(\'p2\',' + index + ');">+</button></td>';
  html += '<td><input type="number" step="0.01" min="0" value="' + item.amount + '" data-field="amount"></td>';
  html += '<td>' +
   '<button class="edit-btn" onclick="window.editFee(\'p2\',' + index + ');event.stopPropagation();" title="编辑">✏️</button>' +
@@ -449,7 +493,8 @@ window.confirmFeeModal = function() {
   name: name,
   unit: unit,
   amount: amount,
-  deletable: true
+  deletable: true,
+  conditions: []
  };
  if (type === 'p2') item.checked = true;
  currentFees[type].push(item);
@@ -513,6 +558,69 @@ function escapeHtml(str) {
  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+// ========== v0.4.1 条件管理 ==========
+var _condType = null;
+var _condIndex = null;
+var _tempConds = [];
+
+function condSummary(item) {
+ if (!item.conditions || item.conditions.length === 0) return '—';
+ return item.conditions.map(function(c) { return c.cond_value + ':' + c.price; }).join(', ');
+}
+
+window.openCondModal = function(type, index) {
+ _condType = type;
+ _condIndex = index;
+ var item = currentFees[type][index];
+ document.getElementById('condFeeName').textContent = item.name;
+ document.getElementById('condDefaultAmount').value = item.amount || 0;
+ _tempConds = (item.conditions || []).map(function(c) { return Object.assign({}, c); });
+ renderCondList();
+ document.getElementById('condModal').classList.remove('hidden');
+};
+
+function renderCondList() {
+ var html = '';
+ _tempConds.forEach(function(c, i) {
+  html += '<div class="cond-row">';
+  html += '<span style="flex:1;">' + c.cond_type + '=' + c.cond_value + ' → 单价 ' + c.price + ' 元</span>';
+  if (c.note) html += '<span style="font-size:12px;color:#888;">(' + c.note + ')</span>';
+  html += '<button onclick="removeCondRow(' + i + ')" style="color:#ff3b30;background:none;border:none;cursor:pointer;font-size:16px;">🗑️</button>';
+  html += '</div>';
+ });
+ document.getElementById('condList').innerHTML = (html || '<p style="color:#888;font-size:13px;">暂无条件，使用默认单价</p>');
+}
+
+window.addCondRow = function() {
+ var condType = document.getElementById('condTypeSelect').value;
+ var condValue = document.getElementById('condValueInput').value.trim();
+ var price = parseFloat(document.getElementById('condPriceInput').value);
+ var note = document.getElementById('condNoteInput').value.trim();
+ if (!condValue || isNaN(price)) { alert('请填写条件值和单价'); return; }
+ _tempConds.push({ cond_type: condType, cond_value: condValue, price: price, note: note || '' });
+ renderCondList();
+ document.getElementById('condValueInput').value = '';
+ document.getElementById('condPriceInput').value = '0';
+ document.getElementById('condNoteInput').value = '';
+};
+
+window.removeCondRow = function(idx) {
+ _tempConds.splice(idx, 1);
+ renderCondList();
+};
+
+window.saveCondModal = function() {
+ var item = currentFees[_condType][_condIndex];
+ item.amount = parseFloat(document.getElementById('condDefaultAmount').value) || 0;
+ item.conditions = _tempConds.slice();
+ closeCondModal();
+ renderTables();
+};
+
+window.closeCondModal = function() {
+ document.getElementById('condModal').classList.add('hidden');
+};
+
 function collectFormData() {
  return {
  supplier: {
@@ -522,9 +630,9 @@ function collectFormData() {
  location: document.getElementById('serviceLocation').value || '',
  validUntil: document.getElementById('validUntil').value || ''
  },
- p0: currentFees.p0.filter(function(f) { return f.amount > 0 || f.code.indexOf('WH_P0') === 0 || f.code.indexOf('CUSTOM_') === 0; }),
- p1: currentFees.p1.filter(function(f) { return f.amount > 0 || f.code.indexOf('WH_P1') === 0 || f.code.indexOf('CUSTOM_') === 0; }),
- p2: currentFees.p2.filter(function(f) { return f.checked || f.code.indexOf('CUSTOM_') === 0; })
+ p0: currentFees.p0.filter(function(f) { return f.amount > 0 || (f.conditions && f.conditions.length > 0) || f.code.indexOf('WH_P0') === 0 || f.code.indexOf('CUSTOM_') === 0; }),
+ p1: currentFees.p1.filter(function(f) { return f.amount > 0 || (f.conditions && f.conditions.length > 0) || f.code.indexOf('WH_P1') === 0 || f.code.indexOf('CUSTOM_') === 0; }),
+ p2: currentFees.p2.filter(function(f) { return f.checked || (f.conditions && f.conditions.length > 0) || f.code.indexOf('CUSTOM_') === 0; })
  };
 }
 
@@ -596,9 +704,9 @@ function loadFromURL() {
  document.getElementById('validUntil').value = payload.supplier.validUntil || '';
  }
  if (payload.fees) {
- currentFees.p0 = currentFees.p0.map(function(def) { var m = (payload.fees.p0 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount }) : def; });
- currentFees.p1 = currentFees.p1.map(function(def) { var m = (payload.fees.p1 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount }) : def; });
- currentFees.p2 = currentFees.p2.map(function(def) { var m = (payload.fees.p2 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked }) : def; });
+ currentFees.p0 = currentFees.p0.map(function(def) { var m = (payload.fees.p0 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount, conditions: m.conditions || [] }) : def; });
+ currentFees.p1 = currentFees.p1.map(function(def) { var m = (payload.fees.p1 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount, conditions: m.conditions || [] }) : def; });
+ currentFees.p2 = currentFees.p2.map(function(def) { var m = (payload.fees.p2 || []).find(function(f) { return f.code === def.code; }); return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked, conditions: m.conditions || [] }) : def; });
  // v0.4.0: 合并自定义项
  mergeCustomItems('p0', payload.fees.p0);
  mergeCustomItems('p1', payload.fees.p1);
@@ -608,9 +716,8 @@ function loadFromURL() {
  } catch(e) { console.warn('解析分享链接失败', e); }
  }
 }
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('feeModal').classList.add('hidden');
-});
+
+document.addEventListener('DOMContentLoaded', function() { document.getElementById('feeModal').classList.add('hidden'); });
 initFeeData(); renderTables(); loadFromURL();
 </script>
 </body>
