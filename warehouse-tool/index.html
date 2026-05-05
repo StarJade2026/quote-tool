@@ -738,14 +738,17 @@ window.printCleanPDF = function() {
  });
  html += '</table>';
 
- // P2：全部展开（不使用 collectFormData 过滤，直接遍历 currentFees.p2）
- html += '<h2>P2 增值附加费（差异化服务）</h2>';
- html += '<table><tr><th>费用名称</th><th>计价单位</th><th>条件</th><th>单价 (¥)</th></tr>';
- currentFees.p2.forEach(function(f) {
-  html += '<tr><td>' + escapeHtml(f.name) + '</td><td>' + escapeHtml(f.unit) + '</td>';
-  html += '<td>' + escapeHtml(condSummary(f)) + '</td><td>' + f.amount + '</td></tr>';
- });
- html += '</table>';
+ // P2：只打印已勾选费用项
+ var p2Selected = currentFees.p2.filter(function(f) { return f.checked; });
+ if (p2Selected.length > 0) {
+  html += '<h2>P2 增值附加费（差异化服务）</h2>';
+  html += '<table><tr><th>费用名称</th><th>计价单位</th><th>条件</th><th>单价 (¥)</th></tr>';
+  p2Selected.forEach(function(f) {
+   html += '<tr><td>' + escapeHtml(f.name) + '</td><td>' + escapeHtml(f.unit) + '</td>';
+   html += '<td>' + escapeHtml(condSummary(f)) + '</td><td>' + f.amount + '</td></tr>';
+  });
+  html += '</table>';
+ }
 
  // 页脚
  html += '<div class="footer">';
