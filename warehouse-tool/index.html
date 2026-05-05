@@ -346,6 +346,48 @@ window.importWhTemplate = function(input) {
  document.getElementById('validUntil').value = data.supplier.validUntil || '';
  }
  if (data.fees) {
+ // v0.4.1: 双模式导入选择
+ var importMode = confirm(
+ '请选择导入模式：\n\n' +
+ '【确定】= 全量替换 —— 用模板内容完全覆盖当前页面，模板中没有的费用项将被删除。\n' +
+ '【取消】= 增量合并 —— 只更新已有费用项的价格，并追加新的自定义项，不删除任何已有费用。\n\n' +
+ '点击「确定」全量替换，点击「取消」增量合并。'
+ );
+ if (importMode) {
+ // 全量替换：直接用模板数据重建费用项
+ currentFees.p0 = (data.fees.p0 || []).map(function(f) {
+ return {
+ code: f.code,
+ name: f.name,
+ unit: f.unit || '—',
+ amount: f.amount || 0,
+ deletable: (f.code.indexOf('CUSTOM_') === 0),
+ conditions: f.conditions || []
+ };
+ });
+ currentFees.p1 = (data.fees.p1 || []).map(function(f) {
+ return {
+ code: f.code,
+ name: f.name,
+ unit: f.unit || '—',
+ amount: f.amount || 0,
+ deletable: (f.code.indexOf('CUSTOM_') === 0),
+ conditions: f.conditions || []
+ };
+ });
+ currentFees.p2 = (data.fees.p2 || []).map(function(f) {
+ return {
+ code: f.code,
+ name: f.name,
+ unit: f.unit || '—',
+ amount: f.amount || 0,
+ checked: (f.checked !== false),
+ deletable: (f.code.indexOf('CUSTOM_') === 0),
+ conditions: f.conditions || []
+ };
+ });
+ } else {
+ // 增量合并：保持原有逻辑（更新价格 + 合并自定义项）
  currentFees.p0 = currentFees.p0.map(function(def) {
  var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
  return m ? Object.assign({}, def, { amount: m.amount, conditions: m.conditions || [] }) : def;
@@ -362,6 +404,7 @@ window.importWhTemplate = function(input) {
  mergeCustomItems('p0', data.fees.p0);
  mergeCustomItems('p1', data.fees.p1);
  mergeCustomItems('p2', data.fees.p2);
+ }
  }
  renderTables();
  } catch(err) {
