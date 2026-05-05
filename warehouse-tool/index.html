@@ -915,43 +915,97 @@ window.backImportStep1 = function() {
 window.previewImport = function() {
  var raw = document.getElementById('importRaw').value.trim();
  if (!raw) { alert('请先粘贴表格内容'); return; }
- var lines = raw.split(String.fromCharCode(10)).filter(function(l) { return l.trim() !== ''; });
- var parsed = [];
+
+ // 第一步：预处理和结构检测
+ var lines = raw.split(/\r?\n/);
+ var isTabFormat = raw.indexOf('\t') > -1;
  var headers = [];
- var confidence = 0;
- for (var i = 0; i < lines.length; i++) {
-  var parts = lines[i].split(/\t|\s{2,}/);
-  if (parts.some(function(p) { return /20|40|HQ|GP/.test(p); })) {
-   headers = parts;
-   lines.splice(i, 1);
-   confidence += 3;
-   break;
-  }
- }
- lines.forEach(function(line) {
-  var parts = line.split(/\t|\s{2,}/).filter(function(p) { return p.trim() !== ''; });
-  if (parts.length >= 2 && parts[0] && isNaN(parseFloat(parts[0]))) {
-   var name = parts[0];
-   var prices = parts.slice(1).map(function(p) { return parseFloat(p); }).filter(function(p) { return !isNaN(p); });
-   if (prices.length > 0) {
-    parsed.push({ name: name, prices: prices });
-    confidence += 1;
+ var dataLines = [];
+ var firstDataCol = 0;
+
+ if (isTabFormat) {
+  // TSV格式检测
+  for (var i = 0; i < lines.length; i++) {
+   var cols = lines[i].split('\t');
+   var cleanCols = cols.map(function(c) { return c.replace(/^["']|["']$/g, '').trim(); });
+   // 检测表头行（包含20'/40'/40HQ/收费标准等关键词）
+   if (cleanCols.some(function(c) { return /20'|40'|40HQ|收费标准/i.test(c); })) {
+    headers = cleanCols;
+    for (var j = 0; j < headers.length; j++) {
+     if (/20'|40'|40HQ/i.test(headers[j])) {
+      firstDataCol = j;
+      break;
+     }
+    }
+    for (var k = i + 1; k < lines.length; k++) {
+     dataLines.push(lines[k].split('\t'));
+    }
+    break;
    }
   }
- });
+ } else {
+  // 空格对齐格式（纯文本）
+  for (var i = 0; i < lines.length; i++) {
+   var cols = lines[i].split(/\s{2,}/);
+   if (cols.some(function(c) { return /20'|40'|40HQ|收费标准/i.test(c); })) {
+    headers = cols.map(function(c) { return c.trim(); });
+    for (var j = 0; j < headers.length; j++) {
+     if (/20'|40'|40HQ/i.test(headers[j])) {
+      firstDataCol = j;
+      break;
+     }
+    }
+    for (var k = i + 1; k < lines.length; k++) {
+     dataLines.push(lines[k].split(/\s{2,}/));
+    }
+    break;
+   }
+  }
+ }
+
+ // 第二步：逐行解析，跳过非数据行
+ var parsed = [];
+ for (var i = 0; i < dataLines.length; i++) {
+  var cols = dataLines[i].map(function(c) { return c.replace(/^["']|["']$/g, '').trim(); });
+  if (cols.length === 0 || (cols.length === 1 && cols[0] === '')) continue;
+  // 提取费用名称（跳过纯数字序号行，如"1."、"2、"等）
+  var rawName = cols[0] || '';
+  var cleanName = rawName.replace(/^\d+[\.\、\s]*/, '').trim();
+  if (!cleanName || /^[-—]+$/.test(cleanName)) continue;
+  // 从首列数据列开始提取价格
+  var prices = [];
+  for (var j = firstDataCol; j < cols.length && j < firstDataCol + 3; j++) {
+   var cell = cols[j] || '';
+   if (!cell) { prices.push(null); continue; }
+   var cleaned = cell.replace(/[¥￥,\s]/g, '');
+   cleaned = cleaned.replace(/元\/.*$/, '').replace(/元$/, '');
+   var match = cleaned.match(/(\d+\.?\d*)/);
+   if (match) { prices.push(parseFloat(match[1])); } else { prices.push(null); }
+  }
+  parsed.push({ name: cleanName, prices: prices });
+ }
+
+ // 第三步：生成预览并存储待导入数据
+ window._importParsed = parsed;
+ window._importHeaders = headers;
+ window._importFirstDataCol = firstDataCol;
+
+ // 显示预览
  var html = '';
  parsed.forEach(function(item) {
   html += '<div class="parse-item"><span class="item-name">✓ ' + escapeHtml(item.name) + '</span>';
-  html += '<div class="item-detail">默认单价: ' + item.prices[0] + ' | 条件: ';
-  var conds = [];
-  for (var j = 0; j < headers.length - 1 && j < item.prices.length; j++) {
-   conds.push((headers[j+1] || '列'+(j+2)) + ':' + item.prices[j]);
+  html += '<div class="item-detail">默认单价: ' + (item.prices[0] !== null ? item.prices[0] : '—') + ' | 条件: ';
+  var labels = [];
+  for (var j = firstDataCol; j < firstDataCol + item.prices.length; j++) {
+   var hdr = headers[j] || '列' + (j + 1);
+   var p = item.prices[j - firstDataCol];
+   if (p !== null) labels.push(hdr + ':' + p);
   }
-  html += (conds.length > 0 ? conds.join(', ') : '无') + '</div></div>';
+  html += (labels.length > 0 ? labels.join(', ') : '无') + '</div></div>';
  });
  document.getElementById('importPreview').innerHTML = html || '<p style="color:#888;">未识别到费用项</p>';
  var starCount = parsed.length > 0 ? Math.min(4, 1 + Math.floor(parsed.length / 3)) : 0;
- document.getElementById('importConfidence').textContent = '识别置信度: ' + '★★★★☆'.substring(0, starCount) + '☆☆☆☆☆'.substring(0, 4 - starCount) + ' (' + parsed.length + ' 项费用)';
+ document.getElementById('importConfidence').textContent = '识别置信度: ' + ('★★★★☆☆☆☆☆'.substring(0, starCount) + '★★★★☆☆☆☆☆'.substring(0, 4 - starCount)).substring(0, 4) + ' (' + parsed.length + ' 项费用)';
  document.getElementById('importUnrecognised').textContent = (parsed.length === 0 ? '未能解析表格，请检查格式' : '');
  document.getElementById('importStep1').style.display = 'none';
  document.getElementById('importStep2').style.display = 'block';
@@ -965,40 +1019,74 @@ window.confirmImport = function(mode) {
  var raw = document.getElementById('importRaw').value.trim();
  if (!raw) return;
  var tier = document.getElementById('importTier').value;
- var lines = raw.split(String.fromCharCode(10)).filter(function(l) { return l.trim() !== ''; });
- var headers = [];
- var newFees = [];
- for (var i = 0; i < lines.length; i++) {
-  var parts = lines[i].split(/\t|\s{2,}/);
-  if (parts.some(function(p) { return /20|40|HQ|GP/.test(p); })) {
-   headers = parts;
-   lines.splice(i, 1);
-   break;
-  }
- }
- lines.forEach(function(line) {
-  var parts = line.split(/\t|\s{2,}/).filter(function(p) { return p.trim() !== ''; });
-  if (parts.length >= 2) {
-   var name = parts[0];
-   var prices = parts.slice(1).map(function(p) { return parseFloat(p); }).filter(function(p) { return !isNaN(p); });
-   if (name && prices.length > 0) {
-    var feeItem = {
-     code: 'CUSTOM_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
-     name: name,
-     unit: '元/箱',
-     amount: prices[0] || 0,
-     deletable: true,
-     conditions: []
-    };
-    for (var j = 1; j < headers.length && j - 1 < prices.length; j++) {
-     if (headers[j] && prices[j-1]) {
-      feeItem.conditions.push({ cond_type: 'container', cond_value: String(headers[j]).replace(/'/g, 'GP'), price: prices[j-1] });
-     }
+
+ // 重用已在previewImport中解析好的数据
+ var parsed = window._importParsed || [];
+ var headers = window._importHeaders || [];
+ var firstDataCol = window._importFirstDataCol || 0;
+
+ // 如果previewImport没有运行过（直接点确认），重新解析
+ if (parsed.length === 0) {
+  var lines = raw.split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+   var cols = lines[i].split('\t');
+   if (cols.some(function(c) { return /20'|40'|40HQ|收费标准/i.test(c); })) {
+    headers = cols.map(function(c) { return c.replace(/^["']|["']$/g, '').trim(); });
+    for (var j = 0; j < headers.length; j++) {
+     if (/20'|40'|40HQ/i.test(headers[j])) { firstDataCol = j; break; }
     }
-    newFees.push(feeItem);
+    for (var k = i + 1; k < lines.length; k++) {
+     var cols2 = lines[k].split('\t');
+     var rawName = (cols2[0] || '').replace(/^\d+[\.\、\s]*/, '').trim();
+     if (!rawName || rawName === '' || /^[-—]+$/.test(rawName)) continue;
+     var prices = [];
+     for (var j2 = firstDataCol; j2 < cols2.length && j2 < firstDataCol + 3; j2++) {
+      var cell = cols2[j2] || '';
+      var cleaned = cell.replace(/[¥￥,\s]/g, '').replace(/元\/.*$/, '').replace(/元$/, '');
+      var m = cleaned.match(/(\d+\.?\d*)/);
+      prices.push(m ? parseFloat(m[1]) : null);
+     }
+     parsed.push({ name: rawName, prices: prices });
+    }
+    break;
    }
   }
+ }
+
+ // 生成条件标签的cond_value（避免"列2"无意义标签）
+ var headerLabels = [];
+ if (headers.length > 0) {
+  for (var j = firstDataCol; j < headers.length; j++) {
+   var h = headers[j] || '';
+   var cleanH = h.replace(/'/g, 'GP').replace(/寸/g, 'GP');
+   if (/20|40|HQ|GP|LCL/i.test(cleanH)) {
+    headerLabels.push(cleanH);
+   } else {
+    headerLabels.push(null);
+   }
+  }
+ }
+
+ // 构造费用项
+ var newFees = [];
+ parsed.forEach(function(item) {
+  var prices = item.prices;
+  var feeItem = {
+   code: 'CUSTOM_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+   name: item.name,
+   unit: '元/箱',
+   amount: prices[0] !== null ? prices[0] : 0,
+   deletable: true,
+   conditions: []
+  };
+  for (var j = 0; j < headerLabels.length && j < prices.length; j++) {
+   if (headerLabels[j] && prices[j] !== null && prices[j] > 0) {
+    feeItem.conditions.push({ cond_type: 'container', cond_value: headerLabels[j], price: prices[j], note: '' });
+   }
+  }
+  newFees.push(feeItem);
  });
+
  if (mode === 'replace') {
   currentFees[tier] = newFees;
  } else {
@@ -1007,6 +1095,21 @@ window.confirmImport = function(mode) {
  closeImportModal();
  renderTables();
 };
+
+function getDemandParams() {
+ var extras = [];
+ if (document.getElementById('fwdPallet').checked) extras.push('打托');
+ if (document.getElementById('fwdLabel').checked) extras.push('贴唛');
+ if (document.getElementById('fwdInsurance').checked) extras.push('保险');
+ return {
+  quantity: parseInt(document.getElementById('fwdQuantity').value) || 1,
+  container: document.getElementById('fwdContainer').value,
+  port: document.getElementById('fwdPort').value,
+  time: document.getElementById('fwdTime').value,
+  cargo: document.getElementById('fwdCargo').value,
+  extras: extras
+ };
+}
 
 // ========== v0.4.1 条件管理 ==========
 var _condType = null;
