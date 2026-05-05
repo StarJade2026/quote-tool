@@ -86,6 +86,39 @@
  .guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
  .guide-text a { color: #64748b; text-decoration: underline; }
  @media print {
+  /* 打印时隐藏操作列、按钮、输入框样式 */
+.fee-table th:last-child,
+.fee-table td:last-child,
+.add-btn,
+.edit-btn,
+.delete-btn,
+.save-edit-btn,
+.cancel-edit-btn,
+button[style*="font-size:11px"] {
+    display: none !important;
+}
+
+/* 输入框改为纯文本显示 */
+.fee-table input[type="number"],
+.fee-table input[type="text"] {
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    appearance: none;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font: inherit !important;
+    color: inherit !important;
+    text-align: left !important;
+    width: auto !important;
+}
+
+/* 打印时恢复条件列文本可见 */
+#feeTablesContainer * {
+    visibility: visible;
+}
  body * { visibility: hidden; }
  #feeTablesContainer, #feeTablesContainer * { visibility: visible; }
  #feeTablesContainer { position: absolute; left: 0; top: 0; width: 100%; }
