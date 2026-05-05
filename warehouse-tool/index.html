@@ -350,7 +350,7 @@ window.importWhTemplate = function(input) {
  var importMode = confirm(
  '请选择导入模式：\n\n' +
  '【确定】= 全量替换 —— 用模板内容完全覆盖当前页面，模板中没有的费用项将被删除。\n' +
- '【取消】= 增量合并 —— 只更新已有费用项的价格，并追加新的自定义项，不删除任何已有费用。\n\n' +
+ '【取消】= 增量合并 —— 用模板数据更新已有项（名称/单位/价格/条件全部同步），并追加页面上不存在的项，不删除任何已有费用。\n\n' +
  '点击「确定」全量替换，点击「取消」增量合并。'
  );
  if (importMode) {
@@ -387,23 +387,32 @@ window.importWhTemplate = function(input) {
  };
  });
  } else {
- // 增量合并：保持原有逻辑（更新价格 + 合并自定义项）
- currentFees.p0 = currentFees.p0.map(function(def) {
- var m = (data.fees.p0 || []).find(function(f) { return f.code === def.code; });
- return m ? Object.assign({}, def, { amount: m.amount, conditions: m.conditions || [] }) : def;
+ // 增量合并（完整深度合并）
+ ['p0', 'p1', 'p2'].forEach(function(type) {
+ (data.fees[type] || []).forEach(function(f) {
+ var existing = currentFees[type].find(function(x) { return x.code === f.code; });
+ if (existing) {
+ // 已存在 → 全面更新
+ existing.name = f.name;
+ existing.unit = f.unit || '—';
+ existing.amount = f.amount || 0;
+ existing.conditions = f.conditions || [];
+ if (type === 'p2') existing.checked = (f.checked !== false);
+ } else {
+ // 不存在 → 新增（不限于CUSTOM_，预置项被删后也可恢复）
+ var newItem = {
+ code: f.code,
+ name: f.name,
+ unit: f.unit || '—',
+ amount: f.amount || 0,
+ deletable: (f.code.indexOf('CUSTOM_') === 0),
+ conditions: f.conditions || []
+ };
+ if (type === 'p2') newItem.checked = (f.checked !== false);
+ currentFees[type].push(newItem);
+ }
  });
- currentFees.p1 = currentFees.p1.map(function(def) {
- var m = (data.fees.p1 || []).find(function(f) { return f.code === def.code; });
- return m ? Object.assign({}, def, { amount: m.amount, conditions: m.conditions || [] }) : def;
  });
- currentFees.p2 = currentFees.p2.map(function(def) {
- var m = (data.fees.p2 || []).find(function(f) { return f.code === def.code; });
- return m ? Object.assign({}, def, { amount: m.amount, checked: m.checked === true, conditions: m.conditions || [] }) : def;
- });
- // v0.4.0: 合并自定义项
- mergeCustomItems('p0', data.fees.p0);
- mergeCustomItems('p1', data.fees.p1);
- mergeCustomItems('p2', data.fees.p2);
  }
  }
  renderTables();
