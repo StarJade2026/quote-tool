@@ -1,13 +1,11 @@
 
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>货代业务流转单</title>
-    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
-    <script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js">
     // ---- 模板导出/导入 (pako gzip + Base64) ----
     function collectAllData_workflow() {
         var data = {
@@ -37,6 +35,7 @@
             seg1SupplierCards: JSON.parse(JSON.stringify(seg1SupplierCards)),
             seg3SupplierCards: JSON.parse(JSON.stringify(seg3SupplierCards)),
             tasks: JSON.parse(JSON.stringify(tasks)),
+            screenshots: JSON.parse(JSON.stringify(screenshots)),
             _exportTime: new Date().toISOString(),
             _version: '1'
         };
@@ -69,16 +68,18 @@
         if (document.getElementById('seg1Pay')) document.getElementById('seg1Pay').value = data.seg1Pay || '';
         if (document.getElementById('seg2Pay')) document.getElementById('seg2Pay').value = data.seg2Pay || '';
         if (document.getElementById('seg3Pay')) document.getElementById('seg3Pay').value = data.seg3Pay || '';
-        upstreamCards = data.upstreamCards || [{ type:'domestic', company:'', contact:'', phone:'' }];
-        seg1SupplierCards = data.seg1SupplierCards || [{ company:'', contact:'', phone:'' }];
-        seg3SupplierCards = data.seg3SupplierCards || [{ type:'换单代理', company:'', contact:'', phone:'' }];
+        upstreamCards = data.upstreamCards || [{ vendor_type:'other', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
+        seg1SupplierCards = data.seg1SupplierCards || [{ vendor_type:'warehouse', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
+        seg3SupplierCards = data.seg3SupplierCards || [{ vendor_type:'overseas', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
         tasks = data.tasks || { seg1:[], seg2:[], seg3:[] };
         renderUpstreamCards();
         renderSeg1SupplierCards();
         renderSeg3SupplierCards();
         renderTasks();
+        renderScreenshots();
         calcWindow();
         updatePreview();
+        screenshots = data.screenshots || [];
     }
 
     window.exportTemplate = function() {
@@ -302,7 +303,7 @@
 
         <div class="row-2">
             <div class="form-group"><label>段1 起运地</label><input type="text" id="geo1" value="上海洋山港"></div>
-            <div class="form-group"><label>段2 干线</label><input type="text" id="geo2" value="上海�� → 汉堡港"></div>
+            <div class="form-group"><label>段2 干线</label><input type="text" id="geo2" value="上海港 → 汉堡港"></div>
             <div class="form-group"><label>段3 目的地</label><input type="text" id="geo3" value="柏林仓库"></div>
         </div>
 
@@ -409,19 +410,27 @@ BAF 300 USD</textarea>
 </div>
 
 <script>
-    // 全局状态
+    // ====== v0.6 全局状态 ======
     let isSpecified = false;
+    const VENDOR_TYPES = ['仓库', '车队', '报关', '订舱', '海外代理', '其他'];
+    const SUPPLIER_RELATIONS = ['长期合作', '单次合作', '指定供应商', '备用'];
+    const VENDOR_TYPE_LABELS = { warehouse:'📦仓库', fleet:'🚛车队', customs:'📃报关', booking:'🚢订舱', overseas:'🌍海外代理', other:'➕自定义' };
+
+    // 供应商卡片（联系人数组模式）
     let upstreamCards = [
-        { type: 'domestic', company: '丹东昱豪制衣有限公司', contact: '陆建新', phone: '13913202350' }
+        { vendor_type:'other', supplier_relation:'长期合作', company:'丹东昱豪制衣有限公司', contacts:[{ name:'陆建新', role:'财务', phone:'13913202350', is_primary:true }], fees:[] }
     ];
     let seg1SupplierCards = [
-        { company: '中外运', contact: '', phone: '' },
-        { company: 'xx仓库/车队', contact: '', phone: '' },
-        { company: 'xx报关行', contact: '', phone: '' }
+        { vendor_type:'booking', supplier_relation:'长期合作', company:'中外运', contacts:[{ name:'', role:'', phone:'', is_primary:true }], fees:[] },
+        { vendor_type:'warehouse', supplier_relation:'长期合作', company:'xx仓库/车队', contacts:[{ name:'', role:'', phone:'', is_primary:true }], fees:[] },
+        { vendor_type:'customs', supplier_relation:'长期合作', company:'xx报关行', contacts:[{ name:'', role:'', phone:'', is_primary:true }], fees:[] }
     ];
     let seg3SupplierCards = [
-        { type: '换单代理', company: '德国代理 (Hans)', contact: '+49xxx', phone: '' }
+        { vendor_type:'overseas', supplier_relation:'长期合作', company:'德国代理 (Hans)', contacts:[{ name:'Hans', role:'代理', phone:'+49xxx', is_primary:true }], fees:[] }
     ];
+
+    // 截图归档
+    let screenshots = [];
 
     let tasks = {
         seg1: [
@@ -440,8 +449,6 @@ BAF 300 USD</textarea>
         ]
     };
 
-    const supplierTypes = ['换单代理', '清关行', '卡车公司', '收货人', '其他'];
-
     window.toggleSpecifiedTag = function() {
         isSpecified = !isSpecified;
         const el = document.getElementById('specifiedTagSwitch');
@@ -450,136 +457,222 @@ BAF 300 USD</textarea>
         updatePreview();
     };
 
-    // ---- 上游委托方卡片 ----
+    // ====== v0.6 供应商卡片（联系人数组 + vendor_type + supplier_relation 标签） ======
+    function renderSupplierCard(card, idx, seg, deleteFn, updateFn, vendorTypeKey) {
+        const vtLabel = VENDOR_TYPE_LABELS[card.vendor_type] || '➕自定义';
+        const srLabels = { 'long':'📋长期合作', 'single':'🤝单次合作', 'designated':'🔴指定供应商', 'backup':'🟢备用' };
+        const srLabel = srLabels[card.supplier_relation] || card.supplier_relation;
+        let contactsHtml = '<div class="contacts-list" style="margin-top:6px;">';
+        (card.contacts || []).forEach(function(c, ci) {
+            contactsHtml += '<div class="contact-row" style="display:flex;gap:4px;align-items:center;margin-bottom:4px;">' +
+                '<input type="text" placeholder="姓名" value="' + (c.name || '') + '" style="flex:1;" onchange="updateContact(' + seg + ',' + idx + ',' + ci + ',\'name\',this.value)">' +
+                '<input type="text" placeholder="岗位" value="' + (c.role || '') + '" style="flex:0.7;" onchange="updateContact(' + seg + ',' + idx + ',' + ci + ',\'role\',this.value)">' +
+                '<input type="text" placeholder="电话" value="' + (c.phone || '') + '" style="flex:1;" onchange="updateContact(' + seg + ',' + idx + ',' + ci + ',\'phone\',this.value)">' +
+                (c.is_primary ? '<span style="font-size:10px;background:#0071e3;color:#fff;padding:1px 4px;border-radius:3px;">主</span>' : '') +
+                '<button style="background:none;border:none;color:#999;cursor:pointer;font-size:12px;" onclick="deleteContact(' + seg + ',' + idx + ',' + ci + ')">✕</button></div>';
+        });
+        contactsHtml += '<button class="btn-small" onclick="addContact(' + seg + ',' + idx + ')">+ 添加联系人</button></div>';
+        return '<div class="card" style="position:relative;margin-bottom:8px;border:1px solid #dee2e6;border-radius:8px;padding:10px 14px;background:#fafafa;">' +
+            '<button class="delete-card-btn" onclick="' + deleteFn + '(' + idx + ')" style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:#999;">✕</button>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">' +
+            '<span class="tag vendor-tag">' + vtLabel + '</span>' +
+            '<span class="tag relation-tag">' + srLabel + '</span></div>' +
+            '<div class="row-2" style="display:flex;gap:10px;">' +
+            '<div class="form-group" style="flex:1;"><label>供应商类型</label><select onchange="' + updateFn + '(' + idx + ',\'vendor_type\',this.value)">' +
+            VENDOR_TYPES.map(function(vt){return '<option value="' + vtMap(vt) + '" ' + (card.vendor_type===vtMap(vt)?'selected':'') + '>' + vt + '</option>';}).join('') +
+            '</select></div>' +
+            '<div class="form-group" style="flex:1;"><label>合作关系</label><select onchange="' + updateFn + '(' + idx + ',\'supplier_relation\',this.value)">' +
+            SUPPLIER_RELATIONS.map(function(sr){return '<option value="' + srMap(sr) + '" ' + (card.supplier_relation===srMap(sr)?'selected':'') + '>' + sr + '</option>';}).join('') +
+            '</select></div></div>' +
+            '<div class="form-group"><label>公司名称</label><input type="text" value="' + (card.company || '') + '" onchange="' + updateFn + '(' + idx + ',\'company\',this.value)"></div>' +
+            '<div class="form-group"><label style="font-weight:600;">联系人列表</label>' + contactsHtml + '</div>' +
+            (seg !== 'upstream' ? '<div style="margin-top:6px;"><button class="btn-small" onclick="openFeeSlot(' + seg + ',' + idx + ')">💰 费用（' + ((card.fees||[]).length) + '项）</button></div>' : '') +
+            '</div>';
+    }
+
+    function vtMap(chinese) { var m={仓库:'warehouse',车队:'fleet',报关:'customs',订舱:'booking',海外代理:'overseas',其他:'other'}; return m[chinese]||'other'; }
+    function srMap(chinese) { var m={'长期合作':'long','单次合作':'single','指定供应商':'designated','备用':'backup'}; return m[chinese]||'single'; }
+
     function renderUpstreamCards() {
         const container = document.getElementById('upstreamCards');
         container.innerHTML = '';
-        upstreamCards.forEach((card, idx) => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `
-                <button class="delete-card-btn" onclick="deleteUpstreamCard(${idx})">✕</button>
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>类型</label>
-                        <select onchange="updateUpstreamCard(${idx},'type',this.value)">
-                            <option value="domestic" ${card.type==='domestic'?'selected':''}>国内工厂</option>
-                            <option value="overseas" ${card.type==='overseas'?'selected':''}>海外代理客户</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>公司名称</label>
-                        <input type="text" value="${card.company || ''}" onchange="updateUpstreamCard(${idx},'company',this.value)">
-                    </div>
-                </div>
-                <div class="row-2">
-                    <div class="form-group"><label>联系人</label><input type="text" value="${card.contact || ''}" onchange="updateUpstreamCard(${idx},'contact',this.value)"></div>
-                    <div class="form-group"><label>电话</label><input type="text" value="${card.phone || ''}" onchange="updateUpstreamCard(${idx},'phone',this.value)"></div>
-                </div>
-                ${card.type==='overseas' ? `<div class="form-group"><label>所在国家</label><input type="text" value="${card.country || ''}" onchange="updateUpstreamCard(${idx},'country',this.value)"></div>` : ''}
-            `;
-            container.appendChild(div);
+        upstreamCards.forEach(function(card, idx) {
+            var div = document.createElement('div');
+            div.innerHTML = renderSupplierCard(card, idx, 'upstream', 'deleteUpstreamCard', 'updateUpstreamCard');
+            container.appendChild(div.firstElementChild);
         });
     }
+    window.addUpstreamCard = function() { upstreamCards.push({ vendor_type:'other', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }); renderUpstreamCards(); updatePreview(); };
+    window.deleteUpstreamCard = function(idx) { upstreamCards.splice(idx,1); renderUpstreamCards(); updatePreview(); };
+    window.updateUpstreamCard = function(idx, field, value) { upstreamCards[idx][field]=value; renderUpstreamCards(); updatePreview(); };
 
-    window.addUpstreamCard = function() {
-        upstreamCards.push({ type: 'domestic', company: '', contact: '', phone: '' });
-        renderUpstreamCards();
-        updatePreview();
+    // v0.6 联系人操作
+    function getCardList(seg) {
+        if (seg === 'upstream') return upstreamCards;
+        if (seg === 'seg1') return seg1SupplierCards;
+        if (seg === 'seg3') return seg3SupplierCards;
+        return [];
+    }
+
+    window.addContact = function(seg, cardIdx) {
+        var list = getCardList(seg);
+        if (!list[cardIdx]) return;
+        if (!list[cardIdx].contacts) list[cardIdx].contacts = [];
+        list[cardIdx].contacts.push({ name:'', role:'', phone:'', is_primary: list[cardIdx].contacts.length === 0 });
+        renderAllSupplierCards(); updatePreview();
     };
-    window.deleteUpstreamCard = function(idx) { upstreamCards.splice(idx, 1); renderUpstreamCards(); updatePreview(); };
-    window.updateUpstreamCard = function(idx, field, value) { upstreamCards[idx][field] = value; renderUpstreamCards(); updatePreview(); };
+    window.updateContact = function(seg, cardIdx, contactIdx, field, value) {
+        var list = getCardList(seg);
+        if (list[cardIdx] && list[cardIdx].contacts && list[cardIdx].contacts[contactIdx]) {
+            list[cardIdx].contacts[contactIdx][field] = value;
+            updatePreview();
+        }
+    };
+    window.deleteContact = function(seg, cardIdx, contactIdx) {
+        var list = getCardList(seg);
+        if (list[cardIdx] && list[cardIdx].contacts) {
+            list[cardIdx].contacts.splice(contactIdx, 1);
+            renderAllSupplierCards(); updatePreview();
+        }
+    };
+    function renderAllSupplierCards() { renderUpstreamCards(); renderSeg1SupplierCards(); renderSeg3SupplierCards(); }
 
-    // ---- 段1 多供应商卡片 ----
     function renderSeg1SupplierCards() {
         const container = document.getElementById('seg1SupplierCards');
         container.innerHTML = '';
-        seg1SupplierCards.forEach((card, idx) => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `
-                <button class="delete-card-btn" onclick="deleteSeg1SupplierCard(${idx})">✕</button>
-                <div class="row-2">
-                    <div class="form-group"><label>公司名称</label><input type="text" value="${card.company || ''}" onchange="updateSeg1SupplierCard(${idx},'company',this.value)"></div>
-                    <div class="form-group"><label>联系人</label><input type="text" value="${card.contact || ''}" onchange="updateSeg1SupplierCard(${idx},'contact',this.value)"></div>
-                </div>
-                <div class="row-2">
-                    <div class="form-group"><label>电话</label><input type="text" value="${card.phone || ''}" onchange="updateSeg1SupplierCard(${idx},'phone',this.value)"></div>
-                </div>
-            `;
-            container.appendChild(div);
+        seg1SupplierCards.forEach(function(card, idx) {
+            var div = document.createElement('div');
+            div.innerHTML = renderSupplierCard(card, idx, 'seg1', 'deleteSeg1SupplierCard', 'updateSeg1SupplierCard');
+            container.appendChild(div.firstElementChild);
         });
     }
-
     window.addSeg1SupplierCard = function() {
-        seg1SupplierCards.push({ company: '', contact: '', phone: '' });
-        renderSeg1SupplierCards();
-        updateTaskResponsibleOptions();
-        updatePreview();
+        seg1SupplierCards.push({ vendor_type:'warehouse', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] });
+        renderSeg1SupplierCards(); updateTaskResponsibleOptions(); updatePreview();
     };
-    window.deleteSeg1SupplierCard = function(idx) {
-        seg1SupplierCards.splice(idx, 1);
-        renderSeg1SupplierCards();
-        updateTaskResponsibleOptions();
-        updatePreview();
-    };
-    window.updateSeg1SupplierCard = function(idx, field, value) {
-        seg1SupplierCards[idx][field] = value;
-        renderSeg1SupplierCards();
-        updateTaskResponsibleOptions();
-        updatePreview();
-    };
+    window.deleteSeg1SupplierCard = function(idx) { seg1SupplierCards.splice(idx,1); renderSeg1SupplierCards(); updateTaskResponsibleOptions(); updatePreview(); };
+    window.updateSeg1SupplierCard = function(idx, field, value) { seg1SupplierCards[idx][field]=value; renderSeg1SupplierCards(); updateTaskResponsibleOptions(); updatePreview(); };
 
-    // ---- 段3 多供应商卡片 ----
     function renderSeg3SupplierCards() {
         const container = document.getElementById('seg3SupplierCards');
         container.innerHTML = '';
-        seg3SupplierCards.forEach((card, idx) => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `
-                <button class="delete-card-btn" onclick="deleteSeg3SupplierCard(${idx})">✕</button>
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>服务类型</label>
-                        <select onchange="updateSeg3SupplierCard(${idx},'type',this.value)">
-                            ${supplierTypes.map(t => `<option value="${t}" ${card.type===t?'selected':''}>${t}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>公司名称</label>
-                        <input type="text" value="${card.company || ''}" onchange="updateSeg3SupplierCard(${idx},'company',this.value)">
-                    </div>
-                </div>
-                <div class="row-2">
-                    <div class="form-group"><label>联系人</label><input type="text" value="${card.contact || ''}" onchange="updateSeg3SupplierCard(${idx},'contact',this.value)"></div>
-                    <div class="form-group"><label>电话</label><input type="text" value="${card.phone || ''}" onchange="updateSeg3SupplierCard(${idx},'phone',this.value)"></div>
-                </div>
-            `;
+        seg3SupplierCards.forEach(function(card, idx) {
+            var div = document.createElement('div');
+            div.innerHTML = renderSupplierCard(card, idx, 'seg3', 'deleteSeg3SupplierCard', 'updateSeg3SupplierCard');
+            container.appendChild(div.firstElementChild);
+        });
+    }
+    window.addSeg3SupplierCard = function() {
+        seg3SupplierCards.push({ vendor_type:'overseas', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] });
+        renderSeg3SupplierCards(); updateTaskResponsibleOptions(); updatePreview();
+    };
+    window.deleteSeg3SupplierCard = function(idx) { seg3SupplierCards.splice(idx,1); renderSeg3SupplierCards(); updateTaskResponsibleOptions(); updatePreview(); };
+    window.updateSeg3SupplierCard = function(idx, field, value) { seg3SupplierCards[idx][field]=value; renderSeg3SupplierCards(); updateTaskResponsibleOptions(); updatePreview(); };
+
+    // 费用槽位管理（v0.6）
+    window._activeFeeSlot = null;
+    window.openFeeSlot = function(seg, cardIdx) {
+        window._activeFeeSlot = { seg: seg, cardIdx: cardIdx };
+        var list = getCardList(seg);
+        var card = list[cardIdx];
+        if (!card) return;
+        document.getElementById('feeSlotTitle').textContent = '💳 费用槽位 — ' + (card.company || '未命名') + ' (' + (VENDOR_TYPE_LABELS[card.vendor_type] || '其他') + ')';
+        var feeList = card.fees || [];
+        var h = '<table class="fee-slot-table" style="width:100%;border-collapse:collapse;"><tr><th>费用名称</th><th>应付(¥)</th><th>应收(¥)</th><th>操作</th></tr>';
+        feeList.forEach(function(f, fi) {
+            h += '<tr><td><input type="text" value="' + (f.name||'') + '" onchange="editFeeSlot('+fi+',\'name\',this.value)" class="manual-input"></td>' +
+                '<td><input type="number" step="0.01" min="0" value="' + (f.pay||0) + '" onchange="editFeeSlot('+fi+',\'pay\',this.value)" class="manual-input" style="width:80px;"></td>' +
+                '<td><input type="number" step="0.01" min="0" value="' + (f.receive||0) + '" onchange="editFeeSlot('+fi+',\'receive\',this.value)" class="manual-input" style="width:80px;"></td>' +
+                '<td><button onclick="deleteFeeSlot('+fi+')" style="background:none;border:none;color:#e74c3c;cursor:pointer;">✕</button></td></tr>';
+        });
+        h += '</table>';
+        document.getElementById('feeSlotBody').innerHTML = h;
+        document.getElementById('feeSlotModal').classList.remove('hidden');
+    };
+    window.closeFeeSlot = function() { document.getElementById('feeSlotModal').classList.add('hidden'); window._activeFeeSlot = null; };
+    window.addFeeSlot = function() {
+        if (!window._activeFeeSlot) return;
+        var list = getCardList(window._activeFeeSlot.seg);
+        var card = list[window._activeFeeSlot.cardIdx];
+        if (!card) return;
+        if (!card.fees) card.fees = [];
+        card.fees.push({ name:'', pay:0, receive:0 });
+        window.openFeeSlot(window._activeFeeSlot.seg, window._activeFeeSlot.cardIdx);
+        updatePreview();
+    };
+    window.editFeeSlot = function(idx, field, value) {
+        if (!window._activeFeeSlot) return;
+        var list = getCardList(window._activeFeeSlot.seg);
+        var card = list[window._activeFeeSlot.cardIdx];
+        if (card && card.fees && card.fees[idx]) {
+            card.fees[idx][field] = field === 'name' ? value : (parseFloat(value) || 0);
+            updatePreview();
+        }
+    };
+    window.deleteFeeSlot = function(idx) {
+        if (!window._activeFeeSlot) return;
+        var list = getCardList(window._activeFeeSlot.seg);
+        var card = list[window._activeFeeSlot.cardIdx];
+        if (card && card.fees) { card.fees.splice(idx,1); window.openFeeSlot(window._activeFeeSlot.seg, window._activeFeeSlot.cardIdx); updatePreview(); }
+    };
+
+    // ====== v0.6 截图归档 ======
+    window.openScreenshotModal = function() {
+        document.getElementById('screenshotModal').classList.remove('hidden');
+        document.getElementById('screenshotPreview').innerHTML = '<p style="color:#888;">按 Ctrl+V 粘贴截图</p>';
+        document.getElementById('screenshotData').value = '';
+        document.getElementById('screenshotNote').value = '';
+        setTimeout(function() { document.getElementById('screenshotHiddenInput').focus(); }, 100);
+    };
+    window.closeScreenshotModal = function() { document.getElementById('screenshotModal').classList.add('hidden'); };
+    window.handleScreenshotPaste = function(e) {
+        var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') >= 0) {
+                var blob = items[i].getAsFile();
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    document.getElementById('screenshotData').value = ev.target.result;
+                    document.getElementById('screenshotPreview').innerHTML = '<img src="' + ev.target.result + '" style="max-width:100%;max-height:300px;border-radius:4px;">';
+                };
+                reader.readAsDataURL(blob);
+                break;
+            }
+        }
+    };
+    window.confirmScreenshot = function() {
+        var data = document.getElementById('screenshotData').value;
+        var note = document.getElementById('screenshotNote').value.trim();
+        if (!data) { alert('请先粘贴截图'); return; }
+        screenshots.push({ data: data, note: note, time: new Date().toISOString() });
+        closeScreenshotModal();
+        renderScreenshots();
+    };
+    window.deleteScreenshot = function(idx) {
+        screenshots.splice(idx, 1);
+        renderScreenshots();
+    };
+    function renderScreenshots() {
+        var container = document.getElementById('screenshotList');
+        container.innerHTML = '';
+        screenshots.slice().reverse().forEach(function(s, idx) {
+            var realIdx = screenshots.length - 1 - idx;
+            var div = document.createElement('div');
+            div.className = 'screenshot-item';
+            div.innerHTML = '<div style="display:flex;gap:8px;align-items:start;"><img src="' + s.data + '" style="max-width:120px;max-height:120px;border-radius:4px;cursor:pointer;" onclick="window.open(\''+s.data+'\')"><div style="flex:1;">' +
+                (s.note ? '<div style="font-size:11px;color:#666;margin-bottom:4px;">📝 ' + escapeHtml(s.note) + '</div>' : '') +
+                '<div style="font-size:10px;color:#999;">' + new Date(s.time).toLocaleString('zh-CN') + '</div></div>' +
+                '<button onclick="deleteScreenshot(' + realIdx + ')" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px;">✕</button></div>';
             container.appendChild(div);
         });
     }
 
-    window.addSeg3SupplierCard = function() {
-        seg3SupplierCards.push({ type: '换单代理', company: '', contact: '', phone: '' });
-        renderSeg3SupplierCards();
-        updateTaskResponsibleOptions();
-        updatePreview();
-    };
-    window.deleteSeg3SupplierCard = function(idx) { seg3SupplierCards.splice(idx, 1); renderSeg3SupplierCards(); updateTaskResponsibleOptions(); updatePreview(); };
-    window.updateSeg3SupplierCard = function(idx, field, value) { seg3SupplierCards[idx][field] = value; renderSeg3SupplierCards(); updateTaskResponsibleOptions(); updatePreview(); };
-
-    // ---- 责任方选项 ----
+    // 责任方选项
     function getResponsibleOptionsForSeg(seg) {
         const options = ['我方', '客户'];
-        if (seg === 'seg1') {
-            seg1SupplierCards.forEach(card => { if (card.company && !options.includes(card.company)) options.push(card.company); });
-        } else if (seg === 'seg2') {
-            const val = document.getElementById('seg2Carrier')?.value?.trim();
-            if (val && !options.includes(val)) options.push(val);
-        } else if (seg === 'seg3') {
-            seg3SupplierCards.forEach(card => { if (card.company && !options.includes(card.company)) options.push(card.company); });
-        }
+        if (seg === 'seg1') { seg1SupplierCards.forEach(function(card) { if (card.company && !options.includes(card.company)) options.push(card.company); }); }
+        else if (seg === 'seg2') { const val = document.getElementById('seg2Carrier')?.value?.trim(); if (val && !options.includes(val)) options.push(val); }
+        else if (seg === 'seg3') { seg3SupplierCards.forEach(function(card) { if (card.company && !options.includes(card.company)) options.push(card.company); }); }
         return options;
     }
 
@@ -667,27 +760,36 @@ BAF 300 USD</textarea>
         `;
 
         if (upstreamCards.length > 0) {
-            <div class="preview-section"><h4>🧑‍🤝‍🧑 上游委托方</h4>
-                <table class="task-table"><tr><th>类型</th><th>公司名称</th><th>联系人</th><th>电话</th><th>国家</th></tr>`;
-            upstreamCards.forEach(c => {
-                const typeLabel = c.type === 'domestic' ? '<span class="tag tag-green">国内工厂</span>' : '<span class="tag tag-blue">海外代理</span>';
-                html += `<tr><td>${typeLabel}</td><td>${c.company || '-'}</td><td>${c.contact || '-'}</td><td>${c.phone || '-'}</td><td>${c.country || '-'}</td></tr>`;
+            html += '<div class="preview-section"><h4>🧑‍🤝‍🧑 上游委托方</h4>' +
+                '<table class="task-table"><tr><th>公司名称</th><th>联系人</th><th>电话</th><th>vendor_type</th></tr>';
+            upstreamCards.forEach(function(c) {
+                var primaryContact = (c.contacts || [])[0];
+                var contactName = primaryContact ? (primaryContact.name || '-') : '-';
+                var contactPhone = primaryContact ? (primaryContact.phone || '-') : '-';
+                var vtLabel = VENDOR_TYPE_LABELS[c.vendor_type] || c.vendor_type || '-';
+                html += '<tr><td>' + (c.company || '-') + '</td><td>' + contactName + '</td><td>' + contactPhone + '</td><td>' + vtLabel + '</td></tr>';
             });
-            html += `</table></div>`;
+            html += '</table></div>';
         }
 
-        const seg1SupNames = seg1SupplierCards.map(c=>c.company).filter(Boolean).join(', ') || '--';
+        var seg1SupNames = seg1SupplierCards.map(function(c){return c.company;}).filter(function(n){return n;}).join(', ') || '--';
         html += renderSegmentPreview('段1 · 起运地服务 — ' + seg1SupNames, '', tasks.seg1, seg1Note);
         html += renderSegmentPreview('段2 · 干线段 — ' + seg2Car, '', tasks.seg2, seg2Note);
 
         if (seg3SupplierCards.length > 0) {
-            html += `<div class="preview-section"><h4>📍 段3 · 目的地服务方</h4>
-                <table class="task-table"><tr><th>服务类型</th><th>公司名称</th><th>联系人</th><th>电话</th></tr>`;
-            seg3SupplierCards.forEach(c => { html += `<tr><td>${c.type || '-'}</td><td>${c.company || '-'}</td><td>${c.contact || '-'}</td><td>${c.phone || '-'}</td></tr>`; });
-            html += `</table>`;
+            html += '<div class="preview-section"><h4>📍 段3 · 目的地服务方</h4>' +
+                '<table class="task-table"><tr><th>公司名称</th><th>联系人</th><th>电话</th><th>vendor_type</th></tr>';
+            seg3SupplierCards.forEach(function(c) {
+                var primaryContact = (c.contacts || [])[0];
+                var contactName = primaryContact ? (primaryContact.name || '-') : '-';
+                var contactPhone = primaryContact ? (primaryContact.phone || '-') : '-';
+                var vtLabel = VENDOR_TYPE_LABELS[c.vendor_type] || c.vendor_type || '-';
+                html += '<tr><td>' + (c.company || '-') + '</td><td>' + contactName + '</td><td>' + contactPhone + '</td><td>' + vtLabel + '</td></tr>';
+            });
+            html += '</table>';
             html += renderTasksPreview('段3 任务', tasks.seg3);
-            if (seg3Note) html += `<div class="preview-note">📝 ${seg3Note}</div>`;
-            html += `</div>`;
+            if (seg3Note) html += '<div class="preview-note">📝 ' + seg3Note + '</div>';
+            html += '</div>';
         } else {
             html += renderSegmentPreview('段3 · 目的地服务', '', tasks.seg3, seg3Note);
         }
@@ -850,16 +952,18 @@ BAF 300 USD</textarea>
         document.getElementById('seg1Pay').value = data.seg1Pay || '';
         document.getElementById('seg2Pay').value = data.seg2Pay || '';
         document.getElementById('seg3Pay').value = data.seg3Pay || '';
-        upstreamCards = data.upstreamCards || [{ type:'domestic', company:'', contact:'', phone:'' }];
-        seg1SupplierCards = data.seg1SupplierCards || [{ company:'', contact:'', phone:'' }];
-        seg3SupplierCards = data.seg3SupplierCards || [{ type:'换单代理', company:'', contact:'', phone:'' }];
+        upstreamCards = data.upstreamCards || [{ vendor_type:'other', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
+        seg1SupplierCards = data.seg1SupplierCards || [{ vendor_type:'warehouse', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
+        seg3SupplierCards = data.seg3SupplierCards || [{ vendor_type:'overseas', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
         tasks = data.tasks || { seg1:[], seg2:[], seg3:[] };
         renderUpstreamCards();
         renderSeg1SupplierCards();
         renderSeg3SupplierCards();
         renderTasks();
+        renderScreenshots();
         calcWindow();
         updatePreview();
+        screenshots = data.screenshots || [];
         closeHistory();
     };
 
@@ -870,6 +974,7 @@ BAF 300 USD</textarea>
     renderSeg1SupplierCards();
     renderSeg3SupplierCards();
     renderTasks();
+    renderScreenshots();
     calcWindow();
     updatePreview();
     document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('input', ()=>{ calcWindow(); updatePreview(); }));
@@ -903,6 +1008,7 @@ BAF 300 USD</textarea>
             seg1SupplierCards: JSON.parse(JSON.stringify(seg1SupplierCards)),
             seg3SupplierCards: JSON.parse(JSON.stringify(seg3SupplierCards)),
             tasks: JSON.parse(JSON.stringify(tasks)),
+            screenshots: JSON.parse(JSON.stringify(screenshots)),
             _exportTime: new Date().toISOString(),
             _version: '1'
         };
@@ -935,16 +1041,18 @@ BAF 300 USD</textarea>
         if (document.getElementById('seg1Pay')) document.getElementById('seg1Pay').value = data.seg1Pay || '';
         if (document.getElementById('seg2Pay')) document.getElementById('seg2Pay').value = data.seg2Pay || '';
         if (document.getElementById('seg3Pay')) document.getElementById('seg3Pay').value = data.seg3Pay || '';
-        upstreamCards = data.upstreamCards || [{ type:'domestic', company:'', contact:'', phone:'' }];
-        seg1SupplierCards = data.seg1SupplierCards || [{ company:'', contact:'', phone:'' }];
-        seg3SupplierCards = data.seg3SupplierCards || [{ type:'换单代理', company:'', contact:'', phone:'' }];
+        upstreamCards = data.upstreamCards || [{ vendor_type:'other', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
+        seg1SupplierCards = data.seg1SupplierCards || [{ vendor_type:'warehouse', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
+        seg3SupplierCards = data.seg3SupplierCards || [{ vendor_type:'overseas', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }];
         tasks = data.tasks || { seg1:[], seg2:[], seg3:[] };
         renderUpstreamCards();
         renderSeg1SupplierCards();
         renderSeg3SupplierCards();
         renderTasks();
+        renderScreenshots();
         calcWindow();
         updatePreview();
+        screenshots = data.screenshots || [];
     }
 
     window.exportTemplate = function() {
@@ -992,18 +1100,69 @@ BAF 300 USD</textarea>
 
 </script>
 
-<div style="text-align:center; font-size:0.75rem; color:#94a3b8; padding:10px 0; border-top:1px solid #e2e8f0; margin-top:20px;"><span onclick="document.getElementById('wfTermsModal').style.display='block';document.getElementById('wfTermsOverlay').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span> | Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.</div>
-
-
-<!-- 使用条款弹窗 -->
-<div class="terms-modal" id="wfTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
-    <span onclick="document.getElementById('wfTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
-    <h4>📜 使用条款</h4>
-    <p>欢迎使用货代业务流转单。</p>
-    <p>本工具是一个内部业务管理助手，帮助你记录和追踪一票货物从起运地到目的地的任务分配、责任归属和费用明细。生成的流转单为内部管理凭据，不构成对外承诺或具有法律约束力的协议。</p>
-    <p>你在使用过程中输入的所有业务数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
-    <p>因使用本工具生成的流转单而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
+<!-- ====== v0.6 截图归档区域 ====== -->
+<div id="screenshotSection" style="margin:12px 0;padding:10px 14px;background:#fff;border:1px solid #dee2e6;border-radius:8px;">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+ <h4 style="margin:0;font-size:14px;">📷 截图归档</h4>
+ <button onclick="openScreenshotModal()" style="background:#0071e3;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">📷 粘贴截图</button>
+ </div>
+ <div id="screenshotList"></div>
 </div>
-<div id="wfTermsOverlay" onclick="document.getElementById('wfTermsModal').style.display='none'" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.3); z-index:999;"></div>
+
+<!-- ====== v0.6 截图粘贴模态框 ====== -->
+<div id="screenshotModal" class="fee-modal hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:1000;">
+ <div class="modal-content" style="background:#fff;border-radius:12px;padding:20px;max-width:500px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+ <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+ <span style="font-weight:600;font-size:15px;">📷 粘贴截图</span>
+ <button onclick="closeScreenshotModal()" style="background:none;border:none;font-size:18px;cursor:pointer;">✕</button>
+ </div>
+ <input id="screenshotHiddenInput" style="position:fixed;left:-9999px;opacity:0;" onpaste="handleScreenshotPaste(event)">
+ <div id="screenshotPreview" style="min-height:80px;border:2px dashed #ddd;border-radius:6px;padding:10px;text-align:center;font-size:13px;color:#888;">
+ 按 Ctrl+V 粘贴截图
+ </div>
+ <div style="margin-top:10px;">
+ <label style="font-size:12px;color:#666;">备注（关联费用、供应商等）</label>
+ <textarea id="screenshotNote" style="width:100%;min-height:40px;border:1px solid #ddd;border-radius:4px;padding:4px 8px;font-size:12px;resize:vertical;"></textarea>
+ </div>
+ <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+ <button onclick="closeScreenshotModal()" style="background:#f5f5f7;border:1px solid #d2d2d7;border-radius:6px;padding:4px 14px;font-size:12px;cursor:pointer;">取消</button>
+ <button onclick="confirmScreenshot()" style="background:#0071e3;color:#fff;border:none;border-radius:6px;padding:4px 14px;font-size:12px;cursor:pointer;">✅ 确认</button>
+ </div>
+ </div>
+</div>
+
+<!-- ====== v0.6 费用槽位模态框 ====== -->
+<div id="feeSlotModal" class="fee-modal hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:1000;">
+ <div class="modal-content" style="background:#fff;border-radius:12px;padding:20px;max-width:600px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+ <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+ <span id="feeSlotTitle" style="font-weight:600;font-size:15px;">💳 费用槽位</span>
+ <button onclick="closeFeeSlot()" style="background:none;border:none;font-size:18px;cursor:pointer;">✕</button>
+ </div>
+ <div id="feeSlotBody" style="max-height:400px;overflow-y:auto;"></div>
+ <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+ <button onclick="addFeeSlot()" style="background:#34c759;color:#fff;border:none;border-radius:6px;padding:4px 14px;font-size:12px;cursor:pointer;">+ 添加费用项</button>
+ <button onclick="closeFeeSlot()" style="background:#f5f5f7;border:1px solid #d2d2d7;border-radius:6px;padding:4px 14px;font-size:12px;cursor:pointer;">关闭</button>
+ </div>
+ </div>
+</div>
+
+<style>
+/* v0.6 样式 */
+.tag { display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500; }
+.vendor-tag { background:#e3f2fd;color:#1565c0; }
+.relation-tag { background:#fff3e0;color:#e65100; }
+.contacts-list { background:#f5f5f7;border-radius:6px;padding:6px 8px; }
+.contact-row input { font-size:12px;padding:2px 4px;border:1px solid #ddd;border-radius:3px; }
+.btn-small { font-size:11px;background:#f5f5f7;border:1px solid #d2d2d7;border-radius:4px;padding:2px 8px;cursor:pointer; }
+.screenshot-item { padding:6px 0;border-bottom:1px solid #eee;font-size:12px; }
+.fee-slot-table { font-size:12px; }
+.fee-slot-table th { background:#f5f5f7;padding:4px 6px;text-align:left; }
+.fee-slot-table td { padding:4px 6px; }
+.manual-input { font-size:12px;padding:2px 4px;border:1px solid #ddd;border-radius:3px;width:100%;box-sizing:border-box; }
+.screenshot-item:last-child { border-bottom:none; }
+#screenshotModal.fee-modal.hidden, #feeSlotModal.fee-modal.hidden { display:none !important; }
+#screenshotModal.fee-modal:not(.hidden), #feeSlotModal.fee-modal:not(.hidden) { display:flex !important; }
+</style>
+
 </body>
 </html>
