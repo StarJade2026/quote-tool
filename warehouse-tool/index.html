@@ -86,9 +86,12 @@
  .guide-text { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
  .guide-text a { color: #64748b; text-decoration: underline; }
  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+ .action-buttons, button, input[type="file"],
+ #feeModal, #condModal, #whTermsModal, #summaryHidden,
+ .info-card, .note, .guide-text { display: none !important; }
+ table { page-break-inside: avoid; }
+ #p2Content.hidden { display: block !important; }
+ @page { margin: 12mm; }
 }
  </style>
 </head>
@@ -151,7 +154,7 @@
  </div>
 
  <textarea id="summaryHidden" style="position: absolute; left: -9999px;"></textarea>
- <div id="printArea" style="display:none;"></div>
+
  <div style="text-align:center; font-size:0.75rem; color:#94a3b8; padding:10px 0; border-top:1px solid #e2e8f0; margin-top:20px;">
  <span onclick="document.getElementById('whTermsModal').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span>
  &nbsp;|&nbsp;Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.
@@ -687,6 +690,79 @@ function collectFormData() {
  };
 }
 
+window.printCleanPDF = function() {
+ var data = collectFormData();
+ var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>仓库报价单</title>';
+ html += '<style>';
+ html += 'body{font-family:"Microsoft YaHei","SimSun",sans-serif;font-size:13px;color:#333;padding:15px;}';
+ html += 'h1{font-size:18px;text-align:center;margin-bottom:5px;}';
+ html += 'h2{font-size:15px;border-bottom:2px solid #0071e3;padding-bottom:3px;margin-top:16px;}';
+ html += '.supplier-info{background:#f0f7ff;padding:12px 16px;border-radius:6px;margin:10px 0;line-height:1.8;}';
+ html += 'table{width:100%;border-collapse:collapse;margin:8px 0;}';
+ html += 'th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:12px;}';
+ html += 'th{background:#f5f5f7;font-weight:600;}';
+ html += '.footer{text-align:center;font-size:10px;color:#888;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:10px;line-height:1.8;}';
+ html += '@media print{@page{margin:12mm;}}';
+ html += '</style></head><body>';
+
+ // 标题
+ html += '<h1>仓库服务报价单</h1>';
+
+ // 供应商信息
+ html += '<div class="supplier-info">';
+ html += '<strong>供应商：</strong>' + escapeHtml(data.supplier.name) + '<br>';
+ if (data.supplier.contact || data.supplier.phone) {
+  html += '<strong>联系人：</strong>' + escapeHtml(data.supplier.contact) + ' ' + escapeHtml(data.supplier.phone) + '<br>';
+ }
+ html += '<strong>服务地点：</strong>' + escapeHtml(data.supplier.location) + '<br>';
+ if (data.supplier.validUntil) {
+  html += '<strong>有效期至：</strong>' + escapeHtml(data.supplier.validUntil);
+ }
+ html += '</div>';
+
+ // P0
+ html += '<h2>P0 主体服务费（基础服务）</h2>';
+ html += '<table><tr><th>费用名称</th><th>计价单位</th><th>条件</th><th>单价 (¥)</th></tr>';
+ data.p0.forEach(function(f) {
+  html += '<tr><td>' + escapeHtml(f.name) + '</td><td>' + escapeHtml(f.unit) + '</td>';
+  html += '<td>' + escapeHtml(condSummary(f)) + '</td><td>' + f.amount + '</td></tr>';
+ });
+ html += '</table>';
+
+ // P1
+ html += '<h2>P1 固定附加费（行业必收）</h2>';
+ html += '<table><tr><th>费用名称</th><th>计价单位</th><th>条件</th><th>单价 (¥)</th></tr>';
+ data.p1.forEach(function(f) {
+  html += '<tr><td>' + escapeHtml(f.name) + '</td><td>' + escapeHtml(f.unit) + '</td>';
+  html += '<td>' + escapeHtml(condSummary(f)) + '</td><td>' + f.amount + '</td></tr>';
+ });
+ html += '</table>';
+
+ // P2：全部展开（不使用 collectFormData 过滤，直接遍历 currentFees.p2）
+ html += '<h2>P2 增值附加费（差异化服务）</h2>';
+ html += '<table><tr><th>费用名称</th><th>计价单位</th><th>条件</th><th>单价 (¥)</th></tr>';
+ currentFees.p2.forEach(function(f) {
+  html += '<tr><td>' + escapeHtml(f.name) + '</td><td>' + escapeHtml(f.unit) + '</td>';
+  html += '<td>' + escapeHtml(condSummary(f)) + '</td><td>' + f.amount + '</td></tr>';
+ });
+ html += '</table>';
+
+ // 页脚
+ html += '<div class="footer">';
+ html += 'Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.<br>';
+ html += '🧰 工具箱：📄 报价 &nbsp;|&nbsp; 📋 流转单';
+ html += '</div>';
+
+ html += '</body></html>';
+
+ var w = window.open('', '_blank', 'width=800,height=600');
+ w.document.write(html);
+ w.document.close();
+ setTimeout(function() {
+  if (w && !w.closed) { w.print(); }
+ }, 600);
+};
+
 window.previewPDF = function() {
  var data = collectFormData();
  var doc = new jspdf.jsPDF();
@@ -770,61 +846,6 @@ function loadFromURL() {
 
 document.addEventListener('DOMContentLoaded', function() { document.getElementById('feeModal').classList.add('hidden'); });
 initFeeData(); renderTables(); loadFromURL();
- // ========== 干净打印 ==========
-window.printCleanPDF = function() {
-  var data = collectFormData();
-  var p2All = currentFees.p2.filter(function(f) { return f.amount > 0 || (f.conditions && f.conditions.length > 0); });
-  
-  var html = '';
-  
-  // 标题
-  html += '<h2 style="text-align:center;margin-bottom:5px;">仓库服务报价单</h2>';
-  
-  // 供应商信息
-  html += '<table style="width:100%;margin:10px 0 15px 0;border:none;">';
-  html += '<tr><td style="border:none;padding:2px 5px;"><strong>供应商：</strong>' + escapeHtml(data.supplier.name) + '</td>';
-  html += '<td style="border:none;padding:2px 5px;"><strong>联系人：</strong>' + escapeHtml(data.supplier.contact) + ' ' + escapeHtml(data.supplier.phone) + '</td></tr>';
-  html += '<tr><td style="border:none;padding:2px 5px;"><strong>服务地点：</strong>' + escapeHtml(data.supplier.location) + '</td>';
-  html += '<td style="border:none;padding:2px 5px;"><strong>有效期至：</strong>' + escapeHtml(data.supplier.validUntil) + '</td></tr>';
-  html += '</table>';
-  
-  // P0
-  html += '<h4 style="margin:15px 0 5px 0;">P0 主体服务费（基础服务）</h4>';
-  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:15px;">';
-  html += '<tr style="background:#f5f5f7;"><th style="border:1px solid #ddd;padding:6px 8px;text-align:left;">费用名称</th><th style="border:1px solid #ddd;padding:6px 8px;">计价单位</th><th style="border:1px solid #ddd;padding:6px 8px;">条件</th><th style="border:1px solid #ddd;padding:6px 8px;text-align:right;">单价 (¥)</th></tr>';
-  data.p0.forEach(function(f) {
-    html += '<tr><td style="border:1px solid #ddd;padding:6px 8px;">' + escapeHtml(f.name) + '</td><td style="border:1px solid #ddd;padding:6px 8px;">' + escapeHtml(f.unit) + '</td><td style="border:1px solid #ddd;padding:6px 8px;font-size:12px;">' + condSummary(f) + '</td><td style="border:1px solid #ddd;padding:6px 8px;text-align:right;">' + f.amount + '</td></tr>';
-  });
-  html += '</table>';
-  
-  // P1
-  html += '<h4 style="margin:15px 0 5px 0;">P1 固定附加费（行业必收）</h4>';
-  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:15px;">';
-  html += '<tr style="background:#f5f5f7;"><th style="border:1px solid #ddd;padding:6px 8px;text-align:left;">费用名称</th><th style="border:1px solid #ddd;padding:6px 8px;">计价单位</th><th style="border:1px solid #ddd;padding:6px 8px;">条件</th><th style="border:1px solid #ddd;padding:6px 8px;text-align:right;">单价 (¥)</th></tr>';
-  data.p1.forEach(function(f) {
-    html += '<tr><td style="border:1px solid #ddd;padding:6px 8px;">' + escapeHtml(f.name) + '</td><td style="border:1px solid #ddd;padding:6px 8px;">' + escapeHtml(f.unit) + '</td><td style="border:1px solid #ddd;padding:6px 8px;font-size:12px;">' + condSummary(f) + '</td><td style="border:1px solid #ddd;padding:6px 8px;text-align:right;">' + f.amount + '</td></tr>';
-  });
-  html += '</table>';
-  
-  // P2（全部展开）
-  if (p2All.length > 0) {
-    html += '<h4 style="margin:15px 0 5px 0;">P2 增值附加费（差异化服务）</h4>';
-    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:15px;">';
-    html += '<tr style="background:#f5f5f7;"><th style="border:1px solid #ddd;padding:6px 8px;text-align:left;">费用名称</th><th style="border:1px solid #ddd;padding:6px 8px;">计价单位</th><th style="border:1px solid #ddd;padding:6px 8px;">条件</th><th style="border:1px solid #ddd;padding:6px 8px;text-align:right;">单价 (¥)</th></tr>';
-    p2All.forEach(function(f) {
-      html += '<tr><td style="border:1px solid #ddd;padding:6px 8px;">' + escapeHtml(f.name) + '</td><td style="border:1px solid #ddd;padding:6px 8px;">' + escapeHtml(f.unit) + '</td><td style="border:1px solid #ddd;padding:6px 8px;font-size:12px;">' + condSummary(f) + '</td><td style="border:1px solid #ddd;padding:6px 8px;text-align:right;">' + f.amount + '</td></tr>';
-    });
-    html += '</table>';
-  }
-  
-  // 页脚
-  html += '<p style="text-align:center;font-size:10px;color:#999;margin-top:20px;">Copyright &copy; 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.</p>';
-  
-  // 写入隐藏容器并触发打印
-  var printDiv = document.getElementById('printArea');
-  printDiv.innerHTML = html;
-  window.print();
-};
 </script>
 </body>
 </html>
