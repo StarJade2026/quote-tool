@@ -415,14 +415,13 @@ BAF 300 USD</textarea>
         <h3 style="margin-top:0;">📂 历史版本</h3>
         <div id="historyList" style="max-height:300px; overflow-y:auto;"></div>
         <button class="btn" onclick="closeHistory()" style="margin-top:16px;">关闭</button>
-</div>
+    </div>
 </div>
 
 <script>
-function escapeHtml(str) {
-    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
-</script>
+    // ====== 工具函数 ======
+    function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
     // ====== v0.6 全局状态 ======
     let isSpecified = false;
     const UPSTREAM_TYPES = ['factory', 'trader', 'overseas_client', 'domestic_client', 'other'];
@@ -609,25 +608,24 @@ function escapeHtml(str) {
         if (!card) return;
         document.getElementById('feeSlotTitle').textContent = '💳 费用槽位 — ' + (card.company || '未命名') + ' (' + (SEG1_VENDOR_LABELS[card.vendor_type] || SEG3_VENDOR_LABELS[card.vendor_type] || UPSTREAM_TYPE_LABELS[card.vendor_type] || '其他') + ')';
         var feeList = card.fees || [];
-        var h = '<table class="fee-slot-table" style="width:100%;border-collapse:collapse;"><tr><th>费用名称</th><th>应付(¥)</th><th>应收(¥)</th><th>操作</th></tr>';
+        var h = '<table class="fee-slot-table" style="width:100%;border-collapse:collapse;"><tr><th>费用名称</th><th>应付金额(¥)</th><th>操作</th></tr>';
         feeList.forEach(function(f, fi) {
             h += '<tr><td><input type="text" value="' + (f.name||'') + '" onchange="editFeeSlot('+fi+',\'name\',this.value)" class="manual-input"></td>' +
-                '<td><input type="number" step="0.01" min="0" value="' + (f.pay||0) + '" onchange="editFeeSlot('+fi+',\'pay\',this.value)" class="manual-input" style="width:80px;"></td>' +
-                '<td><input type="number" step="0.01" min="0" value="' + (f.receive||0) + '" onchange="editFeeSlot('+fi+',\'receive\',this.value)" class="manual-input" style="width:80px;"></td>' +
+                '<td><input type="number" step="0.01" min="0" value="' + (f.amount||0) + '" onchange="editFeeSlot('+fi+',\'amount\',this.value)" class="manual-input" style="width:80px;"></td>' +
                 '<td><button onclick="deleteFeeSlot('+fi+')" style="background:none;border:none;color:#e74c3c;cursor:pointer;">✕</button></td></tr>';
         });
         h += '</table>';
         document.getElementById('feeSlotBody').innerHTML = h;
         document.getElementById('feeSlotModal').classList.remove('hidden');
     };
-   window.closeFeeSlot = function() { document.getElementById('feeSlotModal').classList.add('hidden'); window._activeFeeSlot = null; updatePreview(); };
+    window.closeFeeSlot = function() { document.getElementById('feeSlotModal').classList.add('hidden'); window._activeFeeSlot = null; };
     window.addFeeSlot = function() {
         if (!window._activeFeeSlot) return;
         var list = getCardList(window._activeFeeSlot.seg);
         var card = list[window._activeFeeSlot.cardIdx];
         if (!card) return;
         if (!card.fees) card.fees = [];
-        card.fees.push({ name:'', pay:0, receive:0 });
+        card.fees.push({ name:'', amount:0 });
         window.openFeeSlot(window._activeFeeSlot.seg, window._activeFeeSlot.cardIdx);
         updatePreview();
     };
@@ -701,14 +699,13 @@ function escapeHtml(str) {
         screenshots.push({ data: data, note: note, time: new Date().toISOString() });
         closeScreenshotModal();
         renderScreenshots();
+        updatePreview();
     };
     window.deleteScreenshot = function(idx) {
         screenshots.splice(idx, 1);
         renderScreenshots();
+        updatePreview();
     };
-    function escapeHtml(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
     function renderScreenshots() {
         var container = document.getElementById('screenshotList');
         container.innerHTML = '';
@@ -787,6 +784,53 @@ function escapeHtml(str) {
     ['deliveryDate','etdDate'].forEach(id => { document.getElementById(id)?.addEventListener('input', () => { calcWindow(); updatePreview(); }); });
 
     // ---- 预览 ----
+    // ====== 预览渲染辅助 ======
+    function renderPreviewContacts(contacts) {
+        if (!contacts || contacts.length === 0) return '<span style="color:#999;">无联系人</span>';
+        return contacts.map(function(c) {
+            var parts = [];
+            if (c.name) parts.push(c.name);
+            if (c.role) parts.push('(' + c.role + ')');
+            if (c.phone) parts.push(c.phone);
+            if (parts.length === 0) return '';
+            var primary = c.is_primary ? ' <span style="font-size:10px;background:#0071e3;color:#fff;padding:1px 4px;border-radius:3px;">主</span>' : '';
+            return '<div style="margin-bottom:2px;">' + parts.join(' ') + primary + '</div>';
+        }).filter(function(s){return s;}).join('') || '<span style="color:#999;">无联系人</span>';
+    }
+
+    function renderPreviewFees(fees) {
+        if (!fees || fees.length === 0) return '';
+        var rows = fees.map(function(f) {
+            var amt = f.amount ? (Number(f.amount).toLocaleString()) : '-';
+            return '<tr><td>' + escapeHtml(f.name || '-') + '</td><td style="text-align:right;">' + amt + '</td></tr>';
+        }).join('');
+        return '<table class="task-table" style="margin-top:6px;font-size:12px;"><tr><th>费用名称</th><th>应付金额</th></tr>' + rows + '</table>';
+    }
+
+    function renderPreviewSupplierCards(cards, seg) {
+        if (!cards || cards.length === 0) return '';
+        var html = '';
+        cards.forEach(function(c) {
+            var typeLabel = '';
+            if (seg === 'upstream') typeLabel = UPSTREAM_TYPE_LABELS[c.vendor_type] || '➕其他';
+            else if (seg === 'seg3') typeLabel = SEG3_VENDOR_LABELS[c.vendor_type] || '➕其他';
+            else typeLabel = SEG1_VENDOR_LABELS[c.vendor_type] || '➕其他';
+            var srLabel = {long:'📋长期合作',single:'🤝单次合作',designated:'🔴指定供应商',backup:'🟢备用'}[c.supplier_relation] || c.supplier_relation || '';
+            html += '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;margin-bottom:8px;background:#fafafa;">';
+            html += '<div style="margin-bottom:4px;"><strong>' + escapeHtml(c.company || '未命名') + '</strong>';
+            html += ' <span style="font-size:11px;background:#e8f4fd;color:#0369a1;padding:1px 6px;border-radius:3px;">' + typeLabel + '</span>';
+            if (srLabel) html += ' <span style="font-size:11px;background:#f0f0f0;color:#555;padding:1px 6px;border-radius:3px;">' + srLabel + '</span>';
+            html += '</div>';
+            // 联系人
+            html += '<div style="font-size:12px;color:#555;margin-bottom:4px;">' + renderPreviewContacts(c.contacts) + '</div>';
+            // 费用
+            html += renderPreviewFees(c.fees);
+            html += '</div>';
+        });
+        return html;
+    }
+
+    // ====== updatePreview 主函数 ======
     function updatePreview() {
         const project = document.getElementById('projectName').value || '未命名项目';
         const customer = document.getElementById('customerName').value || '';
@@ -806,89 +850,91 @@ function escapeHtml(str) {
         calcWindow();
         const windowText = document.getElementById('windowBadge').textContent;
 
-        let html = `
-            <div class="preview-header">
-                <div class="preview-title">业务流转单 · ${project} ${isSpecified ? '<span class="tag tag-red">指定货</span>' : ''}</div>
-                <div class="preview-sub">版本 ${version} | 生成时间 ${new Date().toISOString().slice(0,10)}</div>
-                <div class="preview-sub">客户: ${customer} | ${trade} ${container}</div>
-                <div class="preview-sub">${geo1} → ${geo2} → ${geo3}</div>
-                <div class="preview-sub">📅 客户交货: ${delDate || '待定'} | 🚢 ETD: ${etdDate || '待定'} | ${windowText}</div>
-            </div>
-        `;
+        let html = '<div class="preview-header">' +
+            '<div class="preview-title">业务流转单 · ' + escapeHtml(project) + (isSpecified ? ' <span class="tag tag-red">指定货</span>' : '') + '</div>' +
+            '<div class="preview-sub">版本 ' + escapeHtml(version) + ' | 生成时间 ' + new Date().toISOString().slice(0,10) + '</div>' +
+            '<div class="preview-sub">客户: ' + escapeHtml(customer) + ' | ' + escapeHtml(trade) + ' ' + escapeHtml(container) + '</div>' +
+            '<div class="preview-sub">' + escapeHtml(geo1) + ' → ' + escapeHtml(geo2) + ' → ' + escapeHtml(geo3) + '</div>' +
+            '<div class="preview-sub">客户交货: ' + (delDate || '待定') + ' | ETD: ' + (etdDate || '待定') + ' | ' + windowText + '</div>' +
+            '</div>';
 
+        // 上游委托方
         if (upstreamCards.length > 0) {
-            html += '<div class="preview-section"><h4>🧑‍🤝‍🧑 上游委托方</h4>' +
-                '<table class="task-table"><tr><th>公司名称</th><th>联系人</th><th>电话</th><th>vendor_type</th></tr>';
-            upstreamCards.forEach(function(c) {
-                var primaryContact = (c.contacts || [])[0];
-                var contactName = primaryContact ? (primaryContact.name || '-') : '-';
-                var contactPhone = primaryContact ? (primaryContact.phone || '-') : '-';
-                var vtLabel = UPSTREAM_TYPE_LABELS[c.vendor_type] || c.vendor_type || '-';
-                html += '<tr><td>' + (c.company || '-') + '</td><td>' + contactName + '</td><td>' + contactPhone + '</td><td>' + vtLabel + '</td></tr>';
-            });
-            html += '</table></div>';
-        }
-
-        var seg1SupNames = seg1SupplierCards.map(function(c){return c.company;}).filter(function(n){return n;}).join(', ') || '--';
-        html += renderSegmentPreview('段1 · 起运地服务 — ' + seg1SupNames, '', tasks.seg1, seg1Note);
-        html += renderSegmentPreview('段2 · 干线段 — ' + seg2Car, '', tasks.seg2, seg2Note);
-
-        if (seg3SupplierCards.length > 0) {
-            html += '<div class="preview-section"><h4>📍 段3 · 目的地服务方</h4>' +
-                '<table class="task-table"><tr><th>公司名称</th><th>联系人</th><th>电话</th><th>vendor_type</th></tr>';
-            seg3SupplierCards.forEach(function(c) {
-                var primaryContact = (c.contacts || [])[0];
-                var contactName = primaryContact ? (primaryContact.name || '-') : '-';
-                var contactPhone = primaryContact ? (primaryContact.phone || '-') : '-';
-                var vtLabel = SEG3_VENDOR_LABELS[c.vendor_type] || c.vendor_type || '-';
-                html += '<tr><td>' + (c.company || '-') + '</td><td>' + contactName + '</td><td>' + contactPhone + '</td><td>' + vtLabel + '</td></tr>';
-            });
-            html += '</table>';
-            html += renderTasksPreview('段3 任务', tasks.seg3);
-            if (seg3Note) html += '<div class="preview-note">📝 ' + seg3Note + '</div>';
+            html += '<div class="preview-section"><h4>上游委托方 / 发货工厂</h4>';
+            html += renderPreviewSupplierCards(upstreamCards, 'upstream');
             html += '</div>';
-        } else {
-            html += renderSegmentPreview('段3 · 目的地服务', '', tasks.seg3, seg3Note);
         }
 
-        // 费用表格
+        // 段1 供应商 + 任务
+        html += '<div class="preview-section"><h4>段1 起运地服务</h4>';
+        html += renderPreviewSupplierCards(seg1SupplierCards, 'seg1');
+        html += renderTasksPreview('段1 任务', tasks.seg1);
+        if (seg1Note) html += '<div class="preview-note">' + escapeHtml(seg1Note) + '</div>';
+        html += '</div>';
+
+        // 段2
+        html += '<div class="preview-section"><h4>段2 干线段 — ' + escapeHtml(seg2Car) + '</h4>';
+        html += renderTasksPreview('段2 任务', tasks.seg2);
+        if (seg2Note) html += '<div class="preview-note">' + escapeHtml(seg2Note) + '</div>';
+        html += '</div>';
+
+        // 段3 供应商 + 任务
+        html += '<div class="preview-section"><h4>段3 目的地服务方</h4>';
+        html += renderPreviewSupplierCards(seg3SupplierCards, 'seg3');
+        html += renderTasksPreview('段3 任务', tasks.seg3);
+        if (seg3Note) html += '<div class="preview-note">' + escapeHtml(seg3Note) + '</div>';
+        html += '</div>';
+
+        // 费用汇总
         const rDesc = document.getElementById('receivableDesc')?.value || '';
         const rAmt = document.getElementById('receivableAmount')?.value || '';
         const seg1Pay = document.getElementById('seg1Pay')?.value?.trim() || '';
         const seg2Pay = document.getElementById('seg2Pay')?.value?.trim() || '';
         const seg3Pay = document.getElementById('seg3Pay')?.value?.trim() || '';
 
-        html += `<div class="preview-section"><h4>💰 费用核心摘要</h4>`;
+        html += '<div class="preview-section"><h4>费用核心摘要</h4>';
 
         if (rDesc || rAmt) {
-            html += `<p style="font-weight:600; margin:8px 0 4px;">📤 应收客户${customer ? ' (' + customer + ')' : ''}</p>`;
-            html += `<table class="fee-summary-table"><tr><th>费用说明</th><th>金额</th></tr><tr><td>${rDesc || '-'}</td><td>${rAmt || '待确认'}</td></tr></table>`;
+            html += '<p style="font-weight:600;margin:8px 0 4px;">应收客户' + (customer ? ' (' + escapeHtml(customer) + ')' : '') + '</p>';
+            html += '<table class="fee-summary-table"><tr><th>费用说明</th><th>金额</th></tr><tr><td>' + escapeHtml(rDesc || '-') + '</td><td>' + escapeHtml(rAmt || '待确认') + '</td></tr></table>';
         }
 
-        if (seg1Pay || seg2Pay || seg3Pay) {
-            html += `<p style="font-weight:600; margin:12px 0 4px;">📥 应付明细</p>`;
-            html += `<table class="fee-summary-table"><tr><th>段</th><th>费用项</th><th>金额</th></tr>`;
-            
-            [ {seg:'段1', text:seg1Pay}, {seg:'段2', text:seg2Pay}, {seg:'段3', text:seg3Pay} ].forEach(p => {
-                if (!p.text) return;
-                const lines = p.text.split('\n').filter(l => l.trim());
-                if (lines.length === 0) return;
-                lines.forEach((line, i) => {
-                    const trimmed = line.trim();
-                    const lastSpace = trimmed.lastIndexOf(' ');
-                    let item = trimmed, amt = '';
-                    if (lastSpace > 0) {
-                        item = trimmed.substring(0, lastSpace);
-                        amt = trimmed.substring(lastSpace + 1);
-                    }
-                    html += `<tr><td>${i===0 ? p.seg : ''}</td><td>${item}</td><td>${amt}</td></tr>`;
-                });
+        // 收集所有供应商卡片的费用
+        var allCardFees = [];
+        upstreamCards.forEach(function(c) { (c.fees||[]).forEach(function(f){ if(f.amount) allCardFees.push({name:f.name,amount:f.amount,seg:'上游'}); }); });
+        seg1SupplierCards.forEach(function(c) { (c.fees||[]).forEach(function(f){ if(f.amount) allCardFees.push({name:f.name,amount:f.amount,seg:'段1'}); }); });
+        seg3SupplierCards.forEach(function(c) { (c.fees||[]).forEach(function(f){ if(f.amount) allCardFees.push({name:f.name,amount:f.amount,seg:'段3'}); }); });
+
+        // textarea 中的应付
+        var textPayLines = [];
+        [ {seg:'段1', text:seg1Pay}, {seg:'段2', text:seg2Pay}, {seg:'段3', text:seg3Pay} ].forEach(function(p) {
+            if (!p.text) return;
+            p.text.split('\n').forEach(function(line) {
+                var trimmed = line.trim();
+                if (!trimmed) return;
+                var lastSpace = trimmed.lastIndexOf(' ');
+                var item = trimmed, amt = '';
+                if (lastSpace > 0) { item = trimmed.substring(0, lastSpace); amt = trimmed.substring(lastSpace + 1); }
+                textPayLines.push({seg:p.seg, name:item, amount:amt});
             });
-            html += `</table>`;
+        });
+
+        if (allCardFees.length > 0 || textPayLines.length > 0) {
+            html += '<p style="font-weight:600;margin:12px 0 4px;">应付明细</p>';
+            html += '<table class="fee-summary-table"><tr><th>段</th><th>费用项</th><th>金额</th></tr>';
+            // 先输出卡片费用
+            allCardFees.forEach(function(f) {
+                html += '<tr><td>' + escapeHtml(f.seg) + '</td><td>' + escapeHtml(f.name || '-') + '</td><td>' + Number(f.amount).toLocaleString() + '</td></tr>';
+            });
+            // 再输出 textarea 行
+            textPayLines.forEach(function(f) {
+                html += '<tr><td>' + escapeHtml(f.seg) + '</td><td>' + escapeHtml(f.name) + '</td><td>' + escapeHtml(f.amount) + '</td></tr>';
+            });
+            html += '</table>';
         }
 
-        html += `</div>`;
-        html += `<div class="footnote">内部计划，对外以合同为准 | 操作过程中可补充联络人信息，流转单作为公司数据库归档</div>`;
+        html += '</div>';
+        html += '<div class="footnote">内部计划，对外以合同为准 | 操作过程中可补充联络人信息，流转单作为公司数据库归档</div>';
 
         document.getElementById('previewContainer').innerHTML = html;
     }
