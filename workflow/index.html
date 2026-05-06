@@ -289,6 +289,15 @@
             • 如果你有"主流转单+子流转单"，请先 <strong>导出主流转单（打印PDF）</strong>，再修改名称制作子流转单。
         </div>
 
+        <!-- ====== v0.6 截图归档区域（上移至醒目位置） ====== -->
+        <div id="screenshotSection" style="margin:12px 0;padding:10px 14px;background:#fff;border:1px solid #dee2e6;border-radius:8px;">
+         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+         <h4 style="margin:0;font-size:14px;">📷 截图归档</h4>
+         <button onclick="openScreenshotModal()" style="background:#0071e3;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-size:13px;cursor:pointer;">📷 粘贴截图</button>
+         </div>
+         <div id="screenshotList"></div>
+        </div>
+
         <!-- 时间节点 -->
         <div class="date-highlight">
             <label>📅 客户交货日期:</label><input type="date" id="deliveryDate">
@@ -412,13 +421,17 @@ BAF 300 USD</textarea>
 <script>
     // ====== v0.6 全局状态 ======
     let isSpecified = false;
-    const VENDOR_TYPES = ['仓库', '车队', '报关', '订舱', '海外代理', '其他'];
+    const UPSTREAM_TYPES = ['factory', 'trader', 'overseas_client', 'domestic_client', 'other'];
+    const UPSTREAM_TYPE_LABELS = { factory:'🏭工厂', trader:'💼贸易商', overseas_client:'🌍海外客户', domestic_client:'🏢国内客户', other:'➕其他' };
+    const SEG1_VENDOR_TYPES = ['warehouse', 'fleet', 'customs', 'booking', 'other'];
+    const SEG1_VENDOR_LABELS = { warehouse:'📦仓库', fleet:'🚛车队', customs:'📃报关', booking:'🚢订舱', other:'➕其他' };
+    const SEG3_VENDOR_TYPES = ['overseas_agent', 'customs_broker', 'fleet', 'warehouse', 'other'];
+    const SEG3_VENDOR_LABELS = { overseas_agent:'🌍海外代理', customs_broker:'📃清关行', fleet:'🚛车队', warehouse:'📦仓库', other:'➕其他' };
     const SUPPLIER_RELATIONS = ['长期合作', '单次合作', '指定供应商', '备用'];
-    const VENDOR_TYPE_LABELS = { warehouse:'📦仓库', fleet:'🚛车队', customs:'📃报关', booking:'🚢订舱', overseas:'🌍海外代理', other:'➕自定义' };
 
     // 供应商卡片（联系人数组模式）
     let upstreamCards = [
-        { vendor_type:'other', supplier_relation:'长期合作', company:'丹东昱豪制衣有限公司', contacts:[{ name:'陆建新', role:'财务', phone:'13913202350', is_primary:true }], fees:[] }
+        { vendor_type:'factory', supplier_relation:'长期合作', company:'丹东昱豪制衣有限公司', contacts:[{ name:'陆建新', role:'财务', phone:'13913202350', is_primary:true }], fees:[] }
     ];
     let seg1SupplierCards = [
         { vendor_type:'booking', supplier_relation:'长期合作', company:'中外运', contacts:[{ name:'', role:'', phone:'', is_primary:true }], fees:[] },
@@ -459,7 +472,19 @@ BAF 300 USD</textarea>
 
     // ====== v0.6 供应商卡片（联系人数组 + vendor_type + supplier_relation 标签） ======
     function renderSupplierCard(card, idx, seg, deleteFn, updateFn, vendorTypeKey) {
-        const vtLabel = VENDOR_TYPE_LABELS[card.vendor_type] || '➕自定义';
+        // 根据 seg 使用不同的类型下拉选项
+        var typeDropdown;
+        if (seg === 'upstream') {
+            typeDropdown = UPSTREAM_TYPES.map(function(vt){ return '<option value="' + vt + '" ' + (card.vendor_type === vt ? 'selected' : '') + '>' + (UPSTREAM_TYPE_LABELS[vt] || vt) + '</option>'; }).join('');
+        } else if (seg === 'seg3') {
+            typeDropdown = SEG3_VENDOR_TYPES.map(function(vt){ return '<option value="' + vt + '" ' + (card.vendor_type === vt ? 'selected' : '') + '>' + (SEG3_VENDOR_LABELS[vt] || vt) + '</option>'; }).join('');
+        } else {
+            typeDropdown = SEG1_VENDOR_TYPES.map(function(vt){ return '<option value="' + vt + '" ' + (card.vendor_type === vt ? 'selected' : '') + '>' + (SEG1_VENDOR_LABELS[vt] || vt) + '</option>'; }).join('');
+        }
+        var vtLabel;
+        if (seg === 'upstream') vtLabel = '<span class="tag vendor-tag">' + (UPSTREAM_TYPE_LABELS[card.vendor_type] || '➕其他') + '</span>';
+        else if (seg === 'seg3') vtLabel = '<span class="tag vendor-tag">' + (SEG3_VENDOR_LABELS[card.vendor_type] || '➕其他') + '</span>';
+        else vtLabel = '<span class="tag vendor-tag">' + (SEG1_VENDOR_LABELS[card.vendor_type] || '➕其他') + '</span>';
         const srLabels = { 'long':'📋长期合作', 'single':'🤝单次合作', 'designated':'🔴指定供应商', 'backup':'🟢备用' };
         const srLabel = srLabels[card.supplier_relation] || card.supplier_relation;
         let contactsHtml = '<div class="contacts-list" style="margin-top:6px;">';
@@ -479,7 +504,7 @@ BAF 300 USD</textarea>
             '<span class="tag relation-tag">' + srLabel + '</span></div>' +
             '<div class="row-2" style="display:flex;gap:10px;">' +
             '<div class="form-group" style="flex:1;"><label>供应商类型</label><select onchange="' + updateFn + '(' + idx + ',\'vendor_type\',this.value)">' +
-            VENDOR_TYPES.map(function(vt){return '<option value="' + vtMap(vt) + '" ' + (card.vendor_type===vtMap(vt)?'selected':'') + '>' + vt + '</option>';}).join('') +
+            typeDropdown +
             '</select></div>' +
             '<div class="form-group" style="flex:1;"><label>合作关系</label><select onchange="' + updateFn + '(' + idx + ',\'supplier_relation\',this.value)">' +
             SUPPLIER_RELATIONS.map(function(sr){return '<option value="' + srMap(sr) + '" ' + (card.supplier_relation===srMap(sr)?'selected':'') + '>' + sr + '</option>';}).join('') +
@@ -490,7 +515,9 @@ BAF 300 USD</textarea>
             '</div>';
     }
 
-    function vtMap(chinese) { var m={仓库:'warehouse',车队:'fleet',报关:'customs',订舱:'booking',海外代理:'overseas',其他:'other'}; return m[chinese]||'other'; }
+    function upstreamTypeLabel(val) { return UPSTREAM_TYPE_LABELS[val] || '➕其他'; }
+    function seg1Label(val) { return SEG1_VENDOR_LABELS[val] || '➕其他'; }
+    function seg3Label(val) { return SEG3_VENDOR_LABELS[val] || '➕其他'; }
     function srMap(chinese) { var m={'长期合作':'long','单次合作':'single','指定供应商':'designated','备用':'backup'}; return m[chinese]||'single'; }
 
     function renderUpstreamCards() {
@@ -502,7 +529,7 @@ BAF 300 USD</textarea>
             container.appendChild(div.firstElementChild);
         });
     }
-    window.addUpstreamCard = function() { upstreamCards.push({ vendor_type:'other', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }); renderUpstreamCards(); updatePreview(); };
+    window.addUpstreamCard = function() { upstreamCards.push({ vendor_type:'factory', supplier_relation:'single', company:'', contacts:[{name:'',role:'',phone:'',is_primary:true}], fees:[] }); renderUpstreamCards(); updatePreview(); };
     window.deleteUpstreamCard = function(idx) { upstreamCards.splice(idx,1); renderUpstreamCards(); updatePreview(); };
     window.updateUpstreamCard = function(idx, field, value) { upstreamCards[idx][field]=value; renderUpstreamCards(); updatePreview(); };
 
@@ -576,7 +603,7 @@ BAF 300 USD</textarea>
         var list = getCardList(seg);
         var card = list[cardIdx];
         if (!card) return;
-        document.getElementById('feeSlotTitle').textContent = '💳 费用槽位 — ' + (card.company || '未命名') + ' (' + (VENDOR_TYPE_LABELS[card.vendor_type] || '其他') + ')';
+        document.getElementById('feeSlotTitle').textContent = '💳 费用槽位 — ' + (card.company || '未命名') + ' (' + (SEG1_VENDOR_LABELS[card.vendor_type] || SEG3_VENDOR_LABELS[card.vendor_type] || UPSTREAM_TYPE_LABELS[card.vendor_type] || '其他') + ')';
         var feeList = card.fees || [];
         var h = '<table class="fee-slot-table" style="width:100%;border-collapse:collapse;"><tr><th>费用名称</th><th>应付(¥)</th><th>应收(¥)</th><th>操作</th></tr>';
         feeList.forEach(function(f, fi) {
@@ -620,9 +647,19 @@ BAF 300 USD</textarea>
     window.openScreenshotModal = function() {
         document.getElementById('screenshotModal').classList.remove('hidden');
         document.getElementById('screenshotPreview').innerHTML = '<p style="color:#888;">按 Ctrl+V 粘贴截图</p>';
-        document.getElementById('screenshotData').value = '';
+        window._sd = '';
         document.getElementById('screenshotNote').value = '';
-        setTimeout(function() { document.getElementById('screenshotHiddenInput').focus(); }, 100);
+        // 确保隐藏 input 获得焦点以接收 paste 事件
+        var hi = document.getElementById('screenshotHiddenInput');
+        hi.value = '';
+        hi.focus();
+        // 连续尝试 focus（弹窗动画可能延迟渲染）
+        var tries = 0;
+        var focusInterval = setInterval(function() {
+            hi.focus();
+            tries++;
+            if (tries > 10 || document.activeElement === hi) clearInterval(focusInterval);
+        }, 50);
     };
     window.closeScreenshotModal = function() { document.getElementById('screenshotModal').classList.add('hidden'); };
     window.handleScreenshotPaste = function(e) {
@@ -632,7 +669,7 @@ BAF 300 USD</textarea>
                 var blob = items[i].getAsFile();
                 var reader = new FileReader();
                 reader.onload = function(ev) {
-                    document.getElementById('screenshotData').value = ev.target.result;
+                    window._sd = ev.target.result;
                     document.getElementById('screenshotPreview').innerHTML = '<img src="' + ev.target.result + '" style="max-width:100%;max-height:300px;border-radius:4px;">';
                 };
                 reader.readAsDataURL(blob);
@@ -641,7 +678,7 @@ BAF 300 USD</textarea>
         }
     };
     window.confirmScreenshot = function() {
-        var data = document.getElementById('screenshotData').value;
+        var data = window._sd || '';
         var note = document.getElementById('screenshotNote').value.trim();
         if (!data) { alert('请先粘贴截图'); return; }
         screenshots.push({ data: data, note: note, time: new Date().toISOString() });
@@ -766,7 +803,7 @@ BAF 300 USD</textarea>
                 var primaryContact = (c.contacts || [])[0];
                 var contactName = primaryContact ? (primaryContact.name || '-') : '-';
                 var contactPhone = primaryContact ? (primaryContact.phone || '-') : '-';
-                var vtLabel = VENDOR_TYPE_LABELS[c.vendor_type] || c.vendor_type || '-';
+                var vtLabel = UPSTREAM_TYPE_LABELS[c.vendor_type] || c.vendor_type || '-';
                 html += '<tr><td>' + (c.company || '-') + '</td><td>' + contactName + '</td><td>' + contactPhone + '</td><td>' + vtLabel + '</td></tr>';
             });
             html += '</table></div>';
@@ -783,7 +820,7 @@ BAF 300 USD</textarea>
                 var primaryContact = (c.contacts || [])[0];
                 var contactName = primaryContact ? (primaryContact.name || '-') : '-';
                 var contactPhone = primaryContact ? (primaryContact.phone || '-') : '-';
-                var vtLabel = VENDOR_TYPE_LABELS[c.vendor_type] || c.vendor_type || '-';
+                var vtLabel = SEG3_VENDOR_LABELS[c.vendor_type] || c.vendor_type || '-';
                 html += '<tr><td>' + (c.company || '-') + '</td><td>' + contactName + '</td><td>' + contactPhone + '</td><td>' + vtLabel + '</td></tr>';
             });
             html += '</table>';
@@ -1100,16 +1137,7 @@ BAF 300 USD</textarea>
 
 </script>
 
-<!-- ====== v0.6 截图归档区域 ====== -->
-<div id="screenshotSection" style="margin:12px 0;padding:10px 14px;background:#fff;border:1px solid #dee2e6;border-radius:8px;">
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
- <h4 style="margin:0;font-size:14px;">📷 截图归档</h4>
- <button onclick="openScreenshotModal()" style="background:#0071e3;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">📷 粘贴截图</button>
- </div>
- <div id="screenshotList"></div>
-</div>
-
-<!-- ====== v0.6 截图粘贴模态框 ====== -->
+<!-- ====== v0.6 截图粘贴模态框（保留在底部，只删除旧截图区域） ====== -->
 <div id="screenshotModal" class="fee-modal hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:1000;">
  <div class="modal-content" style="background:#fff;border-radius:12px;padding:20px;max-width:500px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
  <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
