@@ -929,7 +929,6 @@ function aiParseTable(rawText, callback) {
  var xhr = new XMLHttpRequest();
  xhr.open('POST', AI_API_URL, true);
  xhr.setRequestHeader('Content-Type', 'application/json');
- xhr.setRequestHeader('Authorization', 'Bearer ' + AI_API_KEY);
  xhr.timeout = AI_TIMEOUT;
  xhr.onload = function() {
   if (xhr.status === 200) {
