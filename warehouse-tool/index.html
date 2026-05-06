@@ -911,24 +911,20 @@ window.backImportStep1 = function() {
  document.getElementById('importBtn3').style.display = 'none';
  document.getElementById('importBtn4').style.display = 'none';
 };
-
 // ========== v0.4.2 AI解析 ==========
 var AI_API_URL = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
-var AI_API_KEY = 'sk-cxatvoyslyuy7mrf4yu9vcr68f18jc1t2a8qiop02kbpntj6';
 var AI_MODEL = 'mimo-v2-pro';
 var AI_TIMEOUT = 8000;
 var AI_SYSTEM_PROMPT = '你是一个物流供应商报价表格通用解析器。用户会粘贴一份物流服务商的价格表（可能是仓库、报关行、车队或订舱口的报价单），你需要从中提取所有费用项。\n\n' +
-'核心原则：\n' +
-'1. 费用名称和价格是解析的唯一目标，忽略表格标题、公司名、说明文字、联系方式等非数据行\n' +
-'2. 跳过空行、分隔线、以及"备注""说明""注"等纯文字行\n' +
-'3. 如果某行有费用名称但价格是文字描述（如"实报实销""按实发生""case by case""另行协商"），价格填0并在note中注明\n' +
-'4. 清洗非标准数字格式：去除"元""/票""/箱""/联""/方""/吨"等单位后缀，只保留数字\n' +
-'5. 如果一个费用项对应多列价格（如不同箱型），用prices数组列出所有价格\n' +
-'6. 如果表格只有一列价格，prices数组只包含一个元素\n\n' +
-'请只返回JSON格式，不要任何解释文字。JSON结构如下：\n' +
-'{"headers":["费用名称","价格"],"items":[{"name":"报关费","prices":[80]},{"name":"联单费","prices":[40]}]}\n' +
-'如果表格有多个价格列（如20\'/40\'/40HQ），headers可以包含更多列名，prices数组也相应包含更多值。';
-
+'核心规则：\n' +
+'1. 提取所有费用行，不遗漏。即使费用名称重复（如"报关费"出现两次），也必须全部提取。\n' +
+'2. 费用名称取第一列的文字内容，去除行首的数字序号。\n' +
+'3. 价格列的数字清洗规则：去除"元""/票""/箱""/联""/方""/吨"等单位后缀，只保留数字。如果价格是文字描述（如"实报实销""按实发生""case by case""另行协商"），填0。\n' +
+'4. 只提取费用名称和价格两列，忽略"备注""说明"等额外列。\n' +
+'5. 跳过空行、标题行、分隔线、以及公司名、联系方式等说明性文字。\n\n' +
+'JSON输出格式（严格按此结构）：\n' +
+'{"headers":["费用名称","价格"],"items":[{"name":"报关费","prices":[80]},{"name":"联单费","prices":[40]},{"name":"操作费","prices":[0]}]}\n\n' +
+'注意：headers只包含两个元素（费用名称、价格），不要包含"备注"等额外列。items中每个费用项的prices数组，单列价格表格只包含一个数字。不要额外添加任何解释文字，只输出JSON。';
 function aiParseTable(rawText, callback) {
  var xhr = new XMLHttpRequest();
  xhr.open('POST', AI_API_URL, true);
