@@ -490,13 +490,13 @@ BAF 300 USD</textarea>
         let contactsHtml = '<div class="contacts-list" style="margin-top:6px;">';
         (card.contacts || []).forEach(function(c, ci) {
             contactsHtml += '<div class="contact-row" style="display:flex;gap:4px;align-items:center;margin-bottom:4px;">' +
-                '<input type="text" placeholder="姓名" value="' + (c.name || '') + '" style="flex:1;" onchange="updateContact(' + seg + ',' + idx + ',' + ci + ',\'name\',this.value)">' +
-                '<input type="text" placeholder="岗位" value="' + (c.role || '') + '" style="flex:0.7;" onchange="updateContact(' + seg + ',' + idx + ',' + ci + ',\'role\',this.value)">' +
-                '<input type="text" placeholder="电话" value="' + (c.phone || '') + '" style="flex:1;" onchange="updateContact(' + seg + ',' + idx + ',' + ci + ',\'phone\',this.value)">' +
+                '<input type="text" placeholder="姓名" value="' + (c.name || '') + '" style="flex:1;" onchange="updateContact(\'' + seg + '\',' + idx + ',' + ci + ',\'name\',this.value)">' +
+                '<input type="text" placeholder="岗位" value="' + (c.role || '') + '" style="flex:0.7;" onchange="updateContact(\'' + seg + '\',' + idx + ',' + ci + ',\'role\',this.value)">' +
+                '<input type="text" placeholder="电话" value="' + (c.phone || '') + '" style="flex:1;" onchange="updateContact(\'' + seg + '\',' + idx + ',' + ci + ',\'phone\',this.value)">' +
                 (c.is_primary ? '<span style="font-size:10px;background:#0071e3;color:#fff;padding:1px 4px;border-radius:3px;">主</span>' : '') +
-                '<button style="background:none;border:none;color:#999;cursor:pointer;font-size:12px;" onclick="deleteContact(' + seg + ',' + idx + ',' + ci + ')">✕</button></div>';
+                '<button style="background:none;border:none;color:#999;cursor:pointer;font-size:12px;" onclick="deleteContact(\'' + seg + '\',' + idx + ',' + ci + ')">✕</button></div>';
         });
-        contactsHtml += '<button class="btn-small" onclick="addContact(' + seg + ',' + idx + ')">+ 添加联系人</button></div>';
+        contactsHtml += '<button class="btn-small" onclick="addContact(\'' + seg + '\',' + idx + ')">+ 添加联系人</button></div>';
         return '<div class="card" style="position:relative;margin-bottom:8px;border:1px solid #dee2e6;border-radius:8px;padding:10px 14px;background:#fafafa;">' +
             '<button class="delete-card-btn" onclick="' + deleteFn + '(' + idx + ')" style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:#999;">✕</button>' +
             '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">' +
@@ -511,7 +511,7 @@ BAF 300 USD</textarea>
             '</select></div></div>' +
             '<div class="form-group"><label>公司名称</label><input type="text" value="' + (card.company || '') + '" onchange="' + updateFn + '(' + idx + ',\'company\',this.value)"></div>' +
             '<div class="form-group"><label style="font-weight:600;">联系人列表</label>' + contactsHtml + '</div>' +
-            (seg !== 'upstream' ? '<div style="margin-top:6px;"><button class="btn-small" onclick="openFeeSlot(' + seg + ',' + idx + ')">💰 费用（' + ((card.fees||[]).length) + '项）</button></div>' : '') +
+            (seg !== 'upstream' ? '<div style="margin-top:6px;"><button class="btn-small" onclick="openFeeSlot(\'' + seg + '\',' + idx + ')">💰 费用（' + ((card.fees||[]).length) + '项）</button></div>' : '') +
             '</div>';
     }
 
@@ -649,19 +649,32 @@ BAF 300 USD</textarea>
         document.getElementById('screenshotPreview').innerHTML = '<p style="color:#888;">按 Ctrl+V 粘贴截图</p>';
         window._sd = '';
         document.getElementById('screenshotNote').value = '';
-        // 确保隐藏 input 获得焦点以接收 paste 事件
-        var hi = document.getElementById('screenshotHiddenInput');
-        hi.value = '';
-        hi.focus();
-        // 连续尝试 focus（弹窗动画可能延迟渲染）
-        var tries = 0;
-        var focusInterval = setInterval(function() {
-            hi.focus();
-            tries++;
-            if (tries > 10 || document.activeElement === hi) clearInterval(focusInterval);
-        }, 50);
+        // 在 window 上绑定 paste 事件——用户在任何地方按 Ctrl+V 都能触发
+        window._pasteHandler = function(e) {
+            var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') >= 0) {
+                    var blob = items[i].getAsFile();
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        window._sd = ev.target.result;
+                        document.getElementById('screenshotPreview').innerHTML = '<img src="' + ev.target.result + '" style="max-width:100%;max-height:300px;border-radius:4px;">';
+                    };
+                    reader.readAsDataURL(blob);
+                    break;
+                }
+            }
+        };
+        window.addEventListener('paste', window._pasteHandler);
     };
-    window.closeScreenshotModal = function() { document.getElementById('screenshotModal').classList.add('hidden'); };
+    window.closeScreenshotModal = function() {
+        document.getElementById('screenshotModal').classList.add('hidden');
+        // 关闭弹窗时移除 paste 事件监听
+        if (window._pasteHandler) {
+            window.removeEventListener('paste', window._pasteHandler);
+            window._pasteHandler = null;
+        }
+    };
     window.handleScreenshotPaste = function(e) {
         var items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (var i = 0; i < items.length; i++) {
