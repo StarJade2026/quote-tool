@@ -912,7 +912,7 @@ window.backImportStep1 = function() {
  document.getElementById('importBtn4').style.display = 'none';
 };
 // ========== v0.4.2 AI解析 ==========
-var AI_API_URL = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
+var AI_API_URL = 'http://127.0.0.1:8787/v1/chat/completions';
 var AI_MODEL = 'mimo-v2-pro';
 var AI_TIMEOUT = 8000;
 var AI_SYSTEM_PROMPT = '你是一个物流供应商报价表格通用解析器。用户会粘贴一份物流服务商的价格表（可能是仓库、报关行、车队或订舱口的报价单），你需要从中提取所有费用项。\n\n' +
