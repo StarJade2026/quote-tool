@@ -1259,5 +1259,24 @@ BAF 300 USD</textarea>
 #screenshotModal.fee-modal:not(.hidden), #feeSlotModal.fee-modal:not(.hidden) { display:flex !important; }
 </style>
 
+<!-- Footer -->
+<div style="text-align:center; font-size:0.75rem; color:#94a3b8; padding:10px 0; border-top:1px solid #e2e8f0; margin-top:20px;">
+ <span onclick="document.getElementById('wfTermsModal').style.display='block'" style="cursor:pointer; color:#64748b; text-decoration:underline;">📜 使用条款</span>
+ &nbsp;|&nbsp;Copyright © 2026 伍洋（julia-夏虫语冰）. All Rights Reserved.
+</div>
+<div style="text-align:center; font-size:0.75rem; color:#94a3b8; margin-top:6px;">
+ 🧰 工具箱：<a href="../" style="color:#64748b;">📄 报价</a> | <a href="../warehouse-tool/" style="color:#64748b;">🏭 仓库</a>
+</div>
+
+<!-- 使用条款弹窗 -->
+<div id="wfTermsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.2); z-index:1000; max-width:500px; width:90%;">
+ <span onclick="document.getElementById('wfTermsModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</span>
+ <h4>📜 使用条款</h4>
+ <p>欢迎使用货代业务流转单。</p>
+ <p>本工具是一个内部业务流转信息助手，专为货代团队设计，帮助你快速记录和跟踪每一票货物的三段服务进度。生成的流转单信息不构成具有法律约束力的合同文件，最终服务条款和价格请以双方盖章的书面合同为准。</p>
+ <p>你在使用过程中输入的所有业务信息和供应商数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
+ <p>因使用本工具而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
+</div>
+
 </body>
 </html>
