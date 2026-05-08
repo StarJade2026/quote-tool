@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOT时间引擎 - 物流风险管理</title>
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  :root {
+    --red: #e74c3c;
+    --yellow: #f39c12;
+    --green: #27ae60;
+    --bg: #f5f6fa;
+    --card-bg: #fff;
+    --text: #2c3e50;
+    --border: #dcdde1;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:20px; }
+  .header { text-align:center; padding:30px 0 20px; }
+  .header h1 { font-size:24px; margin-bottom:6px; }
+  .header .subtitle { color:#7f8c8d; font-size:14px; }
+  
+  .card { background:var(--card-bg); border-radius:10px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+  .card h2 { font-size:18px; margin-bottom:12px; border-bottom:2px solid #3498db; padding-bottom:8px; display:inline-block; }
+  
+  /* 时间轴 */
+  .timeline { position:relative; padding-left:30px; }
+  .timeline::before { content:''; position:absolute; left:12px; top:0; bottom:0; width:2px; background:var(--border); }
+  .tl-node { position:relative; margin-bottom:16px; padding:10px 14px; border-radius:8px; background:#f8f9fa; border-left:3px solid var(--green); }
+  .tl-node.delay { border-left-color: var(--yellow); }
+  .tl-node.critical { border-left-color: var(--red); background:#fdf2f2; }
+  .tl-node::before { content:''; position:absolute; left:-37px; top:14px; width:12px; height:12px; border-radius:50%; background:var(--green); border:2px solid #fff; box-shadow:0 0 0 2px var(--green); }
+  .tl-node.delay::before { background:var(--yellow); box-shadow:0 0 0 2px var(--yellow); }
+  .tl-node.critical::before { background:var(--red); box-shadow:0 0 0 2px var(--red); }
+  .tl-node .node-name { font-weight:600; font-size:15px; }
+  .tl-node .node-time { font-size:13px; color:#7f8c8d; margin-top:4px; }
+  .tl-node .node-diff { font-size:12px; margin-top:2px; }
+  .tl-node .diff-ok { color:var(--green); }
+  .tl-node .diff-warn { color:var(--yellow); }
+  .tl-node .diff-bad { color:var(--red); font-weight:600; }
+  
+  /* 风险卡片 */
+  .risk-list { list-style:none; }
+  .risk-list li { padding:10px 14px; margin-bottom:8px; border-radius:6px; font-size:14px; }
+  .risk-list .risk-high { background:#fde8e8; border-left:4px solid var(--red); }
+  .risk-list .risk-mid { background:#fef3cd; border-left:4px solid var(--yellow); }
+  .risk-list .risk-low { background:#e8f5e9; border-left:4px solid var(--green); }
+  
+  .meta-bar { text-align:center; font-size:12px; color:#95a5a6; padding:20px 0; }
+  .btn { display:inline-block; padding:10px 24px; background:#3498db; color:#fff; border:none; border-radius:6px; font-size:14px; cursor:pointer; margin:4px; }
+  .btn:hover { background:#2980b9; }
+  .btn:disabled { background:#bdc3c7; cursor:not-allowed; }
+  .btn-group { text-align:center; margin-top:16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>⏱ MOT时间引擎</h1>
+    <p class="subtitle">基于道瑞SOP · 出口FCL标准节点链 · 风险管理原型 v0.1</p>
+  </div>
+
+  <div class="card" id="workflowInfo">
+    <h2>📋 当前流转单</h2>
+    <div id="wfDetail">加载中...</div>
+  </div>
+
+  <div class="card">
+    <h2>🕐 时间轴</h2>
+    <div class="timeline" id="timeline">加载中...</div>
+  </div>
+
+  <div class="card">
+    <h2>⚠️ 风险提示</h2>
+    <ul class="risk-list" id="riskList">加载中...</ul>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn" disabled id="btnOther">试试其他流转单（开发中）</button>
+  </div>
+
+  <div class="meta-bar">
+    当前数据版本：v0.1｜基于道瑞SOP 2026Q1版｜节点链：订舱→装箱→报关→发运→海上→到港→到港通知
+  </div>
+</div>
+
+<script src="mot-engine.js"></script>
+<script>
+  fetch('sample-workflow.json')
+    .then(r => r.json())
+    .then(data => {
+      const result = motEngine.analyze(data);
+      render(result);
+    })
+    .catch(err => {
+      document.getElementById('timeline').innerHTML = '<p style="color:red">数据加载失败：' + err.message + '</p>';
+    });
+
+  function render(result) {
+    // 流转单信息
+    const wf = result.workflowInfo;
+    document.getElementById('wfDetail').innerHTML = `
+      <p><strong>提单号：</strong>${wf.billNo} &nbsp;|&nbsp; <strong>运输模式：</strong>${wf.mode} &nbsp;|&nbsp; <strong>路线：</strong>${wf.origin} → ${wf.destination}</p>
+      <p style="font-size:13px;color:#7f8c8d;">开船日：${wf.etd} &nbsp;|&nbsp; 预计到港：${wf.eta} &nbsp;|&nbsp; 贸易条款：${wf.terms}</p>
+    `;
+
+    // 时间轴
+    let tlHTML = '';
+    result.nodes.forEach(n => {
+      let cls = '';
+      if (n.severity === 'critical') cls = 'critical';
+      else if (n.severity === 'warning') cls = 'delay';
+      
+      let diffHTML = '';
+      if (n.diffDays !== null) {
+        let diffCls = 'diff-ok';
+        if (n.severity === 'critical') diffCls = 'diff-bad';
+        else if (n.severity === 'warning') diffCls = 'diff-warn';
+        const sign = n.diffDays > 0 ? '+' : '';
+        diffHTML = `<div class="node-diff ${diffCls}">实际偏差：${sign}${n.diffDays}天（标准窗口：${n.stdWindow}）</div>`;
+      }
+      
+      tlHTML += `
+        <div class="tl-node ${cls}">
+          <div class="node-name">${n.name}</div>
+          <div class="node-time">标准：${n.expectedDate} &nbsp;|&nbsp; 实际：${n.actualDate || '待确认'}</div>
+          ${diffHTML}
+        </div>
+      `;
+    });
+    document.getElementById('timeline').innerHTML = tlHTML;
+
+    // 风险提示
+    let riskHTML = '';
+    result.risks.forEach(r => {
+      let cls = 'risk-low';
+      if (r.level === 'high') cls = 'risk-high';
+      else if (r.level === 'mid') cls = 'risk-mid';
+      riskHTML += `<li class="${cls}"><strong>${r.nodeName}：</strong>${r.message}</li>`;
+    });
+    if (result.risks.length === 0) {
+      riskHTML = '<li class="risk-low">✅ 所有节点在标准时间窗口内，暂无风险提示</li>';
+    }
+    document.getElementById('riskList').innerHTML = riskHTML;
+  }
+</script>
+</body>
+</html>
