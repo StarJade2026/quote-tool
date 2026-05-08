@@ -1,0 +1,17 @@
+{
+  "billNo": "COSU6088888880",
+  "mode": "FCL出口",
+  "origin": "青岛",
+  "destination": "汉堡",
+  "etd": "2026-04-20",
+  "eta": "2026-05-18",
+  "terms": "FOB",
+  "actualDates": {
+    "booking": "2026-04-03",
+    "stuffing": "2026-04-16",
+    "customs": "2026-04-18",
+    "departure": "2026-04-20",
+    "arrival": "2026-05-20",
+    "arrivalNotice": "2026-05-21"
+  }
+}
