@@ -1277,6 +1277,104 @@ BAF 300 USD</textarea>
  <p>你在使用过程中输入的所有业务信息和供应商数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
  <p>因使用本工具而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
 </div>
+<script>
+(function() {
+  // MOT时间引擎跳转按钮
+  var btnHTML = '<button type="button" id="btnMOT" style="width:100%;padding:12px;background:#2c3e50;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-top:12px;">⏱ 时间风险分析</button>';
+  
+  // 等页面加载完再插入按钮
+  function insertButton() {
+    var existingBtn = document.getElementById('btnMOT');
+    if (existingBtn) return;
+    
+    // 尝试插入到提交按钮附近
+    var submitArea = document.querySelector('button[type="submit"]') || 
+                     document.querySelector('.submit-btn') ||
+                     document.querySelector('.form-actions') ||
+                     document.querySelector('form');
+    
+    if (submitArea && submitArea.parentNode) {
+      var tempDiv = document.createElement('div');
+      tempDiv.innerHTML = btnHTML;
+      var btn = tempDiv.firstChild;
+      submitArea.parentNode.insertBefore(btn, submitArea.nextSibling);
+    } else {
+      // 备选：插到body末尾
+      var tempDiv = document.createElement('div');
+      tempDiv.innerHTML = btnHTML;
+      document.body.appendChild(tempDiv.firstChild);
+    }
+    
+    // 绑定点击事件
+    document.getElementById('btnMOT').addEventListener('click', function() {
+      var wfData = buildWorkflowData();
+      var encoded = encodeURIComponent(JSON.stringify(wfData));
+      var motURL = '../mot/?data=' + encoded;
+      window.open(motURL, '_blank');
+    });
+  }
 
+  // 从表单提取流转单数据
+  function buildWorkflowData() {
+    var data = {
+      billNo: '',
+      mode: '',
+      origin: '',
+      destination: '',
+      etd: '',
+      eta: '',
+      terms: '',
+      actualDates: {}
+    };
+
+    // 尝试从输入框/选择框读取（根据你实际流转单的字段名调整）
+    var fields = {
+      billNo:  ['billNo', 'bill_no', '提单号', 'mbno'],
+      mode:    ['mode', 'transportMode', '运输模式'],
+      origin:  ['origin', 'pol', '起运港', '装货港'],
+      destination: ['destination', 'pod', '目的港', '卸货港'],
+      etd:     ['etd', 'etdDate', '开船日'],
+      eta:     ['eta', 'etaDate', '预计到港'],
+      terms:   ['terms', 'tradeTerms', '贸易条款']
+    };
+
+    Object.keys(fields).forEach(function(key) {
+      var names = fields[key];
+      for (var i = 0; i < names.length; i++) {
+        var el = document.querySelector('[name="' + names[i] + '"], [id="' + names[i] + '"], [data-field="' + names[i] + '"]');
+        if (el) {
+          data[key] = el.value || el.textContent || '';
+          break;
+        }
+      }
+    });
+
+    // 如果上面都没抓到，尝试获取所有输入框的值
+    var allInputs = document.querySelectorAll('input, select, textarea');
+    allInputs.forEach(function(input) {
+      var name = (input.name || input.id || '').toLowerCase();
+      var val = input.value;
+      if (!val) return;
+      
+      if (name.indexOf('bill') !== -1 || name.indexOf('提单') !== -1) data.billNo = val;
+      if (name.indexOf('mode') !== -1 || name.indexOf('运输') !== -1) data.mode = val;
+      if (name.indexOf('origin') !== -1 || name.indexOf('起运') !== -1 || name.indexOf('装货') !== -1 || name.indexOf('pol') !== -1) data.origin = val;
+      if (name.indexOf('dest') !== -1 || name.indexOf('目的') !== -1 || name.indexOf('卸货') !== -1 || name.indexOf('pod') !== -1) data.destination = val;
+      if (name.indexOf('etd') !== -1 || name.indexOf('开船') !== -1) data.etd = val;
+      if (name.indexOf('eta') !== -1 || name.indexOf('到港') !== -1) data.eta = val;
+      if (name.indexOf('term') !== -1 || name.indexOf('贸易') !== -1) data.terms = val;
+    });
+
+    return data;
+  }
+
+  // 页面加载后插入按钮
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', insertButton);
+  } else {
+    insertButton();
+  }
+})();
+</script>
 </body>
 </html>
