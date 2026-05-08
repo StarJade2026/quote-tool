@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAG知识圈 · 内部智库验证</title>
+<title>RAG知识圈 · 内部智库 v0.2</title>
 <style>
   :root {
     --bg: #f5f6fa;
@@ -13,6 +13,7 @@
     --blue: #3498db;
     --green: #27ae60;
     --orange: #f39c12;
+    --red: #e74c3c;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
@@ -24,52 +25,61 @@
   .card { background:var(--card-bg); border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
   .card h2 { font-size:16px; margin-bottom:10px; }
 
-  /* 搜索框 */
   .search-row { display:flex; gap:10px; }
   .search-row input { flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
-  .search-row button { padding:10px 20px; background:var(--blue); color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
+  .search-row button { padding:10px 20px; background:var(--blue); color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; white-space:nowrap; }
   .search-row button:hover { opacity:0.9; }
+  .search-row button:disabled { background:#bdc3c7; cursor:not-allowed; }
 
-  /* 结果 */
   .result-item { padding:14px; margin-bottom:10px; border-left:4px solid var(--blue); background:#f8f9fb; border-radius:0 8px 8px 0; }
   .result-item .score { font-size:11px; color:var(--orange); float:right; }
   .result-item .source { font-size:12px; color:#7f8c8d; margin-bottom:6px; }
   .result-item .snippet { font-size:14px; }
   .result-item .snippet mark { background:#fff3cd; padding:1px 3px; border-radius:2px; }
 
-  .empty { text-align:center; color:#95a5a6; padding:30px; }
+  .generated-answer { background:#f0f7ff; border-left:4px solid var(--green); padding:16px; border-radius:0 8px 8px 0; margin-top:12px; font-size:14px; line-height:1.8; }
+  .generated-answer .ref { font-size:11px; color:#7f8c8d; margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
 
+  .empty { text-align:center; color:#95a5a6; padding:30px; }
   .stats { font-size:12px; color:#7f8c8d; text-align:center; margin-top:12px; }
   .meta { text-align:center; font-size:11px; color:#bdc3c7; padding:16px 0; }
+  .error-msg { color:var(--red); font-size:13px; padding:10px; background:#fdf2f2; border-radius:6px; margin-top:10px; }
+  .loading { text-align:center; padding:15px; color:#7f8c8d; }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
-    <h1>🧠 RAG知识圈 · 内部智库验证</h1>
-    <div class="sub">语料库：3篇内部文章｜纯前端检索｜零API调用</div>
+    <h1>🧠 RAG知识圈 · 内部智库 v0.2</h1>
+    <div class="sub">语料库：4篇内部文章｜检索 + AI生成｜基于专属知识库</div>
   </div>
 
   <div class="card">
-    <h2>🔍 检索测试</h2>
+    <h2>🔍 提出问题</h2>
     <div class="search-row">
-      <input type="text" id="queryInput" placeholder="输入问题，如：什么是三段法？怎么申请MTO资质？" onkeydown="if(event.key==='Enter')search();">
-      <button onclick="search()">检索</button>
+      <input type="text" id="queryInput" placeholder="输入问题，如：什么是三段法？怎么考核操作员？" onkeydown="if(event.key==='Enter')search();">
+      <button onclick="search()" id="btnSearch">🔍 检索</button>
+      <button onclick="generate()" id="btnGenerate" disabled>✨ AI生成回答</button>
     </div>
     <div class="stats" id="stats"></div>
   </div>
 
   <div class="card">
-    <h2>📋 检索结果</h2>
-    <div id="results"><div class="empty">👆 输入问题，开始检索内部智库</div></div>
+    <h2>📋 结果</h2>
+    <div id="results"><div class="empty">👆 先检索，再生成，或直接让AI回答</div></div>
   </div>
 
   <div class="meta">
-    RAG原型 v0.1｜语料：Julia公众号文章3篇｜数据不出浏览器
+    RAG原型 v0.2｜专属智库 · 数据不出浏览器 · 生成调用DeepSeek
   </div>
 </div>
 
 <script>
+// ========== 配置 ==========
+const WORKER_URL = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
+const MODEL = 'deepseek-chat';
+let lastSearchResults = [];
+
 // ========== 语料库 ==========
 const CORPUS = [
   {
@@ -132,155 +142,197 @@ const CORPUS = [
         keywords: '分工 情绪价值 专业距离 工作逻辑一致性 新人 老人 KPI'
       }
     ]
+  },
+  {
+    id: 'doc-4',
+    title: '我的报价与考核闭环——风险成本分离',
+    date: '2026-05',
+    chunks: [
+      {
+        text: '我的报价逻辑：先算"风险成本"，再加利润。很多人报价是：成本 + 利润 = 报价。我不是。我的报价是：（保底成本 + 预判的风险成本） + 5%-10%利润 = 报价。核心区别在于——我会在成本里先放一笔"风险预备金"。假设某个海外段的操作，根据经验，每四票货里可能会有一票出问题，额外成本大概1000块。一个月如果发四批货，我会在成本里先核算500块的"风险成本"。没出事，这500块就是利润；出事了，从这里出，不找客户要。',
+        keywords: '风险成本 报价 风险预备金 利润 成本核算'
+      },
+      {
+        text: '让操作团队参与"省钱分成"。报价做完，我会跟操作员说：这批货，我在成本里已经放了一笔风险预备金。对你来说，你是帮公司亏钱还是帮公司赚钱，就看这笔钱最后花没花掉。如果他提前做了预案——跟供应商确认清楚、盯紧节点、把可能出问题的地方都提前堵上——这笔风险成本就不会发生。月底一看，利润很好看，他自己也开心。',
+        keywords: '操作员 省钱分成 风险预备金 考核 激励'
+      },
+      {
+        text: '我赚的到底是两笔钱：第一笔，风险预判的钱。我判断这个环节可能出问题，提前放了预备金。没出事，预备金就是利润。但我不是"赌它不出事"，我是用经验判断概率，并且在执行中让团队尽量让概率不发生。第二笔，风险兜底的钱。如果真的出事了，这笔预备金用来填坑。客户不需要额外掏钱。客户买到的不是一个"价格"，而是一个"确定性"。',
+        keywords: '风险预判 风险兜底 确定性 利润来源 客户价值'
+      }
+    ]
   }
 ];
 
-// ========== 分词器（简易中文分词） ==========
+// ========== 分词器 ==========
 function tokenize(text) {
-  // 去掉标点，按空格/换行/常用分隔符切分
   var cleaned = text.toLowerCase()
     .replace(/[，。、《》？；：""''！（）—…\n\r\.\,\?\!;:"'\(\)\[\]\/\\]/g, ' ')
     .replace(/\s+/g, ' ');
-  
-  // 提取1-gram（单字）和2-gram（双字组合）混合
   var words = cleaned.split(' ').filter(function(w) { return w.length > 0; });
   var tokens = [];
-  
   words.forEach(function(w) {
-    if (w.length <= 3) {
-      tokens.push(w);
-    } else {
-      // 长词拆成2-gram
-      for (var i = 0; i < w.length - 1; i++) {
-        tokens.push(w.substring(i, i+2));
-      }
-      // 也保留整个词
+    if (w.length <= 3) { tokens.push(w); }
+    else {
+      for (var i = 0; i < w.length - 1; i++) { tokens.push(w.substring(i, i+2)); }
       tokens.push(w);
     }
   });
-  
   return tokens;
 }
 
-// ========== BM25风格的相关性评分 ==========
 function scoreChunk(queryTokens, chunkTokens) {
-  var score = 0;
-  var matchedTokens = {};
-  
+  var score = 0, matched = {};
   queryTokens.forEach(function(qt) {
-    if (matchedTokens[qt]) return; // 不重复计分
-    var countInChunk = 0;
-    chunkTokens.forEach(function(ct) {
-      if (ct === qt) countInChunk++;
-    });
-    if (countInChunk > 0) {
-      score += Math.log(1 + countInChunk);
-      matchedTokens[qt] = true;
-    }
+    if (matched[qt]) return;
+    var cnt = 0;
+    chunkTokens.forEach(function(ct) { if (ct === qt) cnt++; });
+    if (cnt > 0) { score += Math.log(1 + cnt); matched[qt] = true; }
   });
-  
-  // 加分：如果chunk的keywords字段匹配
   return score;
 }
 
-function scoreByKeywords(queryTokens, keywordStr) {
-  if (!keywordStr) return 0;
-  var kwTokens = tokenize(keywordStr);
-  var matchCount = 0;
+function scoreByKeywords(queryTokens, kwStr) {
+  if (!kwStr) return 0;
+  var kwTokens = tokenize(kwStr), match = 0;
   queryTokens.forEach(function(qt) {
-    kwTokens.forEach(function(kt) {
-      if (kt === qt) matchCount++;
-    });
+    kwTokens.forEach(function(kt) { if (kt === qt) match++; });
   });
-  return matchCount * 0.5; // keyword匹配权重稍低
+  return match * 0.5;
 }
 
-// ========== 主检索函数 ==========
+// ========== 检索 ==========
 function search() {
   var query = document.getElementById('queryInput').value.trim();
   if (!query) return;
-  
   var startTime = performance.now();
   var queryTokens = tokenize(query);
-  
   var allResults = [];
-  
+
   CORPUS.forEach(function(doc) {
     doc.chunks.forEach(function(chunk, idx) {
       var chunkTokens = tokenize(chunk.text);
       var textScore = scoreChunk(queryTokens, chunkTokens);
       var kwScore = scoreByKeywords(queryTokens, chunk.keywords);
       var totalScore = textScore + kwScore;
-      
       if (totalScore > 0) {
-        allResults.push({
-          docId: doc.id,
-          docTitle: doc.title,
-          docDate: doc.date,
-          chunkIndex: idx,
-          text: chunk.text,
-          score: totalScore
-        });
+        allResults.push({ docId: doc.id, docTitle: doc.title, docDate: doc.date, chunkIndex: idx, text: chunk.text, score: totalScore });
       }
     });
   });
-  
-  // 按分数降序排列
+
   allResults.sort(function(a, b) { return b.score - a.score; });
-  
-  // 取Top 5
-  var topResults = allResults.slice(0, 5);
-  
-  renderResults(topResults, queryTokens, query, performance.now() - startTime);
+  lastSearchResults = allResults.slice(0, 5);
+  renderSearchResults(queryTokens, performance.now() - startTime);
+  document.getElementById('btnGenerate').disabled = (lastSearchResults.length === 0);
 }
 
-function renderResults(results, queryTokens, query, elapsed) {
+function renderSearchResults(queryTokens, elapsed) {
   var container = document.getElementById('results');
   var stats = document.getElementById('stats');
-  
-  if (results.length === 0) {
-    container.innerHTML = '<div class="empty">😕 未找到相关内容<br><small>试试换个关键词，如："三段法"、"MTO资质"、"直客操作"</small></div>';
+  if (lastSearchResults.length === 0) {
+    container.innerHTML = '<div class="empty">😕 未找到相关内容</div>';
     stats.textContent = '检索完成，0条结果（' + elapsed.toFixed(0) + 'ms）';
     return;
   }
-  
   var html = '';
-  results.forEach(function(r) {
-    // 高亮匹配词
+  lastSearchResults.forEach(function(r) {
     var snippet = r.text;
     queryTokens.forEach(function(qt) {
       if (qt.length < 2) return;
       var regex = new RegExp(qt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       snippet = snippet.replace(regex, '<mark>$&</mark>');
     });
-    
-    // 截断过长文本
-    if (snippet.length > 300) {
-      snippet = snippet.substring(0, 300) + '...';
-    }
-    
+    if (snippet.length > 250) snippet = snippet.substring(0, 250) + '...';
     html += '<div class="result-item">' +
       '<span class="score">相关性 ' + r.score.toFixed(1) + '</span>' +
       '<div class="source">📄 ' + r.docTitle + '（' + r.docDate + '）· 片段' + (r.chunkIndex + 1) + '</div>' +
-      '<div class="snippet">' + snippet + '</div>' +
-      '</div>';
+      '<div class="snippet">' + snippet + '</div></div>';
   });
-  
   container.innerHTML = html;
-  stats.textContent = '检索完成，' + results.length + '条结果（共' + CORPUS.reduce(function(s,d){return s+d.chunks.length;},0) + '个片段，耗时' + elapsed.toFixed(0) + 'ms）';
+  stats.textContent = '检索完成，' + lastSearchResults.length + '条结果（' + elapsed.toFixed(0) + 'ms）｜点击"AI生成回答"获取整合答案';
 }
 
-// 启动时随机显示一个提示
+// ========== 生成 ==========
+function generate() {
+  if (lastSearchResults.length === 0) return;
+  var query = document.getElementById('queryInput').value.trim();
+  
+  var container = document.getElementById('results');
+  var loadingDiv = document.createElement('div');
+  loadingDiv.className = 'loading';
+  loadingDiv.textContent = '⏳ 正在基于内部知识库生成回答...';
+  container.appendChild(loadingDiv);
+
+  var btn = document.getElementById('btnGenerate');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中...';
+
+  // 构建上下文
+  var contextParts = [];
+  lastSearchResults.forEach(function(r, i) {
+    contextParts.push('【来源' + (i+1) + '】《' + r.docTitle + '》（' + r.docDate + '）：' + r.text);
+  });
+  var context = contextParts.join('\n\n');
+
+  var systemPrompt = '你是Julia的内部智库助手。你只能基于下面提供的知识片段来回答问题，不能编造或使用外部知识。' +
+    '如果片段中有明确的操作步骤、方法论、案例，请直接引用。回答要专业、简洁、有条理，保持与Julia公众号文章一致的"说人话"风格。' +
+    '回答末尾请标注引用了哪几个来源（用【来源1】【来源2】标注）。';
+
+  fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: '知识片段：\n\n' + context + '\n\n用户问题：' + query }
+      ],
+      temperature: 0.3,
+      max_tokens: 1500
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    var answer = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '（未获取到回答内容）';
+    
+    // 构建引用来源
+    var refs = [];
+    lastSearchResults.forEach(function(r, i) {
+      refs.push('【来源' + (i+1) + '】《' + r.docTitle + '》片段' + (r.chunkIndex + 1));
+    });
+
+    var answerHTML = '<div class="generated-answer">' +
+      '<div style="font-weight:600;color:var(--green);margin-bottom:8px;">🤖 基于内部知识库的AI回答</div>' +
+      '<div>' + answer.replace(/\n/g, '<br>') + '</div>' +
+      '<div class="ref">📚 引用来源：' + refs.join('；') + '</div></div>';
+
+    // 移除loading，追加回答
+    if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+    container.insertAdjacentHTML('beforeend', answerHTML);
+  })
+  .catch(function(err) {
+    if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+    var errHTML = '<div class="error-msg">❌ 生成失败：' + err.message + '<br><small>请检查API代理层配置或稍后重试</small></div>';
+    container.insertAdjacentHTML('beforeend', errHTML);
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = '✨ AI生成回答';
+  });
+}
+
+// ========== 启动 ==========
 (function() {
   var tips = [
     '试试问："什么是三段法？"',
-    '试试问："怎么申请MTO资质？"',
-    '试试问："疫情对海运有什么影响？"',
+    '试试问："怎么考核操作员？"',
+    '试试问："报价和别人的有什么区别？"',
     '试试问："直客和指定货操作有什么区别？"',
-    '试试问："物流数字化的四个阶段是什么？"'
+    '试试问："多式联运有什么陷阱？"'
   ];
-  var tip = tips[Math.floor(Math.random() * tips.length)];
-  document.getElementById('queryInput').placeholder = tip;
+  document.getElementById('queryInput').placeholder = tips[Math.floor(Math.random() * tips.length)];
 })();
 </script>
 </body>
