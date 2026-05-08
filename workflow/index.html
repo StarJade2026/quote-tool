@@ -1278,77 +1278,26 @@ BAF 300 USD</textarea>
 </div>
 <script>
 (function() {
-  // 加强版：暴力插按钮 + 滚动时主动追击
-  var attempts = 0;
-  var maxAttempts = 20;
+  // MOT引擎跳转按钮 v0.3 — 从localStorage读取完整数据
 
-  function tryInsert() {
-    attempts++;
-    
-    // 如果已经有按钮了，跳过
+  function insertButton() {
     if (document.getElementById('btnMOT')) return;
 
-    // 策略1：找form或任何包含input的容器
-    var container = document.querySelector('form') || 
-                    document.querySelector('[class*="form"]') ||
-                    document.querySelector('[class*="container"]') ||
-                    document.querySelector('main') ||
-                    document.querySelector('.content') ||
-                    document.body;
-
-    // 策略2：找所有提交/保存类按钮的父节点
-    var refNode = document.querySelector('button[type="submit"]') ||
-                  document.querySelector('button') ||
-                  document.querySelector('input[type="submit"]') ||
-                  document.querySelector('.btn');
-
-    if (refNode && refNode.parentNode) {
-      container = refNode.parentNode;
-    }
-
-    if (!container) {
-      if (attempts < maxAttempts) {
-        setTimeout(tryInsert, 500);
-      }
-      return;
-    }
-
-    // 创建按钮
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.id = 'btnMOT';
     btn.textContent = '⏱ 时间风险分析';
     btn.style.cssText = 'display:block;width:100%;max-width:600px;margin:20px auto;padding:14px;background:#2c3e50;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);';
 
-    // 点击事件
     btn.addEventListener('click', function() {
       var wfData = buildWorkflowData();
-      
-      // 调试：弹窗看看抓到了什么（如果抓不到数据，这个弹窗能帮你定位）
-      // 部署成功后可以注释掉下面这行
-      // alert('抓取到的数据：\n' + JSON.stringify(wfData, null, 2));
-
-      if (!wfData.billNo && !wfData.mode && !wfData.etd && !wfData.eta) {
-        alert('⚠️ 未抓取到流转单数据。请检查表单字段是否已填写。\n\n如果字段已填写，可能是字段名不匹配，请联系PT6调整。');
-        return;
-      }
-
       var encoded = encodeURIComponent(JSON.stringify(wfData));
       var motURL = '../mot/?data=' + encoded;
       window.open(motURL, '_blank');
     });
 
-    // 插入到容器末尾
-    container.appendChild(btn);
-
-    // 再在body末尾也放一个（双保险，至少一个能看见）
-    if (container !== document.body) {
-      var btn2 = btn.cloneNode(true);
-      btn2.id = 'btnMOT-bottom';
-      btn2.style.marginTop = '30px';
-      btn2.addEventListener('click', btn.onclick); // 复制点击事件
-      document.body.appendChild(btn2);
-    }
+    // 只插一次，插在body末尾
+    document.body.appendChild(btn);
   }
 
   function buildWorkflowData() {
@@ -1363,48 +1312,59 @@ BAF 300 USD</textarea>
       actualDates: {}
     };
 
-    // 暴力提取：遍历页面上所有input/select/textarea
-    var allInputs = document.querySelectorAll('input, select, textarea');
-    var values = {};
-    
-    allInputs.forEach(function(el) {
-      var name = (el.name || el.id || el.placeholder || '').toLowerCase();
-      var val = el.value.trim();
-      if (!val || !name) return;
-      values[name] = val;
-    });
+    // 方案1：从localStorage读取当前版本数据（最完整）
+    var projectName = (document.getElementById('projectName') || {}).value || '';
+    var version = (document.getElementById('versionDisplay') || {}).value || '';
+    var storageKey = 'wf_' + projectName + '_' + version;
 
-    // 如果只有一个输入框有值，直接遍历也行
-    // 把拿到的值按关键字匹配
-    Object.keys(values).forEach(function(name) {
-      var val = values[name];
-      
-      if (/提单|bill|mbno|b\/l/i.test(name)) data.billNo = val;
-      else if (/运输模式|mode|transport/i.test(name)) data.mode = val;
-      else if (/起运|装货|pol|origin|departure.*port/i.test(name)) data.origin = val;
-      else if (/目的|卸货|pod|dest|arrival.*port/i.test(name)) data.destination = val;
-      else if (/etd|开船|sailing/i.test(name) && !/eta/i.test(name)) data.etd = val;
-      else if (/eta|到港|arrival/i.test(name) && !/etd/i.test(name)) data.eta = val;
-      else if (/贸易|term|trade|条款/i.test(name)) data.terms = val;
-    });
+    try {
+      var raw = localStorage.getItem(storageKey);
+      if (raw) {
+        var stored = JSON.parse(raw);
+        data.billNo = projectName + ' / ' + version;
+        data.mode = (stored.isSpecified ? '指定货' : '直客') + ' FCL出口';
+        data.origin = stored.geo1 || '';
+        data.destination = stored.geo3 || '';
+        data.etd = stored.etdDate || '';
+        data.terms = stored.tradeTerm || '';
+        data.containerInfo = stored.containerInfo || '';
+        // ETA：如果geo2里有 → 符号，尝试提取
+        if (stored.geo2 && stored.geo2.indexOf('→') > -1) {
+          var parts = stored.geo2.split('→');
+          data.transshipPort = parts[1].trim();
+        }
+      }
+    } catch(e) {
+      console.warn('MOT: localStorage读取失败，降级为DOM抓取', e);
+    }
 
-    // 补充：如果没有匹配到，把所有有值的输入框都打印出来，方便你排查
-    if (!data.billNo && !data.mode) {
-      console.log('MOT: 未匹配到关键字段，页面所有输入值：', values);
+    // 方案2（兜底）：如果localStorage没拿到，从DOM抓
+    if (!data.etd) {
+      var etdEl = document.getElementById('etdDate');
+      if (etdEl) data.etd = etdEl.value;
+    }
+    if (!data.terms) {
+      var termEl = document.getElementById('tradeTerm');
+      if (termEl) data.terms = termEl.value;
+    }
+    if (!data.origin) {
+      var g1 = document.getElementById('geo1');
+      if (g1) data.origin = g1.value;
+    }
+    if (!data.destination) {
+      var g3 = document.getElementById('geo3');
+      if (g3) data.destination = g3.value;
     }
 
     return data;
   }
 
-  // 启动
+  // 页面加载后插入
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryInsert);
+    document.addEventListener('DOMContentLoaded', insertButton);
   } else {
-    tryInsert();
+    insertButton();
   }
-
-  // 额外保险：3秒后再试一次（万一流转单是动态渲染的）
-  setTimeout(tryInsert, 3000);
 })();
 </script>
 </body>
