@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MOT时间引擎 - 物流风险管理</title>
-<link rel="stylesheet" href="../shared/shared.css">
+<link rel="stylesheet" href="../shared/SHARED.CSS">
 <style>
   :root {
     --red: #e74c3c;
@@ -29,17 +29,14 @@
   .timeline { position:relative; padding-left:30px; }
   .timeline::before { content:''; position:absolute; left:12px; top:0; bottom:0; width:2px; background:var(--border); }
   .tl-node { position:relative; margin-bottom:16px; padding:10px 14px; border-radius:8px; background:#f8f9fa; border-left:3px solid var(--green); }
-  .tl-node.delay { border-left-color: var(--yellow); }
+  .tl-node.warning { border-left-color: var(--yellow); background:#fffbf0; }
   .tl-node.critical { border-left-color: var(--red); background:#fdf2f2; }
   .tl-node::before { content:''; position:absolute; left:-37px; top:14px; width:12px; height:12px; border-radius:50%; background:var(--green); border:2px solid #fff; box-shadow:0 0 0 2px var(--green); }
-  .tl-node.delay::before { background:var(--yellow); box-shadow:0 0 0 2px var(--yellow); }
+  .tl-node.warning::before { background:var(--yellow); box-shadow:0 0 0 2px var(--yellow); }
   .tl-node.critical::before { background:var(--red); box-shadow:0 0 0 2px var(--red); }
   .tl-node .node-name { font-weight:600; font-size:15px; }
-  .tl-node .node-time { font-size:13px; color:#7f8c8d; margin-top:4px; }
-  .tl-node .node-diff { font-size:12px; margin-top:2px; }
-  .tl-node .diff-ok { color:var(--green); }
-  .tl-node .diff-warn { color:var(--yellow); }
-  .tl-node .diff-bad { color:var(--red); font-weight:600; }
+  .tl-node .node-meta { font-size:13px; color:#7f8c8d; margin-top:4px; }
+  .tl-node .node-diff { font-size:12px; margin-top:2px; font-weight:500; }
   
   /* 风险卡片 */
   .risk-list { list-style:none; }
@@ -49,17 +46,17 @@
   .risk-list .risk-low { background:#e8f5e9; border-left:4px solid var(--green); }
   
   .meta-bar { text-align:center; font-size:12px; color:#95a5a6; padding:20px 0; }
-  .btn { display:inline-block; padding:10px 24px; background:#3498db; color:#fff; border:none; border-radius:6px; font-size:14px; cursor:pointer; margin:4px; }
+  .btn { display:inline-block; padding:10px 24px; background:#3498db; color:#fff; border:none; border-radius:6px; font-size:14px; cursor:pointer; margin:4px; text-decoration:none; }
   .btn:hover { background:#2980b9; }
-  .btn:disabled { background:#bdc3c7; cursor:not-allowed; }
-  .btn-group { text-align:center; margin-top:16px; }
+  .btn-back { background:#7f8c8d; }
+  .btn-back:hover { background:#6c7a7a; }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
     <h1>⏱ MOT时间引擎</h1>
-    <p class="subtitle">基于道瑞SOP · 出口FCL标准节点链 · 风险管理原型 v0.1</p>
+    <p class="subtitle" id="subtitle">基于道瑞SOP · 时间风险管理 v0.2</p>
   </div>
 
   <div class="card" id="workflowInfo">
@@ -77,74 +74,107 @@
     <ul class="risk-list" id="riskList">加载中...</ul>
   </div>
 
-  <div class="btn-group">
-    <button class="btn" disabled id="btnOther">试试其他流转单（开发中）</button>
+  <div style="text-align:center;margin-top:16px;">
+    <a href="../workflow/" class="btn btn-back">← 返回流转单</a>
   </div>
 
   <div class="meta-bar">
-    当前数据版本：v0.1｜基于道瑞SOP 2026Q1版｜节点链：订舱→装箱→报关→发运→海上→到港→到港通知
+    当前数据版本：v0.2｜节点链引擎基于道瑞SOP 2026Q1版｜支持出口FCL+进口FCL
   </div>
 </div>
 
 <script src="mot-engine.js"></script>
 <script>
-  fetch('sample-workflow.json')
-    .then(r => r.json())
-    .then(data => {
-      const result = motEngine.analyze(data);
-      render(result);
-    })
-    .catch(err => {
-      document.getElementById('timeline').innerHTML = '<p style="color:red">数据加载失败：' + err.message + '</p>';
-    });
+(function() {
+  // ========== 数据加载 ==========
+  // 优先从URL参数读取（流转单跳转过来）
+  // 否则用本地示例数据（sample-workflow.json）
+
+  function getParam(name) {
+    const url = new URL(window.location.href);
+    return url.searchParams.get(name);
+  }
+
+  const encodedData = getParam('data');
+  
+  if (encodedData) {
+    // 从URL参数解码（流转单跳转过来的真实数据）
+    try {
+      const jsonStr = decodeURIComponent(encodedData);
+      const wfData = JSON.parse(jsonStr);
+      runAnalysis(wfData);
+    } catch(e) {
+      document.getElementById('timeline').innerHTML = 
+        '<p style="color:red;padding:20px;">❌ 数据解析失败：' + e.message + '<br><small>请从流转单工具重新跳转</small></p>';
+    }
+  } else {
+    // 没有URL参数，加载本地示例数据
+    document.getElementById('subtitle').textContent += ' [示例模式]';
+    fetch('sample-workflow.json')
+      .then(r => r.json())
+      .then(runAnalysis)
+      .catch(function(err) {
+        document.getElementById('timeline').innerHTML = 
+          '<p style="color:#f39c12;padding:20px;">📭 暂无流转单数据<br><small>请从流转单工具点击"时间风险分析"按钮跳转</small></p>';
+      });
+  }
+
+  function runAnalysis(wfData) {
+    const result = motEngine.analyze(wfData);
+    render(result);
+  }
 
   function render(result) {
-    // 流转单信息
     const wf = result.workflowInfo;
-    document.getElementById('wfDetail').innerHTML = `
-      <p><strong>提单号：</strong>${wf.billNo} &nbsp;|&nbsp; <strong>运输模式：</strong>${wf.mode} &nbsp;|&nbsp; <strong>路线：</strong>${wf.origin} → ${wf.destination}</p>
-      <p style="font-size:13px;color:#7f8c8d;">开船日：${wf.etd} &nbsp;|&nbsp; 预计到港：${wf.eta} &nbsp;|&nbsp; 贸易条款：${wf.terms}</p>
-    `;
+    document.getElementById('wfDetail').innerHTML = 
+      '<p><strong>提单号：</strong>' + wf.billNo + 
+      ' &nbsp;|&nbsp; <strong>运输模式：</strong>' + wf.mode + 
+      ' &nbsp;|&nbsp; <strong>路线：</strong>' + wf.origin + ' → ' + wf.destination + '</p>' +
+      '<p style="font-size:13px;color:#7f8c8d;">' +
+      (wf.etd ? '开船日：' + wf.etd + ' &nbsp;|&nbsp; ' : '') +
+      (wf.eta ? '预计到港：' + wf.eta + ' &nbsp;|&nbsp; ' : '') +
+      (wf.terms ? '贸易条款：' + wf.terms : '') +
+      '</p>';
 
-    // 时间轴
-    let tlHTML = '';
-    result.nodes.forEach(n => {
-      let cls = '';
+    // 时间轴渲染
+    var tlHTML = '';
+    result.nodes.forEach(function(n) {
+      var cls = '';
       if (n.severity === 'critical') cls = 'critical';
-      else if (n.severity === 'warning') cls = 'delay';
+      else if (n.severity === 'warning') cls = 'warning';
       
-      let diffHTML = '';
-      if (n.diffDays !== null) {
-        let diffCls = 'diff-ok';
-        if (n.severity === 'critical') diffCls = 'diff-bad';
-        else if (n.severity === 'warning') diffCls = 'diff-warn';
-        const sign = n.diffDays > 0 ? '+' : '';
-        diffHTML = `<div class="node-diff ${diffCls}">实际偏差：${sign}${n.diffDays}天（标准窗口：${n.stdWindow}）</div>`;
+      var diffHTML = '';
+      if (n.diffWorkdays !== null && n.diffWorkdays !== undefined) {
+        var diffCls = '';
+        var sign = n.diffWorkdays > 0 ? '+' : '';
+        if (n.severity === 'critical') diffCls = 'style="color:var(--red);font-weight:600;"';
+        else if (n.severity === 'warning') diffCls = 'style="color:var(--yellow);font-weight:600;"';
+        else diffCls = 'style="color:var(--green);"';
+        diffHTML = '<div class="node-diff"' + diffCls + '>偏差：' + sign + n.diffWorkdays + '个工作日（窗口：' + n.stdWindow + '）</div>';
       }
       
-      tlHTML += `
-        <div class="tl-node ${cls}">
-          <div class="node-name">${n.name}</div>
-          <div class="node-time">标准：${n.expectedDate} &nbsp;|&nbsp; 实际：${n.actualDate || '待确认'}</div>
-          ${diffHTML}
-        </div>
-      `;
+      tlHTML += '<div class="tl-node ' + cls + '">' +
+        '<div class="node-name">' + n.name + '</div>' +
+        '<div class="node-meta">标准：' + n.expectedDate + ' &nbsp;|&nbsp; 实际：' + (n.actualDate || '待确认') + '</div>' +
+        diffHTML +
+        '</div>';
     });
     document.getElementById('timeline').innerHTML = tlHTML;
 
-    // 风险提示
-    let riskHTML = '';
-    result.risks.forEach(r => {
-      let cls = 'risk-low';
+    // 风险提示渲染
+    var riskHTML = '';
+    result.risks.forEach(function(r) {
+      var cls = 'risk-low';
       if (r.level === 'high') cls = 'risk-high';
       else if (r.level === 'mid') cls = 'risk-mid';
-      riskHTML += `<li class="${cls}"><strong>${r.nodeName}：</strong>${r.message}</li>`;
+      riskHTML += '<li class="' + cls + '"><strong>' + r.nodeName + '：</strong>' + r.message + '</li>';
     });
     if (result.risks.length === 0) {
       riskHTML = '<li class="risk-low">✅ 所有节点在标准时间窗口内，暂无风险提示</li>';
     }
     document.getElementById('riskList').innerHTML = riskHTML;
   }
+})();
 </script>
 </body>
 </html>
