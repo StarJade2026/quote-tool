@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG知识圈 · 内部智库验证</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --card-bg: #fff;
+    --text: #2c3e50;
+    --border: #dcdde1;
+    --blue: #3498db;
+    --green: #27ae60;
+    --orange: #f39c12;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:20px; }
+  .header { text-align:center; padding:20px 0; }
+  .header h1 { font-size:22px; }
+  .header .sub { color:#7f8c8d; font-size:13px; margin-top:4px; }
+
+  .card { background:var(--card-bg); border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
+  .card h2 { font-size:16px; margin-bottom:10px; }
+
+  /* 搜索框 */
+  .search-row { display:flex; gap:10px; }
+  .search-row input { flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+  .search-row button { padding:10px 20px; background:var(--blue); color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
+  .search-row button:hover { opacity:0.9; }
+
+  /* 结果 */
+  .result-item { padding:14px; margin-bottom:10px; border-left:4px solid var(--blue); background:#f8f9fb; border-radius:0 8px 8px 0; }
+  .result-item .score { font-size:11px; color:var(--orange); float:right; }
+  .result-item .source { font-size:12px; color:#7f8c8d; margin-bottom:6px; }
+  .result-item .snippet { font-size:14px; }
+  .result-item .snippet mark { background:#fff3cd; padding:1px 3px; border-radius:2px; }
+
+  .empty { text-align:center; color:#95a5a6; padding:30px; }
+
+  .stats { font-size:12px; color:#7f8c8d; text-align:center; margin-top:12px; }
+  .meta { text-align:center; font-size:11px; color:#bdc3c7; padding:16px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🧠 RAG知识圈 · 内部智库验证</h1>
+    <div class="sub">语料库：3篇内部文章｜纯前端检索｜零API调用</div>
+  </div>
+
+  <div class="card">
+    <h2>🔍 检索测试</h2>
+    <div class="search-row">
+      <input type="text" id="queryInput" placeholder="输入问题，如：什么是三段法？怎么申请MTO资质？" onkeydown="if(event.key==='Enter')search();">
+      <button onclick="search()">检索</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <h2>📋 检索结果</h2>
+    <div id="results"><div class="empty">👆 输入问题，开始检索内部智库</div></div>
+  </div>
+
+  <div class="meta">
+    RAG原型 v0.1｜语料：Julia公众号文章3篇｜数据不出浏览器
+  </div>
+</div>
+
+<script>
+// ========== 语料库 ==========
+const CORPUS = [
+  {
+    id: 'doc-1',
+    title: '海关多式联运试点解读：三个机会一个陷阱',
+    date: '2026-04',
+    chunks: [
+      {
+        text: '以前：一票货物从上海走海运到新疆，再转铁路去欧洲，你要跑三趟海关——上海海关、阿拉山口口岸海关、目的地国海关。每换一次运输方式，就要重新申报一遍。现在：一张单子走到底，海关只认这个单子，换装地灵活调整，不用卡死在某一个口岸。核心变化是：通关效率提升，合规成本下降。',
+        keywords: '一单制 海关 通关 申报 口岸 换装'
+      },
+      {
+        text: '多式联运经营人（MTO）是这个政策最直接的受益者。以前想做多式联运，你要搞定每个运输段的主管海关。现在试点落地，"一单制"意味着你只需要对最终目的地海关负责，中间环节由监管系统自动流转。怎么做：研究海关12号公告全文，评估现有业务中可以切入多式联运模式的比例，准备MTO资质申请材料，对接单一窗口系统。',
+        keywords: 'MTO 多式联运经营人 资质 单一窗口 申请 海关12号公告'
+      },
+      {
+        text: 'Julia的三段法拆解：任意多式联运路径，都可以拆成三段——起运地地面服务（国内段）、干线运输（离岸段）、目的地地面服务（海外段）。做方案时，三段独立评估时效、成本、风险，而不是混在一起算。比如重庆→德国：长江水运到上海（地面段），上海→汉堡铁路（干线段），汉堡→工厂卡车（目的地段）。三段分别找最优供应商，再组合。',
+        keywords: '三段法 多式联运 路径拆解 地面段 干线段 目的地段 时效 成本 风险'
+      },
+      {
+        text: '陷阱是：低估合规成本，高估短期收益。MTO资质申请光准备材料就要3-6个月；系统对接改造成本比预期高3倍；客户教育成本远超想象。多式联运不是一个"今天入场、明天变现"的生意。三单一致风险提示：多式联运最大的坑是三单不一致——订舱单、报关单、舱单数据在三段之间断裂。建议在起运地就把三段的数据标准统一，用一套"基础数据模板"流转。',
+        keywords: '陷阱 合规成本 MTO资质 三单一致 数据断裂 基础数据模板 风险'
+      }
+    ]
+  },
+  {
+    id: 'doc-2',
+    title: '对于物流及物流服务行业数字化升级的一点分析和畅想',
+    date: '2025-10',
+    chunks: [
+      {
+        text: '数字化可不仅仅是用上电脑输入系统这么简单。首先就是数据化，比如我们最早经历的十联单阶段就是把所有物流流程中需要的资料数据信息都分门别类变成数据信息表格式呈现。其次是信息化，就是把业务表单变成程序系统的数据内存实现数据在业务流程不同阶段的调用和更新。第三才是数字化，是打通信息化的各环节单位电脑之间的信息互传，全链条数据网络化，取消线下人工导入导出传输的低效率方式。最后是数智化，是利用计算机新兴技术实现物流流程的规划和效率优化。',
+        keywords: '数字化 数据化 信息化 数智化 四阶段 流程 系统 网络化'
+      },
+      {
+        text: '20年航空市场的巨变：航司无力承担巨大的市场需求退而求其次只承担出租飞机的粗活儿，把对接需求的细活儿交给了货代服务商们。尽管如此，在太过庞大的全球市场需求的高压下，依旧发生了包机飞机在途径中转国时物资被截扣的恶性事件并且引发了国际外交争议。21年海运市场缺船缺仓位缺集装箱是因为境外港口缺人导致卸船延迟甚至停滞，船舶空载返回起运港造成全球集装箱各港口分布极度不均衡。',
+        keywords: '疫情 航空 海运 缺箱 港口拥堵 供应链 2020 2021'
+      },
+      {
+        text: '业内只说生意越来越难做了，不管是客户要求还是业务流程中的不可控风险都在提升难度，可是物流服务提供商（货代）的利润却因为僧多粥少而变得越来越薄。可从大局上看，东大国力不断强大，对于本国物流企业发展的未来来说极具战略优势。各省市地区的国营物流集团如雨后春笋；中欧铁临时班列申请权紧缩到新的班列政策落地；北极航线的建设；跨境陆运的运力缺口。',
+        keywords: '行业趋势 竞争 利润 国营物流集团 中欧班列 北极航线 战略'
+      }
+    ]
+  },
+  {
+    id: 'doc-3',
+    title: '不到10人的货代团队，加一个人反而更乱了？',
+    date: '2026-04',
+    chunks: [
+      {
+        text: '小团队加人，不是切蛋糕，是重新画棋盘。拿出一张纸，写下你们公司现在的所有业务类型。海运、空运、进口、出口、直客、指定货。每一项后面标两个数字：一个是大概的单量占比，一个是处理这件事要花的时间占比。比如你发现海运出口占了60%的单量，却花了操作80%的精力。进口空运虽然也有活，但单量少，流程简单，只占20%的时间。',
+        keywords: '小团队 加人 业务分类 单量占比 时间占比 管理方法'
+      },
+      {
+        text: '不要让员工的脑子在不同的频道之间反复横跳。直客货和指定货，操作流程上的确差不多，但脑子里的那根弦完全不一样。做直客的操作，脑子里的弦叫"情绪价值"。他要哄着工厂，要跟销售打配合，要处理客户的各种临时问题和情绪。做指定货的操作，脑子里的弦叫"专业距离"。他的客户在海外，他面对国内工厂时核心是客观、中立、保持距离。遇到贸易纠纷，他得站在中间把事办了。',
+        keywords: '直客 指定货 情绪价值 专业距离 岗位分工 KPI 操作'
+      },
+      {
+        text: '如果你要新增一个人，正确的做法是：把业务按照"脑子里的那根弦"重新分组。把"需要情绪价值"的活归成一堆，把"需要专业距离"的活归成另一堆。然后把其中一堆完整地交给新人，另一堆完整地留给老人。这叫工作逻辑的一致性。你让员工脑子里的弦是同一根，他干活才快，才不容易出错。',
+        keywords: '分工 情绪价值 专业距离 工作逻辑一致性 新人 老人 KPI'
+      }
+    ]
+  }
+];
+
+// ========== 分词器（简易中文分词） ==========
+function tokenize(text) {
+  // 去掉标点，按空格/换行/常用分隔符切分
+  var cleaned = text.toLowerCase()
+    .replace(/[，。、《》？；：""''！（）—…\n\r\.\,\?\!;:"'\(\)\[\]\/\\]/g, ' ')
+    .replace(/\s+/g, ' ');
+  
+  // 提取1-gram（单字）和2-gram（双字组合）混合
+  var words = cleaned.split(' ').filter(function(w) { return w.length > 0; });
+  var tokens = [];
+  
+  words.forEach(function(w) {
+    if (w.length <= 3) {
+      tokens.push(w);
+    } else {
+      // 长词拆成2-gram
+      for (var i = 0; i < w.length - 1; i++) {
+        tokens.push(w.substring(i, i+2));
+      }
+      // 也保留整个词
+      tokens.push(w);
+    }
+  });
+  
+  return tokens;
+}
+
+// ========== BM25风格的相关性评分 ==========
+function scoreChunk(queryTokens, chunkTokens) {
+  var score = 0;
+  var matchedTokens = {};
+  
+  queryTokens.forEach(function(qt) {
+    if (matchedTokens[qt]) return; // 不重复计分
+    var countInChunk = 0;
+    chunkTokens.forEach(function(ct) {
+      if (ct === qt) countInChunk++;
+    });
+    if (countInChunk > 0) {
+      score += Math.log(1 + countInChunk);
+      matchedTokens[qt] = true;
+    }
+  });
+  
+  // 加分：如果chunk的keywords字段匹配
+  return score;
+}
+
+function scoreByKeywords(queryTokens, keywordStr) {
+  if (!keywordStr) return 0;
+  var kwTokens = tokenize(keywordStr);
+  var matchCount = 0;
+  queryTokens.forEach(function(qt) {
+    kwTokens.forEach(function(kt) {
+      if (kt === qt) matchCount++;
+    });
+  });
+  return matchCount * 0.5; // keyword匹配权重稍低
+}
+
+// ========== 主检索函数 ==========
+function search() {
+  var query = document.getElementById('queryInput').value.trim();
+  if (!query) return;
+  
+  var startTime = performance.now();
+  var queryTokens = tokenize(query);
+  
+  var allResults = [];
+  
+  CORPUS.forEach(function(doc) {
+    doc.chunks.forEach(function(chunk, idx) {
+      var chunkTokens = tokenize(chunk.text);
+      var textScore = scoreChunk(queryTokens, chunkTokens);
+      var kwScore = scoreByKeywords(queryTokens, chunk.keywords);
+      var totalScore = textScore + kwScore;
+      
+      if (totalScore > 0) {
+        allResults.push({
+          docId: doc.id,
+          docTitle: doc.title,
+          docDate: doc.date,
+          chunkIndex: idx,
+          text: chunk.text,
+          score: totalScore
+        });
+      }
+    });
+  });
+  
+  // 按分数降序排列
+  allResults.sort(function(a, b) { return b.score - a.score; });
+  
+  // 取Top 5
+  var topResults = allResults.slice(0, 5);
+  
+  renderResults(topResults, queryTokens, query, performance.now() - startTime);
+}
+
+function renderResults(results, queryTokens, query, elapsed) {
+  var container = document.getElementById('results');
+  var stats = document.getElementById('stats');
+  
+  if (results.length === 0) {
+    container.innerHTML = '<div class="empty">😕 未找到相关内容<br><small>试试换个关键词，如："三段法"、"MTO资质"、"直客操作"</small></div>';
+    stats.textContent = '检索完成，0条结果（' + elapsed.toFixed(0) + 'ms）';
+    return;
+  }
+  
+  var html = '';
+  results.forEach(function(r) {
+    // 高亮匹配词
+    var snippet = r.text;
+    queryTokens.forEach(function(qt) {
+      if (qt.length < 2) return;
+      var regex = new RegExp(qt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      snippet = snippet.replace(regex, '<mark>$&</mark>');
+    });
+    
+    // 截断过长文本
+    if (snippet.length > 300) {
+      snippet = snippet.substring(0, 300) + '...';
+    }
+    
+    html += '<div class="result-item">' +
+      '<span class="score">相关性 ' + r.score.toFixed(1) + '</span>' +
+      '<div class="source">📄 ' + r.docTitle + '（' + r.docDate + '）· 片段' + (r.chunkIndex + 1) + '</div>' +
+      '<div class="snippet">' + snippet + '</div>' +
+      '</div>';
+  });
+  
+  container.innerHTML = html;
+  stats.textContent = '检索完成，' + results.length + '条结果（共' + CORPUS.reduce(function(s,d){return s+d.chunks.length;},0) + '个片段，耗时' + elapsed.toFixed(0) + 'ms）';
+}
+
+// 启动时随机显示一个提示
+(function() {
+  var tips = [
+    '试试问："什么是三段法？"',
+    '试试问："怎么申请MTO资质？"',
+    '试试问："疫情对海运有什么影响？"',
+    '试试问："直客和指定货操作有什么区别？"',
+    '试试问："物流数字化的四个阶段是什么？"'
+  ];
+  var tip = tips[Math.floor(Math.random() * tips.length)];
+  document.getElementById('queryInput').placeholder = tip;
+})();
+</script>
+</body>
+</html>
