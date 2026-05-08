@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识库管理 · 文章投喂</title>
+<style>
+  :root {
+    --bg: #f5f6fa; --card-bg: #fff; --text: #2c3e50;
+    --border: #dcdde1; --blue: #3498db; --green: #27ae60;
+    --red: #e74c3c; --orange: #f39c12;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
+  .container { max-width:800px; margin:0 auto; padding:20px; }
+  .header { text-align:center; padding:20px 0; }
+  .header h1 { font-size:20px; }
+  .header .sub { color:#7f8c8d; font-size:13px; margin-top:4px; }
+  .card { background:var(--card-bg); border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
+  .card h2 { font-size:16px; margin-bottom:12px; }
+
+  .upload-zone {
+    border:2px dashed var(--border); border-radius:10px;
+    padding:30px; text-align:center; cursor:pointer;
+    transition: all 0.2s; margin-bottom:16px;
+  }
+  .upload-zone:hover { border-color: var(--blue); background:#f0f7ff; }
+  .upload-zone.dragover { border-color: var(--green); background:#f0fff4; }
+  .upload-zone input { display:none; }
+
+  .file-list { list-style:none; }
+  .file-list li {
+    padding:10px 14px; margin-bottom:6px; border-radius:6px;
+    background:#f8f9fb; display:flex; justify-content:space-between;
+    align-items:center; font-size:13px;
+  }
+  .file-list .status { font-size:11px; padding:3px 8px; border-radius:4px; }
+  .status-pending { background:#fff3cd; color:var(--orange); }
+  .status-done { background:#e8f5e9; color:var(--green); }
+  .status-error { background:#fde8e8; color:var(--red); }
+
+  button {
+    padding:10px 20px; background:var(--blue); color:#fff;
+    border:none; border-radius:8px; font-size:14px; cursor:pointer;
+  }
+  button:hover { opacity:0.9; }
+  button:disabled { background:#bdc3c7; cursor:not-allowed; }
+  button.danger { background:var(--red); }
+
+  .stats { font-size:12px; color:#7f8c8d; margin-top:8px; }
+  .preview { font-size:12px; color:#7f8c8d; max-height:120px; overflow-y:auto; background:#fafafa; padding:10px; border-radius:6px; white-space:pre-wrap; margin-top:8px; }
+  .meta { text-align:center; font-size:11px; color:#bdc3c7; padding:16px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📚 知识库管理 · 文章投喂</h1>
+    <div class="sub">上传文件 → 自动分片 → 存入专属智库</div>
+  </div>
+
+  <div class="card">
+    <h2>📤 上传文章（支持 .txt / .md）</h2>
+    <div class="upload-zone" id="dropZone">
+      <div style="font-size:32px;margin-bottom:8px;">📁</div>
+      <div>点击选择文件，或拖拽文件到这里</div>
+      <div style="font-size:11px;color:#95a5a6;margin-top:4px;">支持 .txt 和 .md 纯文本文件</div>
+      <input type="file" id="fileInput" accept=".txt,.md" multiple>
+    </div>
+    <ul class="file-list" id="fileList"></ul>
+    <button id="btnProcess" disabled>⚡ 开始入库</button>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <h2>📊 语料库概览</h2>
+    <div id="corpusStats">加载中...</div>
+    <div style="margin-top:10px;">
+      <button class="danger" onclick="clearCorpus()">🗑 清空语料库</button>
+    </div>
+  </div>
+
+  <div class="meta">
+    数据完全在浏览器本地处理 · 不上传任何服务器 · localStorage存储
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'rag_corpus';
+
+// ========== 分片引擎 ==========
+function splitText(text, chunkSize) {
+  chunkSize = chunkSize || 500;
+  // 先按段落分
+  var paragraphs = text.split(/\n\s*\n/);
+  var chunks = [];
+  var currentChunk = '';
+
+  paragraphs.forEach(function(para) {
+    para = para.trim();
+    if (!para) return;
+    if ((currentChunk + para).length > chunkSize && currentChunk) {
+      chunks.push(currentChunk.trim());
+      currentChunk = para;
+    } else {
+      currentChunk += (currentChunk ? '\n\n' : '') + para;
+    }
+  });
+  if (currentChunk.trim()) chunks.push(currentChunk.trim());
+
+  // 处理超长段落：强制按字数切
+  var finalChunks = [];
+  chunks.forEach(function(chunk) {
+    if (chunk.length <= chunkSize * 1.5) {
+      finalChunks.push(chunk);
+    } else {
+      var sentences = chunk.replace(/\n/g, ' ').split(/(?<=[。！？\.\!\?])/);
+      var sub = '';
+      sentences.forEach(function(s) {
+        if ((sub + s).length > chunkSize && sub) {
+          finalChunks.push(sub.trim());
+          sub = s;
+        } else {
+          sub += s;
+        }
+      });
+      if (sub.trim()) finalChunks.push(sub.trim());
+    }
+  });
+
+  return finalChunks;
+}
+
+function extractKeywords(text) {
+  // 简单TF策略：取出现频率最高的词（排除常用词）
+  var stopWords = ['的','了','在','是','我','有','和','就','不','人','都','一','一个','上','也','很','到','说','要','去','你','会','着','没有','看','好','自己','这','他','她','它','们','那','些','什么','怎么','哪','为什么','可以','这个','那个','还','被','把','让','向','从','对','与','但','或','而','且','如果','因为','所以','然后','之后','虽然','不过','但是','只是','还是','以及','并','更','最'];
+  var words = text.toLowerCase()
+    .replace(/[，。、《》？；：""''！（）—…\n\r\.\,\?\!;:"'\(\)\[\]\/\\\d]/g, ' ')
+    .split(/\s+/)
+    .filter(function(w) { return w.length >= 2 && stopWords.indexOf(w) === -1; });
+
+  var freq = {};
+  words.forEach(function(w) { freq[w] = (freq[w] || 0) + 1; });
+
+  var sorted = Object.keys(freq).sort(function(a, b) { return freq[b] - freq[a]; });
+  return sorted.slice(0, 8).join(' ');
+}
+
+// ========== 文件处理 ==========
+var pendingFiles = [];
+
+document.getElementById('dropZone').addEventListener('click', function() {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  addFiles(e.target.files);
+  this.value = '';
+});
+
+document.getElementById('dropZone').addEventListener('dragover', function(e) {
+  e.preventDefault();
+  this.classList.add('dragover');
+});
+
+document.getElementById('dropZone').addEventListener('dragleave', function() {
+  this.classList.remove('dragover');
+});
+
+document.getElementById('dropZone').addEventListener('drop', function(e) {
+  e.preventDefault();
+  this.classList.remove('dragover');
+  addFiles(e.dataTransfer.files);
+});
+
+function addFiles(fileList) {
+  Array.from(fileList).forEach(function(file) {
+    if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
+      alert('跳过非文本文件：' + file.name);
+      return;
+    }
+    // 去重
+    if (pendingFiles.some(function(f) { return f.name === file.name && f.size === file.size; })) return;
+    pendingFiles.push(file);
+  });
+  renderFileList();
+  document.getElementById('btnProcess').disabled = (pendingFiles.length === 0);
+}
+
+function renderFileList() {
+  var list = document.getElementById('fileList');
+  list.innerHTML = '';
+  pendingFiles.forEach(function(file, i) {
+    var li = document.createElement('li');
+    li.innerHTML = '<span>📄 ' + file.name + ' <span style="color:#95a5a6;">(' + formatSize(file.size) + ')</span></span>' +
+      '<span class="status status-pending">待入库</span>';
+    list.appendChild(li);
+  });
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+  return (bytes / 1048576).toFixed(1) + 'MB';
+}
+
+// ========== 入库处理 ==========
+document.getElementById('btnProcess').addEventListener('click', function() {
+  if (pendingFiles.length === 0) return;
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = '⏳ 入库中...';
+
+  var corpus = loadCorpus();
+  var totalChunks = 0;
+  var processedCount = 0;
+
+  function processNext(index) {
+    if (index >= pendingFiles.length) {
+      // 全部完成
+      saveCorpus(corpus);
+      pendingFiles = [];
+      renderFileList();
+      renderCorpusStats();
+      updateStatusLabels('status-done', '已入库');
+      btn.textContent = '✅ 入库完成（' + totalChunks + '个片段）';
+      setTimeout(function() {
+        btn.textContent = '⚡ 开始入库';
+        btn.disabled = (pendingFiles.length === 0);
+      }, 2000);
+      return;
+    }
+
+    var file = pendingFiles[index];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var title = file.name.replace(/\.(txt|md)$/i, '');
+      var text = e.target.result;
+      var chunkTexts = splitText(text, 500);
+      var now = new Date().toISOString().slice(0, 10);
+
+      var chunks = chunkTexts.map(function(ct) {
+        return {
+          text: ct,
+          keywords: extractKeywords(ct)
+        };
+      });
+
+      corpus.push({
+        id: 'doc-' + Date.now() + '-' + index,
+        title: title,
+        date: now,
+        chunks: chunks
+      });
+
+      totalChunks += chunks.length;
+      processedCount++;
+
+      // 更新当前文件状态
+      var statusEl = document.querySelectorAll('.file-list .status')[index];
+      if (statusEl) {
+        statusEl.textContent = chunks.length + '个片段';
+        statusEl.className = 'status status-done';
+      }
+
+      document.getElementById('stats').textContent = '已处理：' + processedCount + '/' + pendingFiles.length + ' 个文件，已生成 ' + totalChunks + ' 个片段';
+
+      // 异步处理下一个，避免阻塞UI
+      setTimeout(function() { processNext(index + 1); }, 50);
+    };
+    reader.onerror = function() {
+      var statusEl = document.querySelectorAll('.file-list .status')[index];
+      if (statusEl) {
+        statusEl.textContent = '读取失败';
+        statusEl.className = 'status status-error';
+      }
+      setTimeout(function() { processNext(index + 1); }, 50);
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  processNext(0);
+});
+
+function updateStatusLabels(cls, text) {
+  document.querySelectorAll('.file-list .status').forEach(function(el) {
+    el.textContent = text;
+    el.className = 'status ' + cls;
+  });
+}
+
+// ========== localStorage操作 ==========
+function loadCorpus() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveCorpus(corpus) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(corpus));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') {
+      alert('⚠️ localStorage空间不足（5MB上限）。请清理部分文章后重试，或后续升级为IndexedDB存储。');
+    } else {
+      alert('❌ 保存失败：' + e.message);
+    }
+  }
+}
+
+function clearCorpus() {
+  if (!confirm('确定要清空全部语料库吗？此操作不可撤销。')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderCorpusStats();
+}
+
+// ========== 概览 ==========
+function renderCorpusStats() {
+  var corpus = loadCorpus();
+  var totalChunks = 0;
+  corpus.forEach(function(doc) {
+    totalChunks += doc.chunks.length;
+  });
+  document.getElementById('corpusStats').innerHTML =
+    '<p>📚 <strong>' + corpus.length + '</strong> 篇文章 | ' +
+    '<strong>' + totalChunks + '</strong> 个知识片段</p>' +
+    (corpus.length > 0 ? '<details><summary style="cursor:pointer;font-size:12px;color:var(--blue);">展开文章列表</summary><ul style="font-size:12px;margin-top:6px;">' +
+      corpus.map(function(d) {
+        return '<li>' + d.title + ' <span style="color:#95a5a6;">(' + d.date + '，' + d.chunks.length + '片段)</span></li>';
+      }).join('') + '</ul></details>' : '');
+}
+
+// 初始化
+renderFileList();
+renderCorpusStats();
+</script>
+</body>
+</html>
