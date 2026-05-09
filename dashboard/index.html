@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>货物监控面板 · 王小姐专版</title>
+<title>货物监控面板</title>
 <style>
   :root {
     --bg: #f5f6fa; --card-bg: #fff; --text: #2c3e50;
@@ -65,7 +65,7 @@
       <h1>📋 货物监控面板</h1>
       <div class="sub">早上好，王小姐。这是你今天需要关注的事。</div>
     </div>
-    <button onclick="generateBrief()">📝 生成芽总简报</button>
+    <button onclick="generateBrief()">📝 简报</button>
   </div>
 
   <div class="section-title">📌 今天必须做的事 <span style="font-size:12px;color:#7f8c8d;">（3件待办）</span></div>
@@ -77,7 +77,7 @@
   <div class="section-title">📊 所有货物总览</div>
   <div id="shipmentList"></div>
 
-  <div class="meta">货物监控面板 v0.1 · 西峡项目真实数据 · 王小姐专版</div>
+  <div class="meta">货物监控面板 v0.1 · 西峡项目真实数据</div>
 </div>
 
 <div class="brief-modal" id="briefModal" onclick="if(event.target===this)closeBrief();">
@@ -113,9 +113,9 @@ const SHIPMENTS = [
       { name: '保税仓转关+派送', date: '2016-07-27', status: 'upcoming' }
     ],
     tasks: [
-      { type: 'customs', title: '清关文件已预填，请确认后提交', desc: '代理 Fast Forward Freight 已收到清关文件，需你确认转关文件无误。', action: '确认发送' },
+      { type: 'cutoff', title: '截关提醒：明天郑州陆港截关', desc: '邮件草稿已备好，请确认后发送给郑州国际陆港丁金盘。', action: '确认发送' },
       { type: 'delivery', title: '派送安排确认', desc: '目的地 Göllheim 为戴姆勒指定仓库（保税仓），代理只需做转关+派送。请确认收货人 SONIMA GmbH 的联系方式。', action: '确认信息' },
-      { type: 'cutoff', title: '截关提醒：明天郑州陆港截关', desc: '邮件草稿已备好，请确认后发送给郑州国际陆港丁金盘。', action: '确认发送' }
+      { type: 'customs', title: '清关文件已预填，请确认后提交', desc: '代理 Fast Forward Freight 已收到清关文件，需你确认转关文件无误。', action: '确认发送' }
     ],
     alerts: [
       { level: 'warning', msg: '货物实际重量经堆场测量为5950kg（10个纸托盘），体积9.38cbm。与订舱预估接近，无异常。但保税仓转关环节需注意——收货人为SONIMA GmbH，不需做最终清关，代理只需转关+派送。' }
@@ -210,10 +210,10 @@ document.addEventListener('mouseout', function(e) {
   }
 });
 
-// ========== 一键简报 ==========
+// ========== 简报 ==========
 function generateBrief() {
   var s = SHIPMENTS[0];
-  var html = '<h3>📝 给芽总的简报</h3>';
+  var html = '<h3>📝 简报</h3>';
   html += '<div class="section"><h4>一、精简摘要</h4><p>西峡水泵铁路拼箱已从郑州发车，预计7月21日到汉堡，7月27日派送到Göllheim。目前全节点正常，无延误风险。货物为保税仓交货，不需最终清关。</p></div>';
   html += '<div class="section"><h4>二、关键数据</h4><ul>';
   html += '<li>票号：XX-20160707</li>';
@@ -224,7 +224,7 @@ function generateBrief() {
   html += '<li>承运人：郑州国际陆港（郑欧班列）</li>';
   html += '<li>海外代理：Fast Forward Freight GmbH（联系人Necmi Patan）</li>';
   html += '</ul></div>';
-  html += '<div class="section"><h4>三、建议方案</h4><p>已确认代理只做转关+派送，不需最终清关。收货人为SONIMA GmbH（戴姆勒指定仓库）。建议王小姐7月20日联系代理确认到港情况，7月26日确认派送车辆到位。如无异常，此票可按计划完成。</p></div>';
+  html += '<div class="section"><h4>三、建议方案</h4><p>已确认代理只做转关+派送，不需最终清关。收货人为SONIMA GmbH（戴姆勒指定仓库）。建议7月20日联系代理确认到港情况，7月26日确认派送车辆到位。如无异常，此票可按计划完成。</p></div>';
   html += '<button onclick="closeBrief()">关闭</button>';
 
   document.getElementById('briefContent').innerHTML = html;
