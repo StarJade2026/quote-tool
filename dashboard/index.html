@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>货物监控面板 · 王小姐专版</title>
+<style>
+  :root {
+    --bg: #f5f6fa; --card-bg: #fff; --text: #2c3e50;
+    --border: #dcdde1; --blue: #3498db; --green: #27ae60;
+    --red: #e74c3c; --orange: #f39c12; --yellow: #f1c40f;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
+  .container { max-width:960px; margin:0 auto; padding:16px; }
+
+  .header { background: linear-gradient(135deg, #2c3e50, #34495e); color:#fff; border-radius:12px; padding:20px 24px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .header h1 { font-size:20px; font-weight:600; }
+  .header .sub { font-size:12px; opacity:0.8; margin-top:4px; }
+  .header button { padding:10px 18px; background:var(--green); color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; font-weight:600; }
+  .header button:hover { opacity:0.9; }
+
+  .section-title { font-size:16px; font-weight:600; margin:16px 0 10px; display:flex; align-items:center; gap:8px; }
+
+  .task-card, .alert-card, .shipment-card {
+    background:var(--card-bg); border-radius:10px; padding:14px 16px;
+    margin-bottom:10px; box-shadow:0 1px 4px rgba(0,0,0,0.04);
+    border-left:4px solid var(--blue); cursor:pointer; transition: all 0.2s;
+  }
+  .task-card:hover, .alert-card:hover, .shipment-card:hover { box-shadow:0 3px 10px rgba(0,0,0,0.08); }
+  .alert-card { border-left-color: var(--red); background:#fffbfb; }
+  .alert-card.warning { border-left-color: var(--orange); background:#fffef9; }
+  .shipment-card { border-left-color: var(--green); }
+  .shipment-card.delayed { border-left-color: var(--orange); }
+  .shipment-card.critical { border-left-color: var(--red); }
+
+  .card-row { display:flex; justify-content:space-between; align-items:flex-start; }
+  .card-title { font-weight:600; font-size:14px; }
+  .card-status { font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600; }
+  .status-normal { background:#e8f5e9; color:var(--green); }
+  .status-delay { background:#fff3cd; color:var(--orange); }
+  .status-critical { background:#fde8e8; color:var(--red); }
+  .card-detail { font-size:12px; color:#7f8c8d; margin-top:4px; }
+  .card-action { font-size:12px; color:var(--blue); margin-top:6px; font-weight:500; }
+
+  .tooltip-term { border-bottom:1px dashed var(--blue); cursor:help; color:var(--blue); }
+  .tooltip-box { display:none; position:absolute; background:#2c3e50; color:#fff; padding:8px 12px; border-radius:6px; font-size:11px; max-width:260px; z-index:100; pointer-events:none; }
+
+  .brief-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
+  .brief-modal.active { display:flex; }
+  .brief-content { background:#fff; border-radius:12px; padding:24px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto; }
+  .brief-content h3 { margin-bottom:12px; }
+  .brief-content .section { margin-bottom:14px; }
+  .brief-content .section h4 { font-size:14px; margin-bottom:6px; }
+  .brief-content .section p, .brief-content .section li { font-size:13px; line-height:1.6; }
+  .brief-content button { margin-top:12px; padding:8px 18px; background:var(--blue); color:#fff; border:none; border-radius:6px; cursor:pointer; }
+
+  .meta { text-align:center; font-size:11px; color:#bdc3c7; padding:16px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>📋 货物监控面板</h1>
+      <div class="sub">早上好，王小姐。这是你今天需要关注的事。</div>
+    </div>
+    <button onclick="generateBrief()">📝 生成芽总简报</button>
+  </div>
+
+  <div class="section-title">📌 今天必须做的事 <span style="font-size:12px;color:#7f8c8d;">（3件待办）</span></div>
+  <div id="taskList"></div>
+
+  <div class="section-title">⚠️ 可能出问题的货 <span style="font-size:12px;color:#7f8c8d;">（1票需关注）</span></div>
+  <div id="alertList"></div>
+
+  <div class="section-title">📊 所有货物总览</div>
+  <div id="shipmentList"></div>
+
+  <div class="meta">货物监控面板 v0.1 · 西峡项目真实数据 · 王小姐专版</div>
+</div>
+
+<div class="brief-modal" id="briefModal" onclick="if(event.target===this)closeBrief();">
+  <div class="brief-content" id="briefContent"></div>
+</div>
+
+<div class="tooltip-box" id="tooltip"></div>
+
+<script>
+// ========== 西峡真实流转单数据 ==========
+const SHIPMENTS = [
+  {
+    id: 'XX-20160707',
+    project: '西峡水泵出口德国铁路拼箱',
+    customer: '河南省西峡汽车水泵股份有限公司',
+    origin: '郑州圃田站',
+    destination: 'Göllheim D-67307, Germany',
+    etd: '2016-07-07',
+    eta: '2016-07-21',
+    deliveryDate: '2016-07-27',
+    tradeTerm: 'DDU',
+    container: 'LCL 拼箱',
+    carrier: '郑州国际陆港 / ZIH',
+    route: '郑州 → 汉堡（郑欧班列）',
+    status: 'normal',
+    nodes: [
+      { name: '客户交货', date: '2016-07-04', status: 'done' },
+      { name: '订舱', date: '2016-07-05', status: 'done' },
+      { name: '装箱（10个纸托盘）', date: '2016-07-06', status: 'done' },
+      { name: '报关', date: '2016-07-06', status: 'done' },
+      { name: '发运/开船', date: '2016-07-07', status: 'current' },
+      { name: '到港汉堡', date: '2016-07-21', status: 'upcoming' },
+      { name: '保税仓转关+派送', date: '2016-07-27', status: 'upcoming' }
+    ],
+    tasks: [
+      { type: 'customs', title: '清关文件已预填，请确认后提交', desc: '代理 Fast Forward Freight 已收到清关文件，需你确认转关文件无误。', action: '确认发送' },
+      { type: 'delivery', title: '派送安排确认', desc: '目的地 Göllheim 为戴姆勒指定仓库（保税仓），代理只需做转关+派送。请确认收货人 SONIMA GmbH 的联系方式。', action: '确认信息' },
+      { type: 'cutoff', title: '截关提醒：明天郑州陆港截关', desc: '邮件草稿已备好，请确认后发送给郑州国际陆港丁金盘。', action: '确认发送' }
+    ],
+    alerts: [
+      { level: 'warning', msg: '货物实际重量经堆场测量为5950kg（10个纸托盘），体积9.38cbm。与订舱预估接近，无异常。但保税仓转关环节需注意——收货人为SONIMA GmbH，不需做最终清关，代理只需转关+派送。' }
+    ]
+  }
+];
+
+// ========== 术语白话解释库 ==========
+const TERM_DICT = {
+  '截关': '截关是船公司/铁路公司截止接收放行条的日期和时间。过了这个时间，这批货就不能上这趟车/船了。',
+  '保税仓转关': '保税仓是海关监管的特殊仓库，货物进去时暂时不交关税。转关是指货物从一个海关管辖区运到另一个管辖区，不需要在中间环节清关。这票货到汉堡后直接保税转关到Göllheim，不需要做最终清关。',
+  'LCL拼箱': 'LCL（Less than Container Load）是拼箱货，你的货不够装一个整柜，跟其他货拼在一起走。',
+  '郑欧班列': '郑州到欧洲的铁路货运班列，从郑州圃田站出发，经新疆阿拉山口出境，到德国汉堡。',
+  'DDU': '卖方承担货物运至目的地的一切费用和风险，但不负责目的地的进口清关手续和关税。',
+  'ETA': '预计到达时间（Estimated Time of Arrival）。这批货预计7月21日到汉堡。',
+  'ETD': '预计开航/发车时间（Estimated Time of Departure）。这批货7月7日从郑州发车。',
+  'MOT': '时间风险管理引擎，帮你盯住每个运输节点是否准时，超期自动预警。',
+  '三段法': '把运输路径拆成三段：国内段（起运地服务）、干线段（国际运输）、海外段（目的地服务），分段管理风险和成本。',
+  '风险预备金': '报价时提前预留一小笔钱，用于应对运输中可能出现的额外成本。没出事这笔钱就是利润，出事了从这里出，客户不加钱。'
+};
+
+// ========== 渲染 ==========
+function renderTasks() {
+  var tasks = SHIPMENTS[0].tasks;
+  var html = '';
+  tasks.forEach(function(t) {
+    var icon = t.type === 'cutoff' ? '⏰' : (t.type === 'customs' ? '📋' : '🚚');
+    html += '<div class="task-card" onclick="alert(\'预填草稿已打开（原型演示）\n\n\"' + t.title + '\"\n\n' + t.desc + '\")">';
+    html += '<div class="card-row"><span class="card-title">' + icon + ' ' + t.title + '</span></div>';
+    html += '<div class="card-detail">' + t.desc + '</div>';
+    html += '<div class="card-action">👉 一键' + t.action + '</div>';
+    html += '</div>';
+  });
+  document.getElementById('taskList').innerHTML = html;
+}
+
+function renderAlerts() {
+  var alerts = SHIPMENTS[0].alerts;
+  var html = '';
+  alerts.forEach(function(a) {
+    var cls = a.level === 'warning' ? 'warning' : '';
+    html += '<div class="alert-card ' + cls + '">';
+    html += '<div class="card-title">⚠️ 西峡水泵铁路拼箱</div>';
+    html += '<div class="card-detail">' + a.msg + '</div>';
+    html += '</div>';
+  });
+  document.getElementById('alertList').innerHTML = html;
+}
+
+function renderShipments() {
+  var html = '';
+  SHIPMENTS.forEach(function(s) {
+    var cls = s.status === 'delayed' ? 'delayed' : (s.status === 'critical' ? 'critical' : '');
+    var statusLabel = s.status === 'normal' ? '正常' : (s.status === 'delayed' ? '有延误' : '需关注');
+    var statusCls = s.status === 'normal' ? 'status-normal' : (s.status === 'delayed' ? 'status-delay' : 'status-critical');
+    
+    html += '<div class="shipment-card ' + cls + '" onclick="toggleDetail(\'' + s.id + '\')">';
+    html += '<div class="card-row"><span class="card-title">📦 ' + s.project + '</span><span class="card-status ' + statusCls + '">' + statusLabel + '</span></div>';
+    html += '<div class="card-detail">' + s.route + ' | ETD: ' + s.etd + ' | ETA汉堡: ' + s.eta + ' | <span class="tooltip-term" data-term="保税仓转关">保税仓转关</span>派送: ' + s.deliveryDate + '</div>';
+    html += '<div class="card-detail" style="margin-top:2px;">收货人: SONIMA GmbH（戴姆勒指定仓库）| 代理: Fast Forward Freight GmbH</div>';
+    html += '<div id="detail-' + s.id + '" style="display:none;margin-top:8px;font-size:12px;">';
+    s.nodes.forEach(function(n) {
+      var icon = n.status === 'done' ? '✅' : (n.status === 'current' ? '🔄' : '⏳');
+      html += '<div style="padding:3px 0;">' + icon + ' ' + n.date + ' — ' + n.name + '</div>';
+    });
+    html += '</div>';
+    html += '</div>';
+  });
+  document.getElementById('shipmentList').innerHTML = html;
+}
+
+function toggleDetail(id) {
+  var el = document.getElementById('detail-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ========== 术语悬浮 ==========
+document.addEventListener('mouseover', function(e) {
+  if (e.target.classList.contains('tooltip-term')) {
+    var term = e.target.getAttribute('data-term');
+    var tip = document.getElementById('tooltip');
+    var text = TERM_DICT[term] || '暂无解释';
+    tip.textContent = text;
+    tip.style.display = 'block';
+    tip.style.left = e.pageX + 10 + 'px';
+    tip.style.top = e.pageY - 30 + 'px';
+  }
+});
+document.addEventListener('mouseout', function(e) {
+  if (e.target.classList.contains('tooltip-term')) {
+    document.getElementById('tooltip').style.display = 'none';
+  }
+});
+
+// ========== 一键简报 ==========
+function generateBrief() {
+  var s = SHIPMENTS[0];
+  var html = '<h3>📝 给芽总的简报</h3>';
+  html += '<div class="section"><h4>一、精简摘要</h4><p>西峡水泵铁路拼箱已从郑州发车，预计7月21日到汉堡，7月27日派送到Göllheim。目前全节点正常，无延误风险。货物为保税仓交货，不需最终清关。</p></div>';
+  html += '<div class="section"><h4>二、关键数据</h4><ul>';
+  html += '<li>票号：XX-20160707</li>';
+  html += '<li>路线：郑州圃田站 → 汉堡 → Göllheim</li>';
+  html += '<li>ETD：7月7日 | ETA汉堡：7月21日 | 派送到门：7月27日</li>';
+  html += '<li>箱型：LCL拼箱（10个纸托盘，实重5950kg，体积9.38cbm）</li>';
+  html += '<li>贸易条款：DDU</li>';
+  html += '<li>承运人：郑州国际陆港（郑欧班列）</li>';
+  html += '<li>海外代理：Fast Forward Freight GmbH（联系人Necmi Patan）</li>';
+  html += '</ul></div>';
+  html += '<div class="section"><h4>三、建议方案</h4><p>已确认代理只做转关+派送，不需最终清关。收货人为SONIMA GmbH（戴姆勒指定仓库）。建议王小姐7月20日联系代理确认到港情况，7月26日确认派送车辆到位。如无异常，此票可按计划完成。</p></div>';
+  html += '<button onclick="closeBrief()">关闭</button>';
+
+  document.getElementById('briefContent').innerHTML = html;
+  document.getElementById('briefModal').classList.add('active');
+}
+
+function closeBrief() {
+  document.getElementById('briefModal').classList.remove('active');
+}
+
+// ========== 初始化 ==========
+renderTasks();
+renderAlerts();
+renderShipments();
+</script>
+</body>
+</html>
