@@ -225,10 +225,35 @@ function callAIClean(rows, isCardFormat) {
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
     var content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
     
-    var jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('AI未返回有效的JSON数组。返回内容：' + content.substring(0, 200));
+        // 尝试多种方式提取JSON
+    var jsonStr = content.trim();
     
-    cleanedData = JSON.parse(jsonMatch[0]);
+    // 方式1：直接解析整个返回
+    try {
+      cleanedData = JSON.parse(jsonStr);
+      if (!Array.isArray(cleanedData)) throw new Error('不是数组');
+    } catch(e1) {
+      // 方式2：正则提取JSON数组
+      var jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        try {
+          cleanedData = JSON.parse(jsonMatch[0]);
+        } catch(e2) {
+          // 方式3：提取所有花括号对象，手动组装数组
+          var objMatches = jsonStr.match(/\{[^{}]*\}/g);
+          if (objMatches) {
+            cleanedData = [];
+            objMatches.forEach(function(m) {
+              try { cleanedData.push(JSON.parse(m)); } catch(e3) {}
+            });
+          }
+        }
+      }
+    }
+
+    if (!cleanedData || cleanedData.length === 0) {
+      throw new Error('AI未返回有效的JSON数组。\n返回内容前300字：' + content.substring(0, 300));
+    }
     setStatus('✅ AI清洗完成，共 ' + cleanedData.length + ' 条记录。请在下方预览并确认。');
     renderPreview();
   })
