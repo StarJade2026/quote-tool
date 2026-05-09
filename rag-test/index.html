@@ -286,10 +286,15 @@ function generate() {
   btn.disabled = true;
   btn.textContent = '⏳ 生成中...';
 
-  // 构建上下文
+  // 压缩上下文，避免超DeepSeek token限制
+  var topResults = lastSearchResults.slice(0, 5);
   var contextParts = [];
-  lastSearchResults.forEach(function(r, i) {
-    contextParts.push('【来源' + (i+1) + '】《' + r.docTitle + '》（' + r.docDate + '）：' + r.text);
+  topResults.forEach(function(r, i) {
+    var truncated = r.text;
+    if (truncated.length > 400) {
+      truncated = truncated.substring(0, 400) + '...';
+    }
+    contextParts.push('【来源' + (i+1) + '】《' + r.docTitle + '》：' + truncated);
   });
   var context = contextParts.join('\n\n');
 
