@@ -286,6 +286,7 @@ function generate() {
   btn.disabled = true;
   btn.textContent = '⏳ 生成中...';
 
+  // 构建上下文
   // 压缩上下文，避免超DeepSeek token限制
   var topResults = lastSearchResults.slice(0, 5);
   var contextParts = [];
