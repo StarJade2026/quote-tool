@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>知识库管理 · 文章投喂</title>
+<title>知识库管理 · 文章投喂 v0.3</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #f5f6fa; --card-bg: #fff; --text: #2c3e50;
@@ -12,10 +13,11 @@
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
-  .container { max-width:800px; margin:0 auto; padding:20px; }
+  .container { max-width:900px; margin:0 auto; padding:20px; }
   .header { text-align:center; padding:20px 0; }
   .header h1 { font-size:20px; }
   .header .sub { color:#7f8c8d; font-size:13px; margin-top:4px; }
+
   .card { background:var(--card-bg); border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
   .card h2 { font-size:16px; margin-bottom:12px; }
 
@@ -34,7 +36,7 @@
     background:#f8f9fb; display:flex; justify-content:space-between;
     align-items:center; font-size:13px;
   }
-  .file-list .status { font-size:11px; padding:3px 8px; border-radius:4px; }
+  .status { font-size:11px; padding:3px 8px; border-radius:4px; }
   .status-pending { background:#fff3cd; color:var(--orange); }
   .status-done { background:#e8f5e9; color:var(--green); }
   .status-error { background:#fde8e8; color:var(--red); }
@@ -46,29 +48,76 @@
   button:hover { opacity:0.9; }
   button:disabled { background:#bdc3c7; cursor:not-allowed; }
   button.danger { background:var(--red); }
+  button.small { padding:4px 10px; font-size:12px; border-radius:4px; }
 
   .stats { font-size:12px; color:#7f8c8d; margin-top:8px; }
-  .preview { font-size:12px; color:#7f8c8d; max-height:120px; overflow-y:auto; background:#fafafa; padding:10px; border-radius:6px; white-space:pre-wrap; margin-top:8px; }
+
+  .article-item {
+    padding:10px 14px; margin-bottom:6px; border-radius:6px;
+    background:#f8f9fb; display:flex; justify-content:space-between;
+    align-items:center; font-size:13px;
+  }
+  .article-item .info { flex:1; }
+  .article-item .actions { display:flex; gap:6px; }
+
+  /* 审核面板 */
+  .review-panel { margin-top:12px; }
+  .review-row {
+    display:flex; gap:12px; padding:10px; margin-bottom:6px;
+    background:#fafafa; border-radius:6px; font-size:12px;
+    align-items:flex-start;
+  }
+  .review-row .structured { flex:1; }
+  .review-row .original { flex:1; color:#7f8c8d; font-size:11px; border-left:1px solid var(--border); padding-left:10px; }
+  .review-row .field-label { font-weight:600; color:var(--blue); display:inline-block; width:50px; }
+  .review-row .clue-text { background:#fffef0; padding:4px 8px; border-radius:4px; font-size:11px; margin-top:4px; }
+  .review-row input[type="text"] { width:100%; padding:4px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px; margin-top:2px; }
+  .review-row textarea { width:100%; padding:4px 8px; border:1px solid var(--border); border-radius:4px; font-size:11px; margin-top:2px; min-height:40px; resize:vertical; }
+
+  /* 模态框 */
+  .modal-overlay {
+    display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.5); z-index:1000; justify-content:center;
+    align-items:center;
+  }
+  .modal-overlay.active { display:flex; }
+  .modal {
+    background:#fff; border-radius:12px; padding:24px; max-width:700px;
+    width:90%; max-height:80vh; overflow-y:auto; box-shadow:0 8px 30px rgba(0,0,0,0.2);
+  }
+  .modal h3 { margin-bottom:12px; }
+  .modal .chunk-item {
+    background:#f8f9fb; padding:10px 14px; margin-bottom:8px;
+    border-radius:6px; font-size:13px; line-height:1.6;
+    border-left:3px solid var(--blue);
+  }
+  .modal .close-btn {
+    float:right; background:transparent; border:none; font-size:20px;
+    cursor:pointer; color:#7f8c8d; padding:0; line-height:1;
+  }
+
   .meta { text-align:center; font-size:11px; color:#bdc3c7; padding:16px 0; }
+  .success-toast { position:fixed; bottom:20px; right:20px; background:var(--green); color:#fff; padding:12px 20px; border-radius:8px; font-size:13px; z-index:2000; display:none; }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
-    <h1>📚 知识库管理 · 文章投喂</h1>
-    <div class="sub">上传文件 → 自动分片 → 存入专属智库</div>
+    <h1>📚 知识库管理 · v0.3</h1>
+    <div class="sub">支持 Excel/CSV 上传 | 列名自动识别 | 基础层+线索层分离</div>
   </div>
 
   <div class="card">
-    <h2>📤 上传文章（支持 .txt / .md）</h2>
+    <h2>📤 上传文件（支持 .txt / .md / .xlsx / .csv）</h2>
     <div class="upload-zone" id="dropZone">
       <div style="font-size:32px;margin-bottom:8px;">📁</div>
       <div>点击选择文件，或拖拽文件到这里</div>
-      <div style="font-size:11px;color:#95a5a6;margin-top:4px;">支持 .txt 和 .md 纯文本文件</div>
-      <input type="file" id="fileInput" accept=".txt,.md" multiple>
+      <div style="font-size:11px;color:#95a5a6;margin-top:4px;">支持 .txt .md .xlsx .csv</div>
+      <input type="file" id="fileInput" accept=".txt,.md,.xlsx,.csv" multiple>
     </div>
     <ul class="file-list" id="fileList"></ul>
     <button id="btnProcess" disabled>⚡ 开始入库</button>
+    <div id="reviewContainer" class="review-panel"></div>
     <div class="stats" id="stats"></div>
   </div>
 
@@ -76,26 +125,57 @@
     <h2>📊 语料库概览</h2>
     <div id="corpusStats">加载中...</div>
     <div style="margin-top:10px;">
-      <button class="danger" onclick="clearCorpus()">🗑 清空语料库</button>
+      <button class="danger" onclick="clearCorpus()">🗑 清空全部语料</button>
     </div>
   </div>
 
   <div class="meta">
-    数据完全在浏览器本地处理 · 不上传任何服务器 · localStorage存储
+    v0.3 · Excel列名自动识别 · 基础层+线索层 · 数据不出浏览器
   </div>
+  <div class="success-toast" id="toast"></div>
+</div>
+
+<!-- 查看文章模态框 -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal();">
+  <div class="modal" id="modalContent"></div>
 </div>
 
 <script>
 const STORAGE_KEY = 'rag_corpus';
 
+// ========== 列名匹配规则表 ==========
+const FIELD_RULES = [
+  { field: 'company', aliases: ['company', '公司', '企业', '代理', 'agent', '供应商', 'supplier', '名称', 'name_co', 'forwarder', 'freight'] },
+  { field: 'country', aliases: ['country', '国家', '国别', '地区', 'region', 'nation', '区域', '目的国', '所在国'] },
+  { field: 'contact', aliases: ['contact', '联系人', '姓名', '名字', 'name', 'attn', 'attention', '接洽', '联系人姓名'] },
+  { field: 'email', aliases: ['email', 'e-mail', '邮箱', '邮件', '电邮', 'mail', '电子邮件'] },
+  { field: 'phone', aliases: ['phone', 'tel', '电话', '手机', 'mobile', '座机', '联系电话', '联系方式', '号码', '电话/手机'] },
+  { field: 'biz_type', aliases: ['biz', 'business', '业务', '类型', 'type', '服务', 'service', '航线', 'trade', '业务类型', '主营业务'] },
+  { field: 'address', aliases: ['address', 'addr', '地址', '所在地', 'location', '办公', '办公地址', '公司地址'] },
+  { field: 'remark', aliases: ['remark', 'note', '备注', '说明', '注释', 'comment', '描述', 'memo', '补充说明'] }
+];
+
+// ========== 列名匹配引擎 ==========
+function matchColumn(colName) {
+  var lower = (colName || '').toLowerCase().replace(/[\s\-_\.]/g, '');
+  for (var i = 0; i < FIELD_RULES.length; i++) {
+    var rule = FIELD_RULES[i];
+    for (var j = 0; j < rule.aliases.length; j++) {
+      var alias = rule.aliases[j].toLowerCase().replace(/[\s\-_\.]/g, '');
+      if (lower.indexOf(alias) !== -1 || alias.indexOf(lower) !== -1) {
+        return rule.field;
+      }
+    }
+  }
+  return null;
+}
+
 // ========== 分片引擎 ==========
 function splitText(text, chunkSize) {
   chunkSize = chunkSize || 500;
-  // 先按段落分
   var paragraphs = text.split(/\n\s*\n/);
   var chunks = [];
   var currentChunk = '';
-
   paragraphs.forEach(function(para) {
     para = para.trim();
     if (!para) return;
@@ -107,66 +187,39 @@ function splitText(text, chunkSize) {
     }
   });
   if (currentChunk.trim()) chunks.push(currentChunk.trim());
-
-  // 处理超长段落：强制按字数切
-  var finalChunks = [];
-  chunks.forEach(function(chunk) {
-    if (chunk.length <= chunkSize * 1.5) {
-      finalChunks.push(chunk);
-    } else {
-      var sentences = chunk.replace(/\n/g, ' ').split(/(?<=[。！？\.\!\?])/);
-      var sub = '';
-      sentences.forEach(function(s) {
-        if ((sub + s).length > chunkSize && sub) {
-          finalChunks.push(sub.trim());
-          sub = s;
-        } else {
-          sub += s;
-        }
-      });
-      if (sub.trim()) finalChunks.push(sub.trim());
-    }
-  });
-
-  return finalChunks;
+  return chunks;
 }
 
 function extractKeywords(text) {
-  // 简单TF策略：取出现频率最高的词（排除常用词）
-  var stopWords = ['的','了','在','是','我','有','和','就','不','人','都','一','一个','上','也','很','到','说','要','去','你','会','着','没有','看','好','自己','这','他','她','它','们','那','些','什么','怎么','哪','为什么','可以','这个','那个','还','被','把','让','向','从','对','与','但','或','而','且','如果','因为','所以','然后','之后','虽然','不过','但是','只是','还是','以及','并','更','最'];
+  var stopWords = ['的','了','在','是','我','有','和','就','不','人','都','一','一个','上','也','很','到','说','要','去','你','会','着','没有','看','好','自己','这','他','她','它','们','那','些','什么','怎么','哪','为什么','可以','这个','那个','还','被','把','让','向','从','对','与','但','或','而','且','如果','因为','所以','然后','之后','虽然','不过','但是','只是','还是','以及','并','更','最','为','等'];
   var words = text.toLowerCase()
     .replace(/[，。、《》？；：""''！（）—…\n\r\.\,\?\!;:"'\(\)\[\]\/\\\d]/g, ' ')
     .split(/\s+/)
     .filter(function(w) { return w.length >= 2 && stopWords.indexOf(w) === -1; });
-
   var freq = {};
   words.forEach(function(w) { freq[w] = (freq[w] || 0) + 1; });
-
   var sorted = Object.keys(freq).sort(function(a, b) { return freq[b] - freq[a]; });
   return sorted.slice(0, 8).join(' ');
 }
 
 // ========== 文件处理 ==========
 var pendingFiles = [];
+var parsedRecords = [];
 
 document.getElementById('dropZone').addEventListener('click', function() {
   document.getElementById('fileInput').click();
 });
-
 document.getElementById('fileInput').addEventListener('change', function(e) {
   addFiles(e.target.files);
   this.value = '';
 });
-
 document.getElementById('dropZone').addEventListener('dragover', function(e) {
   e.preventDefault();
   this.classList.add('dragover');
 });
-
 document.getElementById('dropZone').addEventListener('dragleave', function() {
   this.classList.remove('dragover');
 });
-
 document.getElementById('dropZone').addEventListener('drop', function(e) {
   e.preventDefault();
   this.classList.remove('dragover');
@@ -175,11 +228,11 @@ document.getElementById('dropZone').addEventListener('drop', function(e) {
 
 function addFiles(fileList) {
   Array.from(fileList).forEach(function(file) {
-    if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
-      alert('跳过非文本文件：' + file.name);
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (['txt','md','xlsx','csv'].indexOf(ext) === -1) {
+      alert('不支持的文件格式：' + file.name + '（仅支持 .txt .md .xlsx .csv）');
       return;
     }
-    // 去重
     if (pendingFiles.some(function(f) { return f.name === file.name && f.size === file.size; })) return;
     pendingFiles.push(file);
   });
@@ -190,7 +243,7 @@ function addFiles(fileList) {
 function renderFileList() {
   var list = document.getElementById('fileList');
   list.innerHTML = '';
-  pendingFiles.forEach(function(file, i) {
+  pendingFiles.forEach(function(file) {
     var li = document.createElement('li');
     li.innerHTML = '<span>📄 ' + file.name + ' <span style="color:#95a5a6;">(' + formatSize(file.size) + ')</span></span>' +
       '<span class="status status-pending">待入库</span>';
@@ -204,133 +257,340 @@ function formatSize(bytes) {
   return (bytes / 1048576).toFixed(1) + 'MB';
 }
 
+// ========== Excel解析 ==========
+function parseExcel(data, fileName) {
+  var workbook = XLSX.read(data, { type: 'array' });
+  var records = [];
+  workbook.SheetNames.forEach(function(sheetName) {
+    var sheet = workbook.Sheets[sheetName];
+    var rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    if (rows.length === 0) return;
+
+    var headers = Object.keys(rows[0]);
+    var colMapping = {};
+    var clueColumns = [];
+
+    headers.forEach(function(h) {
+      var match = matchColumn(h);
+      if (match) {
+        colMapping[h] = match;
+      } else {
+        clueColumns.push(h);
+      }
+    });
+
+    rows.forEach(function(row, idx) {
+      var record = {
+        company: '', country: '', contact: '', email: '', phone: '',
+        biz_type: '', address: '', remark: '',
+        clueText: '',
+        source: fileName + ' / ' + sheetName + ' / 行' + (idx + 2)
+      };
+
+      // 基础字段
+      headers.forEach(function(h) {
+        var field = colMapping[h];
+        var val = String(row[h] || '').trim();
+        if (field && val) {
+          if (record[field]) {
+            record[field] += ' | ' + val;
+          } else {
+            record[field] = val;
+          }
+        }
+      });
+
+      // 线索层
+      var clueParts = [];
+      clueColumns.forEach(function(h) {
+        var val = String(row[h] || '').trim();
+        if (val) clueParts.push('【' + h + '】：' + val);
+      });
+      record.clueText = clueParts.join('\n');
+
+      records.push(record);
+    });
+  });
+  return records;
+}
+
+// ========== CSV解析 ==========
+function parseCSV(text, fileName) {
+  var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+  if (lines.length < 2) return [];
+  var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^"|"$/g, ''); });
+  var colMapping = {};
+  var clueColumns = [];
+  headers.forEach(function(h) {
+    var match = matchColumn(h);
+    if (match) { colMapping[h] = match; } else { clueColumns.push(h); }
+  });
+
+  var records = [];
+  for (var i = 1; i < lines.length; i++) {
+    var vals = lines[i].split(',').map(function(v) { return v.trim().replace(/^"|"$/g, ''); });
+    var record = {
+      company: '', country: '', contact: '', email: '', phone: '',
+      biz_type: '', address: '', remark: '',
+      clueText: '',
+      source: fileName + ' / 行' + (i + 1)
+    };
+    headers.forEach(function(h, idx) {
+      var field = colMapping[h];
+      var val = vals[idx] || '';
+      if (field && val) {
+        if (record[field]) { record[field] += ' | ' + val; } else { record[field] = val; }
+      }
+    });
+    var clueParts = [];
+    clueColumns.forEach(function(h) {
+      var val = vals[headers.indexOf(h)] || '';
+      if (val) clueParts.push('【' + h + '】：' + val);
+    });
+    record.clueText = clueParts.join('\n');
+    records.push(record);
+  }
+  return records;
+}
+
+// ========== 审核面板渲染 ==========
+function renderReviewPanel(records) {
+  var container = document.getElementById('reviewContainer');
+  if (records.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  var html = '<h3 style="font-size:14px;margin-bottom:8px;">🔍 审核入库预览（共' + records.length + '条，可修改后入库）</h3>';
+  html += '<p style="font-size:11px;color:#7f8c8d;margin-bottom:10px;">修改后点击下方"确认入库"。手机号/邮箱如需脱敏，请在输入框里直接替换。</p>';
+
+  records.forEach(function(r, i) {
+    html += '<div class="review-row" id="review-' + i + '">';
+    html += '<div class="structured">';
+    html += '<div><span class="field-label">公司：</span><input type="text" value="' + escapeHtml(r.company) + '" data-idx="' + i + '" data-field="company"></div>';
+    html += '<div><span class="field-label">国家：</span><input type="text" value="' + escapeHtml(r.country) + '" data-idx="' + i + '" data-field="country"></div>';
+    html += '<div><span class="field-label">联系人：</span><input type="text" value="' + escapeHtml(r.contact) + '" data-idx="' + i + '" data-field="contact"></div>';
+    html += '<div><span class="field-label">邮箱：</span><input type="text" value="' + escapeHtml(r.email) + '" data-idx="' + i + '" data-field="email" placeholder="留空则脱敏"></div>';
+    html += '<div><span class="field-label">电话：</span><input type="text" value="' + escapeHtml(r.phone) + '" data-idx="' + i + '" data-field="phone" placeholder="留空则脱敏"></div>';
+    html += '<div><span class="field-label">类型：</span><input type="text" value="' + escapeHtml(r.biz_type) + '" data-idx="' + i + '" data-field="biz_type"></div>';
+    html += '<div><span class="field-label">地址：</span><input type="text" value="' + escapeHtml(r.address) + '" data-idx="' + i + '" data-field="address"></div>';
+    html += '<div>🟡 <strong>线索层（可编辑）：</strong></div>';
+    html += '<textarea data-idx="' + i + '" data-field="clueText" placeholder="补充线索信息...">' + escapeHtml(r.clueText) + '</textarea>';
+    html += '</div>';
+    html += '<div class="original"><strong>来源：</strong>' + r.source + '<br>' + (r.clueText ? '原始线索：' + escapeHtml(r.clueText) : '无额外线索') + '</div>';
+    html += '</div>';
+  });
+
+  html += '<button onclick="confirmImport()" style="margin-top:10px;">✅ 确认入库（' + records.length + '条）</button>';
+  html += '<button onclick="cancelImport()" style="margin-top:10px;margin-left:8px;background:#95a5a6;">取消</button>';
+  container.innerHTML = html;
+
+  // 绑定输入事件
+  container.querySelectorAll('input, textarea').forEach(function(el) {
+    el.addEventListener('input', function() {
+      var idx = parseInt(this.getAttribute('data-idx'));
+      var field = this.getAttribute('data-field');
+      if (parsedRecords[idx]) {
+        parsedRecords[idx][field] = this.value;
+      }
+    });
+  });
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function confirmImport() {
+  var corpus = loadCorpus();
+  var now = new Date().toISOString().slice(0, 10);
+  var totalChunks = 0;
+
+  parsedRecords.forEach(function(r) {
+    // 构建文本：基础字段 + 线索层
+    var parts = [];
+    if (r.company) parts.push('公司：' + r.company);
+    if (r.country) parts.push('国家：' + r.country);
+    if (r.contact) parts.push('联系人：' + r.contact);
+    if (r.biz_type) parts.push('业务类型：' + r.biz_type);
+    if (r.remark) parts.push('备注：' + r.remark);
+    if (r.clueText) parts.push('线索信息：' + r.clueText);
+
+    var fullText = parts.join('\n');
+    if (!fullText.trim()) return;
+
+    var chunks = splitText(fullText, 500);
+    var docChunks = chunks.map(function(ct) {
+      return { text: ct, keywords: extractKeywords(ct) };
+    });
+
+    corpus.push({
+      id: 'doc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      title: r.company || '未命名记录',
+      date: now,
+      chunks: docChunks,
+      source: r.source,
+      meta: {
+        company: r.company,
+        country: r.country,
+        contact: r.contact,
+        biz_type: r.biz_type
+      }
+    });
+    totalChunks += docChunks.length;
+  });
+
+  saveCorpus(corpus);
+  parsedRecords = [];
+  pendingFiles = [];
+  renderFileList();
+  renderCorpusStats();
+  document.getElementById('reviewContainer').innerHTML = '';
+  document.getElementById('btnProcess').disabled = true;
+  showToast('✅ 入库完成（' + totalChunks + '个片段）');
+}
+
+function cancelImport() {
+  parsedRecords = [];
+  pendingFiles = [];
+  renderFileList();
+  document.getElementById('reviewContainer').innerHTML = '';
+  document.getElementById('btnProcess').disabled = true;
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 2500);
+}
+
 // ========== 入库处理 ==========
 document.getElementById('btnProcess').addEventListener('click', function() {
   if (pendingFiles.length === 0) return;
   var btn = this;
   btn.disabled = true;
-  btn.textContent = '⏳ 入库中...';
-
-  var corpus = loadCorpus();
-  var totalChunks = 0;
-  var processedCount = 0;
+  btn.textContent = '⏳ 解析中...';
+  parsedRecords = [];
 
   function processNext(index) {
     if (index >= pendingFiles.length) {
-      // 全部完成
-      saveCorpus(corpus);
-      pendingFiles = [];
-      renderFileList();
-      renderCorpusStats();
-      updateStatusLabels('status-done', '已入库');
-      btn.textContent = '✅ 入库完成（' + totalChunks + '个片段）';
-      setTimeout(function() {
-        btn.textContent = '⚡ 开始入库';
-        btn.disabled = (pendingFiles.length === 0);
-      }, 2000);
+      btn.textContent = '🔍 审核中...';
+      renderReviewPanel(parsedRecords);
       return;
     }
 
     var file = pendingFiles[index];
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var title = file.name.replace(/\.(txt|md)$/i, '');
-      var text = e.target.result;
-      var chunkTexts = splitText(text, 500);
-      var now = new Date().toISOString().slice(0, 10);
+    var ext = file.name.split('.').pop().toLowerCase();
 
-      var chunks = chunkTexts.map(function(ct) {
-        return {
-          text: ct,
-          keywords: extractKeywords(ct)
-        };
-      });
+    if (ext === 'xlsx' || ext === 'csv') {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var records;
+          if (ext === 'xlsx') {
+            records = parseExcel(new Uint8Array(e.target.result), file.name);
+          } else {
+            records = parseCSV(e.target.result, file.name);
+          }
+          parsedRecords = parsedRecords.concat(records);
 
-      corpus.push({
-        id: 'doc-' + Date.now() + '-' + index,
-        title: title,
-        date: now,
-        chunks: chunks
-      });
-
-      totalChunks += chunks.length;
-      processedCount++;
-
-      // 更新当前文件状态
-      var statusEl = document.querySelectorAll('.file-list .status')[index];
-      if (statusEl) {
-        statusEl.textContent = chunks.length + '个片段';
-        statusEl.className = 'status status-done';
+          var statusEl = document.querySelectorAll('.file-list .status')[index];
+          if (statusEl) { statusEl.textContent = records.length + '条'; statusEl.className = 'status status-done'; }
+          document.getElementById('stats').textContent = '已解析：' + (index + 1) + '/' + pendingFiles.length + ' 个文件，共 ' + parsedRecords.length + ' 条记录';
+        } catch(err) {
+          var statusEl = document.querySelectorAll('.file-list .status')[index];
+          if (statusEl) { statusEl.textContent = '解析失败'; statusEl.className = 'status status-error'; }
+          console.error('解析失败：' + file.name, err);
+        }
+        setTimeout(function() { processNext(index + 1); }, 50);
+      };
+      if (ext === 'xlsx') {
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.readAsText(file, 'UTF-8');
       }
-
-      document.getElementById('stats').textContent = '已处理：' + processedCount + '/' + pendingFiles.length + ' 个文件，已生成 ' + totalChunks + ' 个片段';
-
-      // 异步处理下一个，避免阻塞UI
-      setTimeout(function() { processNext(index + 1); }, 50);
-    };
-    reader.onerror = function() {
-      var statusEl = document.querySelectorAll('.file-list .status')[index];
-      if (statusEl) {
-        statusEl.textContent = '读取失败';
-        statusEl.className = 'status status-error';
-      }
-      setTimeout(function() { processNext(index + 1); }, 50);
-    };
-    reader.readAsText(file, 'UTF-8');
+    } else {
+      // txt/md 走原有逻辑
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var title = file.name.replace(/\.(txt|md)$/i, '');
+        var text = e.target.result;
+        var chunkTexts = splitText(text, 500);
+        var now = new Date().toISOString().slice(0, 10);
+        var chunks = chunkTexts.map(function(ct) { return { text: ct, keywords: extractKeywords(ct) }; });
+        var corpus = loadCorpus();
+        corpus.push({ id: 'doc-' + Date.now() + '-' + index, title: title, date: now, chunks: chunks, source: file.name });
+        saveCorpus(corpus);
+        var statusEl = document.querySelectorAll('.file-list .status')[index];
+        if (statusEl) { statusEl.textContent = chunks.length + '个片段'; statusEl.className = 'status status-done'; }
+        setTimeout(function() { processNext(index + 1); }, 50);
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
   }
 
   processNext(0);
 });
 
-function updateStatusLabels(cls, text) {
-  document.querySelectorAll('.file-list .status').forEach(function(el) {
-    el.textContent = text;
-    el.className = 'status ' + cls;
-  });
-}
-
 // ========== localStorage操作 ==========
 function loadCorpus() {
-  try {
-    var raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch(e) {
-    return [];
-  }
+  try { var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; } catch(e) { return []; }
 }
-
 function saveCorpus(corpus) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(corpus));
-  } catch(e) {
-    if (e.name === 'QuotaExceededError') {
-      alert('⚠️ localStorage空间不足（5MB上限）。请清理部分文章后重试，或后续升级为IndexedDB存储。');
-    } else {
-      alert('❌ 保存失败：' + e.message);
-    }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(corpus)); } catch(e) {
+    if (e.name === 'QuotaExceededError') { alert('⚠️ localStorage空间不足（5MB上限）。请清理部分文章后重试。'); }
+    else { alert('❌ 保存失败：' + e.message); }
   }
 }
-
 function clearCorpus() {
   if (!confirm('确定要清空全部语料库吗？此操作不可撤销。')) return;
   localStorage.removeItem(STORAGE_KEY);
   renderCorpusStats();
 }
+function deleteArticle(articleId) {
+  var corpus = loadCorpus();
+  var target = corpus.find(function(d) { return d.id === articleId; });
+  if (!target) return;
+  if (!confirm('确定要删除《' + target.title + '》吗？（' + target.chunks.length + '个片段）')) return;
+  corpus = corpus.filter(function(d) { return d.id !== articleId; });
+  saveCorpus(corpus);
+  renderCorpusStats();
+}
+function viewArticle(articleId) {
+  var corpus = loadCorpus();
+  var target = corpus.find(function(d) { return d.id === articleId; });
+  if (!target) return;
+  var html = '<button class="close-btn" onclick="closeModal()">✕</button>';
+  html += '<h3>📄 ' + target.title + '</h3>';
+  html += '<p style="font-size:12px;color:#7f8c8d;margin-bottom:12px;">入库日期：' + target.date + ' · ' + target.chunks.length + '个片段' + (target.source ? ' · 来源：' + target.source : '') + '</p>';
+  target.chunks.forEach(function(chunk, i) {
+    html += '<div class="chunk-item"><div>' + chunk.text + '</div><div style="font-size:11px;color:#7f8c8d;margin-top:4px;">🏷 ' + (chunk.keywords || '无') + '</div></div>';
+  });
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
 
-// ========== 概览 ==========
 function renderCorpusStats() {
   var corpus = loadCorpus();
   var totalChunks = 0;
-  corpus.forEach(function(doc) {
-    totalChunks += doc.chunks.length;
-  });
-  document.getElementById('corpusStats').innerHTML =
-    '<p>📚 <strong>' + corpus.length + '</strong> 篇文章 | ' +
-    '<strong>' + totalChunks + '</strong> 个知识片段</p>' +
-    (corpus.length > 0 ? '<details><summary style="cursor:pointer;font-size:12px;color:var(--blue);">展开文章列表</summary><ul style="font-size:12px;margin-top:6px;">' +
-      corpus.map(function(d) {
-        return '<li>' + d.title + ' <span style="color:#95a5a6;">(' + d.date + '，' + d.chunks.length + '片段)</span></li>';
-      }).join('') + '</ul></details>' : '');
+  corpus.forEach(function(doc) { totalChunks += doc.chunks.length; });
+  var html = '<p>📚 <strong>' + corpus.length + '</strong> 篇文章 | <strong>' + totalChunks + '</strong> 个知识片段</p>';
+  if (corpus.length > 0) {
+    html += '<div style="margin-top:10px;">';
+    corpus.forEach(function(doc) {
+      html += '<div class="article-item">';
+      html += '<div class="info">📄 ' + doc.title + ' <span style="color:#95a5a6;font-size:11px;">(' + doc.date + '，' + doc.chunks.length + '片段)</span>';
+      if (doc.meta && doc.meta.country) html += ' <span style="font-size:10px;background:#e8f5e9;padding:2px 6px;border-radius:3px;">' + doc.meta.country + '</span>';
+      html += '</div>';
+      html += '<div class="actions">';
+      html += '<button class="small" onclick="viewArticle(\'' + doc.id + '\')">👁</button>';
+      html += '<button class="small danger" onclick="deleteArticle(\'' + doc.id + '\')">🗑</button>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+  }
+  document.getElementById('corpusStats').innerHTML = html;
 }
 
 // 初始化
