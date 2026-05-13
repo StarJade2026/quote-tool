@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -5,83 +6,194 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>货物监控面板</title>
 <style>
-  :root {
-    --bg: #f5f6fa; --card-bg: #fff; --text: #2c3e50;
-    --border: #dcdde1; --blue: #3498db; --green: #27ae60;
-    --red: #e74c3c; --orange: #f39c12; --yellow: #f1c40f;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
-  .container { max-width:960px; margin:0 auto; padding:16px; }
+ :root {
+ --bg: #f5f6fa; --card-bg: #fff; --text: #2c3e50;
+ --border: #dcdde1; --blue: #3498db; --green: #27ae60;
+ --red: #e74c3c; --orange: #f39c12; --yellow: #f1c40f;
+ }
+ * { margin:0; padding:0; box-sizing:border-box; }
+ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.6; }
+ .container { max-width:960px; margin:0 auto; padding:16px; }
 
-  .header { background: linear-gradient(135deg, #2c3e50, #34495e); color:#fff; border-radius:12px; padding:20px 24px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
-  .header h1 { font-size:20px; font-weight:600; }
-  .header .sub { font-size:12px; opacity:0.8; margin-top:4px; }
-  .header button { padding:10px 18px; background:var(--green); color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; font-weight:600; }
-  .header button:hover { opacity:0.9; }
+ .header { background: linear-gradient(135deg, #2c3e50, #34495e); color:#fff; border-radius:12px; padding:20px 24px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+ .header h1 { font-size:20px; font-weight:600; }
+ .header .sub { font-size:12px; opacity:0.8; margin-top:4px; }
+ .header button { padding:10px 18px; background:var(--green); color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; font-weight:600; }
+ .header button:hover { opacity:0.9; }
 
-  .section-title { font-size:16px; font-weight:600; margin:16px 0 10px; display:flex; align-items:center; gap:8px; }
+ .section-title { font-size:16px; font-weight:600; margin:16px 0 10px; display:flex; align-items:center; gap:8px; }
 
-  .task-card, .alert-card, .shipment-card {
-    background:var(--card-bg); border-radius:10px; padding:14px 16px;
-    margin-bottom:10px; box-shadow:0 1px 4px rgba(0,0,0,0.04);
-    border-left:4px solid var(--blue); cursor:pointer; transition: all 0.2s;
-  }
-  .task-card:hover, .alert-card:hover, .shipment-card:hover { box-shadow:0 3px 10px rgba(0,0,0,0.08); }
-  .alert-card { border-left-color: var(--red); background:#fffbfb; }
-  .alert-card.warning { border-left-color: var(--orange); background:#fffef9; }
-  .shipment-card { border-left-color: var(--green); }
-  .shipment-card.delayed { border-left-color: var(--orange); }
-  .shipment-card.critical { border-left-color: var(--red); }
+ .task-card, .alert-card, .shipment-card {
+ background:var(--card-bg); border-radius:10px; padding:14px 16px;
+ margin-bottom:10px; box-shadow:0 1px 4px rgba(0,0,0,0.04);
+ border-left:4px solid var(--blue); cursor:pointer; transition: all 0.2s;
+ }
+ .task-card:hover, .alert-card:hover, .shipment-card:hover { box-shadow:0 3px 10px rgba(0,0,0,0.08); }
+ .alert-card { border-left-color: var(--red); background:#fffbfb; }
+ .alert-card.warning { border-left-color: var(--orange); background:#fffef9; }
+ .shipment-card { border-left-color: var(--green); }
+ .shipment-card.delayed { border-left-color: var(--orange); }
+ .shipment-card.critical { border-left-color: var(--red); }
 
-  .card-row { display:flex; justify-content:space-between; align-items:flex-start; }
-  .card-title { font-weight:600; font-size:14px; }
-  .card-status { font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600; }
-  .status-normal { background:#e8f5e9; color:var(--green); }
-  .status-delay { background:#fff3cd; color:var(--orange); }
-  .status-critical { background:#fde8e8; color:var(--red); }
-  .card-detail { font-size:12px; color:#7f8c8d; margin-top:4px; }
-  .card-action { font-size:12px; color:var(--blue); margin-top:6px; font-weight:500; }
+ .card-row { display:flex; justify-content:space-between; align-items:flex-start; }
+ .card-title { font-weight:600; font-size:14px; }
+ .card-status { font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600; }
+ .status-normal { background:#e8f5e9; color:var(--green); }
+ .status-delay { background:#fff3cd; color:var(--orange); }
+ .status-critical { background:#fde8e8; color:var(--red); }
+ .card-detail { font-size:12px; color:#7f8c8d; margin-top:4px; }
+ .card-action { font-size:12px; color:var(--blue); margin-top:6px; font-weight:500; }
 
-  .tooltip-term { border-bottom:1px dashed var(--blue); cursor:help; color:var(--blue); }
-  .tooltip-box { display:none; position:absolute; background:#2c3e50; color:#fff; padding:8px 12px; border-radius:6px; font-size:11px; max-width:260px; z-index:100; pointer-events:none; }
+ .tooltip-term { border-bottom:1px dashed var(--blue); cursor:help; color:var(--blue); }
+ .tooltip-box { display:none; position:absolute; background:#2c3e50; color:#fff; padding:8px 12px; border-radius:6px; font-size:11px; max-width:260px; z-index:100; pointer-events:none; }
 
-  .brief-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
-  .brief-modal.active { display:flex; }
-  .brief-content { background:#fff; border-radius:12px; padding:24px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto; }
-  .brief-content h3 { margin-bottom:12px; }
-  .brief-content .section { margin-bottom:14px; }
-  .brief-content .section h4 { font-size:14px; margin-bottom:6px; }
-  .brief-content .section p, .brief-content .section li { font-size:13px; line-height:1.6; }
-  .brief-content button { margin-top:12px; padding:8px 18px; background:var(--blue); color:#fff; border:none; border-radius:6px; cursor:pointer; }
+ .brief-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
+ .brief-modal.active { display:flex; }
+ .brief-content { background:#fff; border-radius:12px; padding:24px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto; }
+ .brief-content h3 { margin-bottom:12px; }
+ .brief-content .section { margin-bottom:14px; }
+ .brief-content .section h4 { font-size:14px; margin-bottom:6px; }
+ .brief-content .section p, .brief-content .section li { font-size:13px; line-height:1.6; }
+ .brief-content button { margin-top:12px; padding:8px 18px; background:var(--blue); color:#fff; border:none; border-radius:6px; cursor:pointer; }
 
-  .meta { text-align:center; font-size:11px; color:#bdc3c7; padding:16px 0; }
+ /* v0.7 客户委托信息卡片 */
+ .order-card { background:var(--card-bg); border-radius:10px; padding:18px 20px; margin-bottom:10px; box-shadow:0 1px 4px rgba(0,0,0,0.04); border-left:4px solid var(--blue); }
+ .order-card.confirmed { border-left-color: var(--green); }
+ .order-card.draft { border-left-color: var(--orange); }
+ .order-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+ .order-header h3 { font-size:16px; font-weight:600; display:flex; align-items:center; gap:6px; }
+ .status-badge { font-size:11px; padding:3px 10px; border-radius:4px; font-weight:600; }
+ .status-draft { background:#fff3cd; color:var(--orange); }
+ .status-confirmed { background:#e8f5e9; color:var(--green); }
+ .order-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+ .order-grid .full-width { grid-column:1/-1; }
+ .order-grid label { display:block; font-size:11px; font-weight:600; color:#7f8c8d; margin-bottom:3px; text-transform:uppercase; letter-spacing:0.3px; }
+ .order-grid input, .order-grid select, .order-grid textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fafafa; transition:border 0.2s; font-family:inherit; }
+ .order-grid input:focus, .order-grid select:focus, .order-grid textarea:focus { outline:none; border-color:var(--blue); background:#fff; }
+ .order-grid textarea { resize:vertical; min-height:50px; }
+ .order-actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+ .btn { padding:9px 18px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+ .btn:hover { opacity:0.9; }
+ .btn-primary { background:var(--blue); color:#fff; }
+ .btn-success { background:var(--green); color:#fff; }
+ .btn-outline { background:#fff; color:var(--text); border:1px solid var(--border); }
+ .btn-outline:hover { background:#f5f6fa; }
+ .btn-sm { padding:6px 14px; font-size:12px; }
+ .order-toast { display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2c3e50; color:#fff; padding:10px 20px; border-radius:8px; font-size:13px; z-index:2000; box-shadow:0 4px 12px rgba(0,0,0,0.2); animation:fadeIn 0.3s; }
+ .order-toast.show { display:block; }
+ @keyframes fadeIn { from{opacity:0;transform:translateX(-50%) translateY(-10px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
+
+ .meta { text-align:center; font-size:11px; color:#bdc3c7; padding:16px 0; }
+
+ /* 移动端适配 */
+ @media (max-width:600px) {
+ .order-grid { grid-template-columns:1fr; }
+ .header { flex-direction:column; text-align:center; gap:12px; }
+ }
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="header">
-    <div>
-      <h1>📋 货物监控面板</h1>
-      <div class="sub">早上好，王小姐。这是你今天需要关注的事。</div>
-    </div>
-    <button onclick="generateBrief()">📝 简报</button>
+ <div class="header">
+ <div>
+ <h1>📋 货物监控面板</h1>
+ <div class="sub">早上好，王小姐。这是你今天需要关注的事。</div>
+ </div>
+ <button onclick="generateBrief()">📝 简报</button>
+ </div>
+
+ <!-- ============================================================ -->
+ <!-- v0.7 客户委托信息提交区                                       -->
+ <!-- ============================================================ -->
+ <div class="order-card" id="orderCard">
+  <div class="order-header">
+   <h3>📋 客户委托信息</h3>
+   <span class="status-badge" id="orderStatusBadge">--</span>
   </div>
 
-  <div class="section-title">📌 今天必须做的事 <span style="font-size:12px;color:#7f8c8d;">（3件待办）</span></div>
-  <div id="taskList"></div>
+  <div class="order-grid">
+   <div>
+    <label for="ci_shipper">发货人 (Shipper)</label>
+    <input type="text" id="ci_shipper" placeholder="发货人全称、地址、联系方式" autocomplete="off">
+   </div>
+   <div>
+    <label for="ci_consignee">收货人 (Consignee)</label>
+    <input type="text" id="ci_consignee" placeholder="收货人全称、地址、联系方式" autocomplete="off">
+   </div>
+   <div class="full-width">
+    <label for="ci_notifyParty">通知方 (Notify Party)</label>
+    <input type="text" id="ci_notifyParty" placeholder="可与收货人一致或另行填写" autocomplete="off">
+   </div>
+   <div class="full-width">
+    <label for="ci_cargoDesc">货描 (Cargo Description)</label>
+    <textarea id="ci_cargoDesc" placeholder="品名、HS编码等"></textarea>
+   </div>
+   <div>
+    <label for="ci_packages">件数 (Packages)</label>
+    <input type="text" id="ci_packages" placeholder="如：10 纸托盘" autocomplete="off">
+   </div>
+   <div>
+    <label for="ci_grossWeight">毛重 (Gross Weight)</label>
+    <input type="text" id="ci_grossWeight" placeholder="如：6700kg" autocomplete="off">
+   </div>
+   <div>
+    <label for="ci_volume">体积 (Volume)</label>
+    <input type="text" id="ci_volume" placeholder="如：9cbm" autocomplete="off">
+   </div>
+   <div>
+    <label for="ci_tradeTerm">贸易条款</label>
+    <select id="ci_tradeTerm">
+     <option value="">-- 请选择 --</option>
+     <option value="EXW">EXW / 工厂交货</option>
+     <option value="FCA">FCA / 货交承运人</option>
+     <option value="FOB">FOB / 装运港船上交货</option>
+     <option value="CFR">CFR / 成本加运费</option>
+     <option value="CIF">CIF / 成本保险费加运费</option>
+     <option value="DAP">DAP / 目的地交货</option>
+     <option value="DDU">DDU / 未完税交货</option>
+     <option value="DDP">DDP / 完税后交货</option>
+     <option value="CPT">CPT / 运费付至</option>
+     <option value="CIP">CIP / 运费和保险费付至</option>
+    </select>
+   </div>
+   <div>
+    <label for="ci_deliveryDeadline">交货截止日 (Deadline)</label>
+    <input type="text" id="ci_deliveryDeadline" placeholder="如：7月4日前" autocomplete="off">
+   </div>
+  </div>
 
-  <div class="section-title">⚠️ 可能出问题的货 <span style="font-size:12px;color:#7f8c8d;">（1票需关注）</span></div>
-  <div id="alertList"></div>
+  <div class="order-actions">
+   <button class="btn btn-outline" onclick="saveDraft()">💾 保存草稿</button>
+   <button class="btn btn-success" onclick="confirmOrder()">✅ 确认提交</button>
+   <button class="btn btn-outline btn-sm" onclick="resetForm()" style="margin-left:auto;">↺ 重置表单</button>
+  </div>
+  <div style="font-size:11px;color:#bdc3c7;margin-top:8px;">
+   💡 确认提交后数据将写入 localStorage.clientOrder，流转单可自动读取。修改历史自动保留。
+  </div>
+ </div>
 
-  <div class="section-title">📊 所有货物总览</div>
-  <div id="shipmentList"></div>
+ <!-- ============================================================ -->
+ <!-- 原有面板内容                                                  -->
+ <!-- ============================================================ -->
 
-  <div class="meta">货物监控面板 v0.1 · 西峡项目真实数据</div>
+ <div class="section-title">📌 今天必须做的事 <span style="font-size:12px;color:#7f8c8d;">（3件待办）</span></div>
+ <div id="taskList"></div>
+
+ <div class="section-title">⚠️ 可能出问题的货 <span style="font-size:12px;color:#7f8c8d;">（1票需关注）</span></div>
+ <div id="alertList"></div>
+
+ <div class="section-title">📊 所有货物总览</div>
+ <div id="shipmentList"></div>
+
+ <div class="meta">货物监控面板 v0.2 · 西峡项目真实数据 · 新增客户委托信息提交</div>
 </div>
 
+<!-- Toast -->
+<div class="order-toast" id="orderToast"></div>
+
+<!-- 简报模态 -->
 <div class="brief-modal" id="briefModal" onclick="if(event.target===this)closeBrief();">
-  <div class="brief-content" id="briefContent"></div>
+ <div class="brief-content" id="briefContent"></div>
 </div>
 
 <div class="tooltip-box" id="tooltip"></div>
@@ -89,153 +201,331 @@
 <script>
 // ========== 西峡真实流转单数据 ==========
 const SHIPMENTS = [
-  {
-    id: 'XX-20160707',
-    project: '西峡水泵出口德国铁路拼箱',
-    customer: '河南省西峡汽车水泵股份有限公司',
-    origin: '郑州圃田站',
-    destination: 'Göllheim D-67307, Germany',
-    etd: '2016-07-07',
-    eta: '2016-07-21',
-    deliveryDate: '2016-07-27',
-    tradeTerm: 'DDU',
-    container: 'LCL 拼箱',
-    carrier: '郑州国际陆港 / ZIH',
-    route: '郑州 → 汉堡（郑欧班列）',
-    status: 'normal',
-    nodes: [
-      { name: '客户交货', date: '2016-07-04', status: 'done' },
-      { name: '订舱', date: '2016-07-05', status: 'done' },
-      { name: '装箱（10个纸托盘）', date: '2016-07-06', status: 'done' },
-      { name: '报关', date: '2016-07-06', status: 'done' },
-      { name: '发运/开船', date: '2016-07-07', status: 'current' },
-      { name: '到港汉堡', date: '2016-07-21', status: 'upcoming' },
-      { name: '保税仓转关+派送', date: '2016-07-27', status: 'upcoming' }
-    ],
-    tasks: [
-      { type: 'cutoff', title: '截关提醒：明天郑州陆港截关', desc: '邮件草稿已备好，请确认后发送给郑州国际陆港丁金盘。', action: '确认发送' },
-      { type: 'delivery', title: '派送安排确认', desc: '目的地 Göllheim 为戴姆勒指定仓库（保税仓），代理只需做转关+派送。请确认收货人 SONIMA GmbH 的联系方式。', action: '确认信息' },
-      { type: 'customs', title: '清关文件已预填，请确认后提交', desc: '代理 Fast Forward Freight 已收到清关文件，需你确认转关文件无误。', action: '确认发送' }
-    ],
-    alerts: [
-      { level: 'warning', msg: '货物实际重量经堆场测量为5950kg（10个纸托盘），体积9.38cbm。与订舱预估接近，无异常。但保税仓转关环节需注意——收货人为SONIMA GmbH，不需做最终清关，代理只需转关+派送。' }
-    ]
-  }
+ {
+ id: 'XX-20160707',
+ project: '西峡水泵出口德国铁路拼箱',
+ customer: '河南省西峡汽车水泵股份有限公司',
+ origin: '郑州圃田站',
+ destination: 'Göllheim D-67307, Germany',
+ etd: '2016-07-07',
+ eta: '2016-07-21',
+ deliveryDate: '2016-07-27',
+ tradeTerm: 'DDU',
+ container: 'LCL 拼箱',
+ carrier: '郑州国际陆港 / ZIH',
+ route: '郑州 → 汉堡（郑欧班列）',
+ status: 'normal',
+ nodes: [
+ { name: '客户交货', date: '2016-07-04', status: 'done' },
+ { name: '订舱', date: '2016-07-05', status: 'done' },
+ { name: '装箱（10个纸托盘）', date: '2016-07-06', status: 'done' },
+ { name: '报关', date: '2016-07-06', status: 'done' },
+ { name: '发运/开船', date: '2016-07-07', status: 'current' },
+ { name: '到港汉堡', date: '2016-07-21', status: 'upcoming' },
+ { name: '保税仓转关+派送', date: '2016-07-27', status: 'upcoming' }
+ ],
+ tasks: [
+ { type: 'cutoff', title: '截关提醒：明天郑州陆港截关', desc: '邮件草稿已备好，请确认后发送给郑州国际陆港丁金盘。', action: '确认发送' },
+ { type: 'delivery', title: '派送安排确认', desc: '目的地 Göllheim 为戴姆勒指定仓库（保税仓），代理只需做转关+派送。请确认收货人 SONIMA GmbH 的联系方式。', action: '确认信息' },
+ { type: 'customs', title: '清关文件已预填，请确认后提交', desc: '代理 Fast Forward Freight 已收到清关文件，需你确认转关文件无误。', action: '确认发送' }
+ ],
+ alerts: [
+ { level: 'warning', msg: '货物实际重量经堆场测量为5950kg（10个纸托盘），体积9.38cbm。与订舱预估接近，无异常。但保税仓转关环节需注意——收货人为SONIMA GmbH，不需做最终清关，代理只需转关+派送。' }
+ ]
+ }
 ];
 
 // ========== 术语白话解释库 ==========
 const TERM_DICT = {
-  '截关': '截关是船公司/铁路公司截止接收放行条的日期和时间。过了这个时间，这批货就不能上这趟车/船了。',
-  '保税仓转关': '保税仓是海关监管的特殊仓库，货物进去时暂时不交关税。转关是指货物从一个海关管辖区运到另一个管辖区，不需要在中间环节清关。这票货到汉堡后直接保税转关到Göllheim，不需要做最终清关。',
-  'LCL拼箱': 'LCL（Less than Container Load）是拼箱货，你的货不够装一个整柜，跟其他货拼在一起走。',
-  '郑欧班列': '郑州到欧洲的铁路货运班列，从郑州圃田站出发，经新疆阿拉山口出境，到德国汉堡。',
-  'DDU': '卖方承担货物运至目的地的一切费用和风险，但不负责目的地的进口清关手续和关税。',
-  'ETA': '预计到达时间（Estimated Time of Arrival）。这批货预计7月21日到汉堡。',
-  'ETD': '预计开航/发车时间（Estimated Time of Departure）。这批货7月7日从郑州发车。',
-  'MOT': '时间风险管理引擎，帮你盯住每个运输节点是否准时，超期自动预警。',
-  '三段法': '把运输路径拆成三段：国内段（起运地服务）、干线段（国际运输）、海外段（目的地服务），分段管理风险和成本。',
-  '风险预备金': '报价时提前预留一小笔钱，用于应对运输中可能出现的额外成本。没出事这笔钱就是利润，出事了从这里出，客户不加钱。'
+ '截关': '截关是船公司/铁路公司截止接收放行条的日期和时间。过了这个时间，这批货就不能上这趟车/船了。',
+ '保税仓转关': '保税仓是海关监管的特殊仓库，货物进去时暂时不交关税。转关是指货物从一个海关管辖区运到另一个管辖区，不需要在中间环节清关。这票货到汉堡后直接保税转关到Göllheim，不需要做最终清关。',
+ 'LCL拼箱': 'LCL（Less than Container Load）是拼箱货，你的货不够装一个整柜，跟其他货拼在一起走。',
+ '郑欧班列': '郑州到欧洲的铁路货运班列，从郑州圃田站出发，经新疆阿拉山口出境，到德国汉堡。',
+ 'DDU': '卖方承担货物运至目的地的一切费用和风险，但不负责目的地的进口清关手续和关税。',
+ 'ETA': '预计到达时间（Estimated Time of Arrival）。这批货预计7月21日到汉堡。',
+ 'ETD': '预计开航/发车时间（Estimated Time of Departure）。这批货7月7日从郑州发车。',
+ 'MOT': '时间风险管理引擎，帮你盯住每个运输节点是否准时，超期自动预警。',
+ '三段法': '把运输路径拆成三段：国内段（起运地服务）、干线段（国际运输）、海外段（目的地服务），分段管理风险和成本。',
+ '风险预备金': '报价时提前预留一小笔钱，用于应对运输中可能出现的额外成本。没出事这笔钱就是利润，出事了从这里出，客户不加钱。'
 };
+
+// ========== v0.7 客户委托信息 ==========
+
+// 字段列表（与流转单 clientOrder 读取的字段名完全一致）
+var CLIENT_FIELDS = ['shipper','consignee','notifyParty','cargoDesc','packages','grossWeight','volume','tradeTerm','deliveryDeadline'];
+
+function loadOrder() {
+ try {
+  var raw = localStorage.getItem('clientOrder');
+  if (!raw) return null;
+  return JSON.parse(raw);
+ } catch(e) { return null; }
+}
+
+function saveOrder(data) {
+ localStorage.setItem('clientOrder', JSON.stringify(data));
+}
+
+function showToast(msg, isSuccess) {
+ var toast = document.getElementById('orderToast');
+ toast.textContent = (isSuccess ? '✅ ' : 'ℹ️ ') + msg;
+ toast.className = 'order-toast show';
+ setTimeout(function() { toast.className = 'order-toast'; }, 2500);
+}
+
+function updateStatusBadge(status) {
+ var badge = document.getElementById('orderStatusBadge');
+ if (status === 'confirmed') {
+  badge.textContent = '✅ 已确认';
+  badge.className = 'status-badge status-confirmed';
+  document.getElementById('orderCard').className = 'order-card confirmed';
+ } else if (status === 'draft') {
+  badge.textContent = '📝 草稿';
+  badge.className = 'status-badge status-draft';
+  document.getElementById('orderCard').className = 'order-card draft';
+ } else {
+  badge.textContent = '-- 未提交';
+  badge.className = 'status-badge';
+  document.getElementById('orderCard').className = 'order-card';
+ }
+}
+
+function collectFormData() {
+ var data = {};
+ CLIENT_FIELDS.forEach(function(f) {
+  var el = document.getElementById('ci_' + f);
+  if (el) data[f] = el.value || '';
+ });
+ return data;
+}
+
+function fillForm(data) {
+ CLIENT_FIELDS.forEach(function(f) {
+  var el = document.getElementById('ci_' + f);
+  if (el && data[f] !== undefined) el.value = data[f];
+ });
+}
+
+function resetForm() {
+ if (!confirm('确认重置表单？已保存的草稿数据将被清空（不影响已提交的确认数据）。')) return;
+ CLIENT_FIELDS.forEach(function(f) {
+  var el = document.getElementById('ci_' + f);
+  if (el) el.value = '';
+ });
+ updateStatusBadge(null);
+ // 仅清除草稿（不删除已确认数据）
+ var co = loadOrder();
+ if (co && co.status !== 'confirmed') {
+  localStorage.removeItem('clientOrder');
+ }
+ showToast('表单已重置', false);
+}
+
+function saveDraft() {
+ var data = collectFormData();
+ // 检查是否有必填数据
+ var hasData = CLIENT_FIELDS.some(function(f) { return data[f].trim(); });
+ if (!hasData) { showToast('请至少填写一个字段', false); return; }
+
+ data.status = 'draft';
+ data._updatedAt = new Date().toISOString();
+
+ // 保留已有历史
+ var existing = loadOrder();
+ if (existing && existing._history) {
+  data._history = existing._history;
+ } else {
+  data._history = [];
+ }
+ if (existing && existing.confirmedAt) {
+  data.confirmedAt = existing.confirmedAt;
+ }
+
+ saveOrder(data);
+ updateStatusBadge('draft');
+ showToast('草稿已保存到 localStorage.clientOrder', false);
+}
+
+function confirmOrder() {
+ var data = collectFormData();
+
+ // 必填检查
+ var required = ['shipper', 'consignee', 'cargoDesc', 'tradeTerm'];
+ var missing = [];
+ required.forEach(function(f) {
+  if (!data[f].trim()) missing.push(f);
+ });
+ if (missing.length > 0) {
+  showToast('请填写必填字段：' + missing.join(', '), false);
+  return;
+ }
+
+ if (!confirm('确认提交客户委托信息？\n\n提交后流转单可通过"重新载入"读取此数据。')) return;
+
+ data.status = 'confirmed';
+ data.confirmedAt = new Date().toISOString();
+ data._updatedAt = data.confirmedAt;
+
+ // 保存修改历史
+ var existing = loadOrder();
+ var history = [];
+ if (existing && existing._history) {
+  history = existing._history;
+ }
+ // 如果之前有已确认数据，记录版本历史
+ if (existing && existing.status === 'confirmed') {
+  var prevVersion = JSON.parse(JSON.stringify(existing));
+  delete prevVersion._history;
+  history.push({
+   snapshot: prevVersion,
+   time: new Date().toISOString()
+  });
+ }
+ data._history = history;
+
+ saveOrder(data);
+ updateStatusBadge('confirmed');
+ showToast('✅ 已确认提交！流转单可立即读取。', true);
+}
+
+// 初始化加载
+function initOrderForm() {
+ var data = loadOrder();
+ if (data) {
+  fillForm(data);
+  updateStatusBadge(data.status || 'draft');
+ } else {
+  updateStatusBadge(null);
+ }
+
+ // 自动保存草稿（输入变化时）
+ var debounceTimer = null;
+ CLIENT_FIELDS.forEach(function(f) {
+  var el = document.getElementById('ci_' + f);
+  if (!el) return;
+  el.addEventListener('input', function() {
+   clearTimeout(debounceTimer);
+   debounceTimer = setTimeout(function() {
+    // 只在非确认状态时自动保存草稿
+    var cur = loadOrder();
+    if (!cur || cur.status !== 'confirmed') {
+     var formData = collectFormData();
+     var hasData = CLIENT_FIELDS.some(function(f2) { return formData[f2].trim(); });
+     if (hasData) {
+      formData.status = 'draft';
+      formData._updatedAt = new Date().toISOString();
+      var existing = loadOrder();
+      if (existing && existing._history) formData._history = existing._history;
+      else formData._history = [];
+      saveOrder(formData);
+      updateStatusBadge('draft');
+     }
+    }
+   }, 800);
+  });
+ });
+}
 
 // ========== 渲染 ==========
 function renderTasks() {
-  var tasks = SHIPMENTS[0].tasks;
-  var html = '';
-  tasks.forEach(function(t) {
-    var icon = t.type === 'cutoff' ? '⏰' : (t.type === 'customs' ? '📋' : '🚚');
-    html += '<div class="task-card" onclick="alert(\'预填草稿已打开（原型演示）\n\n\"' + t.title + '\"\n\n' + t.desc + '\")">';
-    html += '<div class="card-row"><span class="card-title">' + icon + ' ' + t.title + '</span></div>';
-    html += '<div class="card-detail">' + t.desc + '</div>';
-    html += '<div class="card-action">👉 一键' + t.action + '</div>';
-    html += '</div>';
-  });
-  document.getElementById('taskList').innerHTML = html;
+ var tasks = SHIPMENTS[0].tasks;
+ var html = '';
+ tasks.forEach(function(t) {
+ var icon = t.type === 'cutoff' ? '⏰' : (t.type === 'customs' ? '📋' : '🚚');
+ html += '<div class="task-card" onclick="alert(\'预填草稿已打开（原型演示）\n\n\"' + t.title + '\"\n\n' + t.desc + '\')">';
+ html += '<div class="card-row"><span class="card-title">' + icon + ' ' + t.title + '</span></div>';
+ html += '<div class="card-detail">' + t.desc + '</div>';
+ html += '<div class="card-action">👉 一键' + t.action + '</div>';
+ html += '</div>';
+ });
+ document.getElementById('taskList').innerHTML = html;
 }
 
 function renderAlerts() {
-  var alerts = SHIPMENTS[0].alerts;
-  var html = '';
-  alerts.forEach(function(a) {
-    var cls = a.level === 'warning' ? 'warning' : '';
-    html += '<div class="alert-card ' + cls + '">';
-    html += '<div class="card-title">⚠️ 西峡水泵铁路拼箱</div>';
-    html += '<div class="card-detail">' + a.msg + '</div>';
-    html += '</div>';
-  });
-  document.getElementById('alertList').innerHTML = html;
+ var alerts = SHIPMENTS[0].alerts;
+ var html = '';
+ alerts.forEach(function(a) {
+ var cls = a.level === 'warning' ? 'warning' : '';
+ html += '<div class="alert-card ' + cls + '">';
+ html += '<div class="card-title">⚠️ 西峡水泵铁路拼箱</div>';
+ html += '<div class="card-detail">' + a.msg + '</div>';
+ html += '</div>';
+ });
+ document.getElementById('alertList').innerHTML = html;
 }
 
 function renderShipments() {
-  var html = '';
-  SHIPMENTS.forEach(function(s) {
-    var cls = s.status === 'delayed' ? 'delayed' : (s.status === 'critical' ? 'critical' : '');
-    var statusLabel = s.status === 'normal' ? '正常' : (s.status === 'delayed' ? '有延误' : '需关注');
-    var statusCls = s.status === 'normal' ? 'status-normal' : (s.status === 'delayed' ? 'status-delay' : 'status-critical');
-    
-    html += '<div class="shipment-card ' + cls + '" onclick="toggleDetail(\'' + s.id + '\')">';
-    html += '<div class="card-row"><span class="card-title">📦 ' + s.project + '</span><span class="card-status ' + statusCls + '">' + statusLabel + '</span></div>';
-    html += '<div class="card-detail">' + s.route + ' | ETD: ' + s.etd + ' | ETA汉堡: ' + s.eta + ' | <span class="tooltip-term" data-term="保税仓转关">保税仓转关</span>派送: ' + s.deliveryDate + '</div>';
-    html += '<div class="card-detail" style="margin-top:2px;">收货人: SONIMA GmbH（戴姆勒指定仓库）| 代理: Fast Forward Freight GmbH</div>';
-    html += '<div id="detail-' + s.id + '" style="display:none;margin-top:8px;font-size:12px;">';
-    s.nodes.forEach(function(n) {
-      var icon = n.status === 'done' ? '✅' : (n.status === 'current' ? '🔄' : '⏳');
-      html += '<div style="padding:3px 0;">' + icon + ' ' + n.date + ' — ' + n.name + '</div>';
-    });
-    html += '</div>';
-    html += '</div>';
-  });
-  document.getElementById('shipmentList').innerHTML = html;
+ var html = '';
+ SHIPMENTS.forEach(function(s) {
+ var cls = s.status === 'delayed' ? 'delayed' : (s.status === 'critical' ? 'critical' : '');
+ var statusLabel = s.status === 'normal' ? '正常' : (s.status === 'delayed' ? '有延误' : '需关注');
+ var statusCls = s.status === 'normal' ? 'status-normal' : (s.status === 'delayed' ? 'status-delay' : 'status-critical');
+
+ html += '<div class="shipment-card ' + cls + '" onclick="toggleDetail(\'' + s.id + '\')">';
+ html += '<div class="card-row"><span class="card-title">📦 ' + s.project + '</span><span class="card-status ' + statusCls + '">' + statusLabel + '</span></div>';
+ html += '<div class="card-detail">' + s.route + ' | ETD: ' + s.etd + ' | ETA汉堡: ' + s.eta + ' | <span class="tooltip-term" data-term="保税仓转关">保税仓转关</span>派送: ' + s.deliveryDate + '</div>';
+ html += '<div class="card-detail" style="margin-top:2px;">收货人: SONIMA GmbH（戴姆勒指定仓库）| 代理: Fast Forward Freight GmbH</div>';
+ html += '<div id="detail-' + s.id + '" style="display:none;margin-top:8px;font-size:12px;">';
+ s.nodes.forEach(function(n) {
+ var icon = n.status === 'done' ? '✅' : (n.status === 'current' ? '🔄' : '⏳');
+ html += '<div style="padding:3px 0;">' + icon + ' ' + n.date + ' — ' + n.name + '</div>';
+ });
+ html += '</div>';
+ html += '</div>';
+ });
+ document.getElementById('shipmentList').innerHTML = html;
 }
 
 function toggleDetail(id) {
-  var el = document.getElementById('detail-' + id);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+ var el = document.getElementById('detail-' + id);
+ if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 // ========== 术语悬浮 ==========
 document.addEventListener('mouseover', function(e) {
-  if (e.target.classList.contains('tooltip-term')) {
-    var term = e.target.getAttribute('data-term');
-    var tip = document.getElementById('tooltip');
-    var text = TERM_DICT[term] || '暂无解释';
-    tip.textContent = text;
-    tip.style.display = 'block';
-    tip.style.left = e.pageX + 10 + 'px';
-    tip.style.top = e.pageY - 30 + 'px';
-  }
+ if (e.target.classList.contains('tooltip-term')) {
+ var term = e.target.getAttribute('data-term');
+ var tip = document.getElementById('tooltip');
+ var text = TERM_DICT[term] || '暂无解释';
+ tip.textContent = text;
+ tip.style.display = 'block';
+ tip.style.left = e.pageX + 10 + 'px';
+ tip.style.top = e.pageY - 30 + 'px';
+ }
 });
 document.addEventListener('mouseout', function(e) {
-  if (e.target.classList.contains('tooltip-term')) {
-    document.getElementById('tooltip').style.display = 'none';
-  }
+ if (e.target.classList.contains('tooltip-term')) {
+ document.getElementById('tooltip').style.display = 'none';
+ }
 });
 
 // ========== 简报 ==========
 function generateBrief() {
-  var s = SHIPMENTS[0];
-  var html = '<h3>📝 简报</h3>';
-  html += '<div class="section"><h4>一、精简摘要</h4><p>西峡水泵铁路拼箱已从郑州发车，预计7月21日到汉堡，7月27日派送到Göllheim。目前全节点正常，无延误风险。货物为保税仓交货，不需最终清关。</p></div>';
-  html += '<div class="section"><h4>二、关键数据</h4><ul>';
-  html += '<li>票号：XX-20160707</li>';
-  html += '<li>路线：郑州圃田站 → 汉堡 → Göllheim</li>';
-  html += '<li>ETD：7月7日 | ETA汉堡：7月21日 | 派送到门：7月27日</li>';
-  html += '<li>箱型：LCL拼箱（10个纸托盘，实重5950kg，体积9.38cbm）</li>';
-  html += '<li>贸易条款：DDU</li>';
-  html += '<li>承运人：郑州国际陆港（郑欧班列）</li>';
-  html += '<li>海外代理：Fast Forward Freight GmbH（联系人Necmi Patan）</li>';
-  html += '</ul></div>';
-  html += '<div class="section"><h4>三、建议方案</h4><p>已确认代理只做转关+派送，不需最终清关。收货人为SONIMA GmbH（戴姆勒指定仓库）。建议7月20日联系代理确认到港情况，7月26日确认派送车辆到位。如无异常，此票可按计划完成。</p></div>';
-  html += '<button onclick="closeBrief()">关闭</button>';
+ var s = SHIPMENTS[0];
+ var html = '<h3>📝 简报</h3>';
+ html += '<div class="section"><h4>一、精简摘要</h4><p>西峡水泵铁路拼箱已从郑州发车，预计7月21日到汉堡，7月27日派送到Göllheim。目前全节点正常，无延误风险。货物为保税仓交货，不需最终清关。</p></div>';
+ html += '<div class="section"><h4>二、关键数据</h4><ul>';
+ html += '<li>票号：XX-20160707</li>';
+ html += '<li>路线：郑州圃田站 → 汉堡 → Göllheim</li>';
+ html += '<li>ETD：7月7日 | ETA汉堡：7月21日 | 派送到门：7月27日</li>';
+ html += '<li>箱型：LCL拼箱（10个纸托盘，实重5950kg，体积9.38cbm）</li>';
+ html += '<li>贸易条款：DDU</li>';
+ html += '<li>承运人：郑州国际陆港（郑欧班列）</li>';
+ html += '<li>海外代理：Fast Forward Freight GmbH（联系人Necmi Patan）</li>';
+ html += '</ul></div>';
+ html += '<div class="section"><h4>三、建议方案</h4><p>已确认代理只做转关+派送，不需最终清关。收货人为SONIMA GmbH（戴姆勒指定仓库）。建议7月20日联系代理确认到港情况，7月26日确认派送车辆到位。如无异常，此票可按计划完成。</p></div>';
+ html += '<button onclick="closeBrief()">关闭</button>';
 
-  document.getElementById('briefContent').innerHTML = html;
-  document.getElementById('briefModal').classList.add('active');
+ document.getElementById('briefContent').innerHTML = html;
+ document.getElementById('briefModal').classList.add('active');
 }
 
 function closeBrief() {
-  document.getElementById('briefModal').classList.remove('active');
+ document.getElementById('briefModal').classList.remove('active');
 }
 
 // ========== 初始化 ==========
+initOrderForm();
 renderTasks();
 renderAlerts();
 renderShipments();
