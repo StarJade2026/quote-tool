@@ -126,6 +126,32 @@
         input.value = '';
     };
 
+    // ====== v0.7 客户委托信息区（提升到 Script 1，确保 updatePreview 可调用） ======
+    var CLIENT_ORDER_FIELDS = ['shipper','consignee','notifyParty','cargoDesc','packages','grossWeight','volume','tradeTerm','deliveryDeadline'];
+
+    function loadClientOrder() {
+        try {
+            var raw = localStorage.getItem('clientOrder');
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch(e) { return null; }
+    }
+
+    function loadClientOrderFields() {
+        var co = loadClientOrder();
+        if (!co) return {};
+        var result = {};
+        CLIENT_ORDER_FIELDS.forEach(function(f) {
+            result[f] = co[f] || '';
+        });
+        return result;
+    }
+
+    window.reloadClientOrder = function() {
+        fillClientOrderFields();
+        updatePreview();
+    };
+
 </script>
     <style>
         * { box-sizing: border-box; }
