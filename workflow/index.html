@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -393,6 +394,93 @@ BAF 300 USD</textarea>
         </div>
 
         <p style="font-size:0.75rem; color:#64748b; margin-top:16px;">🔒 内部计划，对外以合同为准 | 流转单作为公司数据库归档</p>
+
+        <!-- ====== v0.7 客户委托信息区 ====== -->
+        <div class="section-card">
+            <h4>📋 客户委托信息 <span style="font-size:0.7rem;color:#94a3b8;font-weight:400;">（自动从 clientOrder 载入）</span></h4>
+            <div class="info-grid">
+                <div><label>发货人 (Shipper)</label><input type="text" id="ci_shipper" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div><label>收货人 (Consignee)</label><input type="text" id="ci_consignee" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div class="info-full"><label>通知方 (Notify Party)</label><input type="text" id="ci_notifyParty" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div class="info-full"><label>货描 (Cargo Description)</label><input type="text" id="ci_cargoDesc" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div><label>件数 (Packages)</label><input type="text" id="ci_packages" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div><label>毛重 (Gross Weight)</label><input type="text" id="ci_grossWeight" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div><label>体积 (Volume)</label><input type="text" id="ci_volume" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div><label>贸易条款</label><input type="text" id="ci_tradeTerm" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+                <div class="info-full"><label>交货截止日 (Deadline)</label><input type="text" id="ci_deliveryDeadline" placeholder="自动填充" readonly style="background:#f1f5f9;"></div>
+            </div>
+            <button class="btn btn-sm" onclick="reloadClientOrder()" style="margin-top:8px;">🔄 重新载入 clientOrder</button>
+        </div>
+
+        <!-- ====== v0.7 原始信息缓冲区 ====== -->
+        <div class="section-card">
+            <h4>📝 原始信息缓冲区</h4>
+            <p style="font-size:0.75rem;color:#64748b;margin:0 0 8px 0;">粘贴或输入碎片信息，系统将按关键词自动解析并填入结构化字段。</p>
+            <textarea id="rawInfoArea" class="raw-info-area" placeholder="示例：&#10;Shipper: XIXIA AUTO WATER PUMP CO.,LTD&#10;收货人: SONIMA GmbH, RUHWEG 17, D-67307 GOLLHEIM&#10;货描: EXHAUST MANIFOLD / 8409999990&#10;件数: 10 纸托盘&#10;毛重: 6700kg&#10;体积: 9cbm&#10;贸易条款: DDU&#10;交货时间: 7月4日前"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                <button class="btn" onclick="parseRawInfo()">✅ 确认迁移 → 填入委托区</button>
+                <button class="btn btn-sm" onclick="showRawHistory()">📂 历史记录</button>
+            </div>
+            <div id="rawParseResult" style="margin-top:8px;font-size:0.78rem;color:#64748b;"></div>
+        </div>
+
+        <!-- ====== v0.7 货物追踪模块 ====== -->
+        <div class="section-card" style="border-left:3px solid #2563eb;">
+            <h4>🚢 货物追踪 <span style="font-size:0.7rem;color:#94a3b8;font-weight:400;">Powered by 飞驼</span></h4>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                <div style="flex:2;min-width:180px;">
+                    <label style="font-size:0.75rem;color:#64748b;">提单号 *</label>
+                    <input type="text" id="trackingBillNo" placeholder="MSCU1234567" style="font-size:0.88rem;">
+                </div>
+                <div style="flex:1;min-width:120px;">
+                    <label style="font-size:0.75rem;color:#64748b;">箱号（选填）</label>
+                    <input type="text" id="trackingContainerNo" placeholder="MSCU1234567" style="font-size:0.88rem;">
+                </div>
+                <div style="flex:1;min-width:130px;">
+                    <label style="font-size:0.75rem;color:#64748b;">船公司</label>
+                    <select id="trackingCarrierCode" style="font-size:0.88rem;">
+                        <option value="MSC">MSC</option>
+                        <option value="MAERSK">MAERSK</option>
+                        <option value="COSCO">COSCO</option>
+                        <option value="CMA CGM">CMA CGM</option>
+                        <option value="EVERGREEN">EVERGREEN</option>
+                        <option value="ONE">ONE</option>
+                        <option value="HPL">HPL (Hapag-Lloyd)</option>
+                        <option value="YML">YML (Yang Ming)</option>
+                        <option value="ZIM">ZIM</option>
+                        <option value="OTHER">其他</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 高级选项（折叠） -->
+            <details style="margin-bottom:10px;font-size:0.78rem;color:#64748b;">
+                <summary style="cursor:pointer;">🔧 高级选项（自动推断，可手动覆盖）</summary>
+                <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:100px;">
+                        <label style="font-size:0.7rem;">portCode（起运港代码）</label>
+                        <select id="trackingPortCode" style="font-size:0.82rem;">
+                            <option value="CNSHA">CNSHA / 上海</option>
+                            <option value="CNNGB">CNNGB / 宁波</option>
+                            <option value="CNTAO">CNTAO / 青岛</option>
+                            <option value="CNSHK">CNSHK / 深圳/蛇口</option>
+                            <option value="CNTXG">CNTXG / 天津</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;min-width:80px;">
+                        <label style="font-size:0.7rem;">进出口方向</label>
+                        <select id="trackingIsExport" style="font-size:0.82rem;">
+                            <option value="E" selected>E / 出口</option>
+                            <option value="I">I / 进口</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;">portCode 从起运地推断，isExport 从贸易条款推断</div>
+            </details>
+
+            <button class="btn btn-primary" onclick="trackFreight()" style="width:100%;">🔍 追踪货物</button>
+            <div id="trackingResult" style="margin-top:12px;"></div>
+        </div>
 
         <div class="action-bar">
             <button class="btn btn-primary" onclick="updatePreview()">🔄 刷新预览</button>
@@ -853,10 +941,32 @@ BAF 300 USD</textarea>
         let html = '<div class="preview-header">' +
             '<div class="preview-title">业务流转单 · ' + escapeHtml(project) + (isSpecified ? ' <span class="tag tag-red">指定货</span>' : '') + '</div>' +
             '<div class="preview-sub">版本 ' + escapeHtml(version) + ' | 生成时间 ' + new Date().toISOString().slice(0,10) + '</div>' +
-            '<div class="preview-sub">客户: ' + escapeHtml(customer) + ' | ' + escapeHtml(trade) + ' ' + escapeHtml(container) + '</div>' +
+            '<div class="preview-sub">客户: ' + escapeHtml(customer) + ' | ' + escapeHtml(trade) + '</div>' +
+            '<div class="preview-sub">箱型箱量: ' + escapeHtml(container) + '</div>' +
             '<div class="preview-sub">' + escapeHtml(geo1) + ' → ' + escapeHtml(geo2) + ' → ' + escapeHtml(geo3) + '</div>' +
             '<div class="preview-sub">客户交货: ' + (delDate || '待定') + ' | ETD: ' + (etdDate || '待定') + ' | ' + windowText + '</div>' +
             '</div>';
+
+        // v0.7 客户委托信息展示（只展不编）
+        var ci = loadClientOrderFields();
+        if (ci.shipper || ci.consignee || ci.cargoDesc) {
+            html += '<div class="preview-section"><h4>📋 客户委托信息</h4>';
+            html += '<table class="task-table" style="font-size:12px;">';
+            if (ci.shipper) html += '<tr><td style="width:80px;font-weight:500;">发货人</td><td>' + escapeHtml(ci.shipper) + '</td></tr>';
+            if (ci.consignee) html += '<tr><td style="font-weight:500;">收货人</td><td>' + escapeHtml(ci.consignee) + '</td></tr>';
+            if (ci.notifyParty) html += '<tr><td style="font-weight:500;">通知方</td><td>' + escapeHtml(ci.notifyParty) + '</td></tr>';
+            if (ci.cargoDesc) html += '<tr><td style="font-weight:500;">货描</td><td>' + escapeHtml(ci.cargoDesc) + '</td></tr>';
+            if (ci.packages || ci.grossWeight || ci.volume) {
+                var line = '';
+                if (ci.packages) line += '件数 ' + ci.packages + ' ';
+                if (ci.grossWeight) line += '毛重 ' + ci.grossWeight + ' ';
+                if (ci.volume) line += '体积 ' + ci.volume;
+                html += '<tr><td style="font-weight:500;">货物概括</td><td>' + escapeHtml(line.trim()) + '</td></tr>';
+            }
+            if (ci.tradeTerm) html += '<tr><td style="font-weight:500;">贸易条款</td><td>' + escapeHtml(ci.tradeTerm) + '</td></tr>';
+            if (ci.deliveryDeadline) html += '<tr><td style="font-weight:500;">交货截止</td><td>' + escapeHtml(ci.deliveryDeadline) + '</td></tr>';
+            html += '</table></div>';
+        }
 
         // 上游委托方
         if (upstreamCards.length > 0) {
@@ -934,6 +1044,32 @@ BAF 300 USD</textarea>
         }
 
         html += '</div>';
+
+        // v0.7 货物追踪结果（从 sessionStorage 暂存）
+        var trackingCache = sessionStorage.getItem('wf_tracking_result');
+        if (trackingCache) {
+            try {
+                var tr = JSON.parse(trackingCache);
+                html += '<div class="preview-section"><h4>🚢 货物追踪 — ' + escapeHtml(tr.billNo || '') + '</h4>';
+                html += '<div class="timeline">';
+                (tr.statusList || []).forEach(function(s) {
+                    var isEsti = s.isEsti;
+                    var cls = isEsti ? 'estimated' : 'actual';
+                    var badge = isEsti ? '<span class="timeline-badge esti">⏳ 预计</span>' : '<span class="timeline-badge actual">✅ 实际</span>';
+                    html += '<div class="timeline-item ' + cls + '">';
+                    html += '<div class="timeline-desc">' + escapeHtml(s.desc || s.eventDesc || s.event || '') + ' ' + badge + '</div>';
+                    if (s.location || s.place) html += '<div class="timeline-location">📍 ' + escapeHtml(s.location || s.place) + '</div>';
+                    html += '<div class="timeline-time">' + (s.time || s.eventTime || s.date || '') + '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                if (tr.routes && tr.routes.length > 0) {
+                    html += '<div style="font-size:0.78rem;color:#64748b;">航线: ' + escapeHtml(tr.routes.join(' → ')) + '</div>';
+                }
+                html += '</div>';
+            } catch(e) {}
+        }
+
         html += '<div class="footnote">内部计划，对外以合同为准 | 操作过程中可补充联络人信息，流转单作为公司数据库归档</div>';
 
         document.getElementById('previewContainer').innerHTML = html;
@@ -1201,6 +1337,277 @@ BAF 300 USD</textarea>
         input.value = '';
     };
 
+    // ====== v0.7 客户委托信息区 ======
+    var CLIENT_ORDER_FIELDS = ['shipper','consignee','notifyParty','cargoDesc','packages','grossWeight','volume','tradeTerm','deliveryDeadline'];
+
+    function loadClientOrder() {
+        try {
+            var raw = localStorage.getItem('clientOrder');
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch(e) { return null; }
+    }
+
+    function loadClientOrderFields() {
+        var co = loadClientOrder();
+        if (!co) return {};
+        var result = {};
+        CLIENT_ORDER_FIELDS.forEach(function(f) {
+            result[f] = co[f] || '';
+        });
+        return result;
+    }
+
+    function fillClientOrderFields() {
+        var co = loadClientOrder();
+        if (!co) {
+            CLIENT_ORDER_FIELDS.forEach(function(f) {
+                var el = document.getElementById('ci_' + f);
+                if (el) el.value = '(无 clientOrder 数据)';
+            });
+            return;
+        }
+        var fieldLabelMap = {
+            shipper:'shipper', consignee:'consignee', notifyParty:'notifyParty', cargoDesc:'cargoDesc',
+            packages:'packages', grossWeight:'grossWeight', volume:'volume', tradeTerm:'tradeTerm', deliveryDeadline:'deliveryDeadline'
+        };
+        Object.keys(fieldLabelMap).forEach(function(f) {
+            var el = document.getElementById('ci_' + f);
+            if (el) el.value = co[f] || '';
+        });
+    }
+
+    window.reloadClientOrder = function() {
+        fillClientOrderFields();
+        updatePreview();
+    };
+
+    // ====== v0.7 原始信息缓冲区 ======
+    var RAW_INFO_KEYWORDS = [
+        { regex:/^(?:Shipper|发货人)[：:]\s*(.+)/i, field:'shipper' },
+        { regex:/^(?:Consignee|收货人)[：:]\s*(.+)/i, field:'consignee' },
+        { regex:/^(?:Notify|通知方|通知人)[：:]\s*(.+)/i, field:'notifyParty' },
+        { regex:/^(?:货描|品名|Cargo)[：:]\s*(.+)/i, field:'cargoDesc' },
+        { regex:/^(?:件数|Packages)[：:]\s*(.+)/i, field:'packages' },
+        { regex:/^(?:毛重|Gross\s*Weight)[：:]\s*(.+)/i, field:'grossWeight' },
+        { regex:/^(?:体积|Volume|CBM)[：:]\s*(.+)/i, field:'volume' },
+        { regex:/^(?:贸易条款|Trade\s*Term)[：:]\s*(.+)/i, field:'tradeTerm' },
+        { regex:/^(?:交货时间|Deadline)[：:]\s*(.+)/i, field:'deliveryDeadline' },
+        { regex:/^(?:备注|Remarks)[：:]\s*(.+)/i, field:'remarks' }
+    ];
+
+    window.parseRawInfo = function() {
+        var text = document.getElementById('rawInfoArea').value;
+        if (!text.trim()) { alert('请输入原始信息'); return; }
+
+        var lines = text.split('\n');
+        var mapped = {};
+        var unmatched = [];
+        var matchedCount = 0;
+
+        lines.forEach(function(line) {
+            line = line.trim();
+            if (!line) return;
+            var found = false;
+            for (var i = 0; i < RAW_INFO_KEYWORDS.length; i++) {
+                var m = line.match(RAW_INFO_KEYWORDS[i].regex);
+                if (m) {
+                    mapped[RAW_INFO_KEYWORDS[i].field] = m[1].trim();
+                    found = true;
+                    matchedCount++;
+                    break;
+                }
+            }
+            // 检查纯贸易条款关键词（无冒号分隔的情况）
+            if (!found) {
+                var tradeTermMatch = line.match(/^(FOB|DDP|DDU|CIF|EXW|CFR|FCA|DAP|CPT|CIP)$/i);
+                if (tradeTermMatch) {
+                    mapped.tradeTerm = tradeTermMatch[1].toUpperCase();
+                    found = true;
+                    matchedCount++;
+                }
+            }
+            if (!found) unmatched.push(line);
+        });
+
+        if (unmatched.length > 0) {
+            mapped.remarks = (mapped.remarks || '') + (mapped.remarks ? '\n' : '') + unmatched.join('\n');
+        }
+
+        // 显示解析结果
+        var resultHtml = '<div style="margin-top:6px;">✅ 已识别 ' + matchedCount + ' 个字段';
+        if (unmatched.length > 0) resultHtml += '，' + unmatched.length + ' 行未匹配已归入备注';
+        resultHtml += '</div>';
+        document.getElementById('rawParseResult').innerHTML = resultHtml;
+
+        // 填充 clientOrder 到 localStorage
+        var co = loadClientOrder() || {};
+        ['shipper','consignee','notifyParty','cargoDesc','packages','grossWeight','volume','tradeTerm','deliveryDeadline','remarks'].forEach(function(f) {
+            if (mapped[f] !== undefined) co[f] = mapped[f];
+        });
+        localStorage.setItem('clientOrder', JSON.stringify(co));
+
+        // 更新显示的字段
+        fillClientOrderFields();
+
+        // 保存原始记录到历史
+        var history = JSON.parse(localStorage.getItem('rawInfoHistory') || '[]');
+        history.push({ raw: text, parsed: mapped, time: new Date().toISOString() });
+        localStorage.setItem('rawInfoHistory', JSON.stringify(history));
+
+        updatePreview();
+    };
+
+    window.showRawHistory = function() {
+        var history = JSON.parse(localStorage.getItem('rawInfoHistory') || '[]');
+        if (history.length === 0) {
+            alert('暂无历史记录');
+            return;
+        }
+        var h = '<div style="max-height:350px;overflow-y:auto;">';
+        history.slice().reverse().forEach(function(item, idx) {
+            h += '<div class="raw-history-item">';
+            h += '<div style="font-size:10px;color:#999;margin-bottom:2px;">' + new Date(item.time).toLocaleString('zh-CN') + '</div>';
+            h += '<pre style="font-size:11px;background:#f5f5f7;padding:4px 6px;border-radius:4px;margin:0;white-space:pre-wrap;word-break:break-all;">' + escapeHtml(item.raw) + '</pre>';
+            h += '</div>';
+        });
+        h += '</div>';
+        document.getElementById('historyList').innerHTML = h;
+        document.getElementById('historyModal').style.display = 'block';
+    };
+
+    // ====== v0.7 飞驼货物追踪 ======
+    var PORT_CODE_MAP = {
+        '上海':'CNSHA', '上海洋山港':'CNSHA', '外高桥':'CNSHA', '上海港':'CNSHA',
+        '宁波':'CNNGB', '宁波港':'CNNGB',
+        '青岛':'CNTAO', '青岛港':'CNTAO',
+        '深圳':'CNSHK', '蛇口':'CNSHK', '深圳港':'CNSHK',
+        '天津':'CNTXG', '天津港':'CNTXG'
+    };
+
+    function autoDetectPortCode() {
+        var geo1 = (document.getElementById('geo1').value || '').trim();
+        for (var key in PORT_CODE_MAP) {
+            if (geo1.indexOf(key) >= 0) return PORT_CODE_MAP[key];
+        }
+        return 'CNSHA';
+    }
+
+    function autoDetectIsExport() {
+        var trade = document.getElementById('tradeTerm').value || 'DDP';
+        var exportTerms = ['EXW','FCA','FOB','CFR','CIF','DAP','DDP','DDU','CPT','CIP'];
+        return exportTerms.indexOf(trade.toUpperCase()) >= 0 ? 'E' : 'I';
+    }
+
+    function applyAutoDetectTrackingOptions() {
+        var portEl = document.getElementById('trackingPortCode');
+        var isExpEl = document.getElementById('trackingIsExport');
+        if (portEl && !portEl.dataset.manualOverride) {
+            portEl.value = autoDetectPortCode();
+        }
+        if (isExpEl && !isExpEl.dataset.manualOverride) {
+            isExpEl.value = autoDetectIsExport();
+        }
+    }
+
+    // ====== v0.7 初始化扩展（在现有 DOMContentLoaded 之后执行） ======
+    (function() {
+        var portEl = document.getElementById('trackingPortCode');
+        var isExpEl = document.getElementById('trackingIsExport');
+        if (portEl) portEl.addEventListener('change', function() { portEl.dataset.manualOverride = '1'; });
+        if (isExpEl) isExpEl.addEventListener('change', function() { isExpEl.dataset.manualOverride = '1'; });
+        var geo1El = document.getElementById('geo1');
+        if (geo1El) geo1El.addEventListener('input', function() {
+            if (portEl && !portEl.dataset.manualOverride) portEl.value = autoDetectPortCode();
+        });
+        var tradeEl = document.getElementById('tradeTerm');
+        if (tradeEl) tradeEl.addEventListener('change', function() {
+            if (isExpEl && !isExpEl.dataset.manualOverride) isExpEl.value = autoDetectIsExport();
+        });
+        fillClientOrderFields();
+        applyAutoDetectTrackingOptions();
+        var ciEl = document.getElementById('containerInfo');
+        if (ciEl) ciEl.addEventListener('input', updatePreview);
+    })();
+
+    window.trackFreight = function() {
+        var billNo = document.getElementById('trackingBillNo').value.trim();
+        if (!billNo) { alert('请输入提单号'); return; }
+        var containerNo = document.getElementById('trackingContainerNo').value.trim() || undefined;
+        var carrierCode = document.getElementById('trackingCarrierCode').value;
+        var portCode = document.getElementById('trackingPortCode').value;
+        var isExport = document.getElementById('trackingIsExport').value;
+
+        var trackingResult = document.getElementById('trackingResult');
+        trackingResult.innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;">⏳ 查询中...</div>';
+
+        var body = { billNo: billNo, carrierCode: carrierCode, portCode: portCode, isExport: isExport };
+        if (containerNo) body.containerNo = containerNo;
+
+        fetch('https://api-proxy.rainbowway-api.workers.dev/v1/freightower/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+            var result = data && data.data && data.data.result;
+            if (!result) {
+                trackingResult.innerHTML = '<div style="padding:10px;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:0.85rem;">❌ 查询失败：返回数据格式异常' + (data.message ? ' (' + data.message + ')' : '') + '</div>';
+                return;
+            }
+
+            var containers = result.containers || [];
+            if (containers.length === 0) {
+                trackingResult.innerHTML = '<div style="padding:10px;background:#fef9c3;color:#854d0e;border-radius:6px;font-size:0.85rem;">⚠️ 未找到匹配的箱信息</div>';
+                return;
+            }
+
+            var statusNodes = containers[0].status || [];
+            var routes = result.routes || [];
+
+            if (statusNodes.length === 0) {
+                trackingResult.innerHTML = '<div style="padding:10px;background:#fef9c3;color:#854d0e;border-radius:6px;font-size:0.85rem;">⚠️ 未找到追踪节点数据</div>';
+                return;
+            }
+
+            // 缓存到 sessionStorage 供预览展示
+            sessionStorage.setItem('wf_tracking_result', JSON.stringify({
+                billNo: billNo,
+                containerNo: containerNo,
+                statusList: statusNodes,
+                routes: routes
+            }));
+
+            // 时间轴渲染
+            var h = '<div class="timeline">';
+            statusNodes.forEach(function(s) {
+                var isEsti = s.isEsti === true || s.isEsti === 'true' || s.isEsti === 1;
+                var cls = isEsti ? 'estimated' : 'actual';
+                var badge = isEsti ? '<span class="timeline-badge esti">⏳ 预计</span>' : '<span class="timeline-badge actual">✅ 实际</span>';
+                var desc = s.desc || s.eventDesc || s.event || '-';
+                var loc = s.location || s.place || '';
+                var time = s.time || s.eventTime || s.date || '';
+                h += '<div class="timeline-item ' + cls + '">';
+                h += '<div class="timeline-desc">' + escapeHtml(desc) + ' ' + badge + '</div>';
+                if (loc) h += '<div class="timeline-location">📍 ' + escapeHtml(loc) + '</div>';
+                if (time) h += '<div class="timeline-time">📅 ' + escapeHtml(time) + '</div>';
+                h += '</div>';
+            });
+            h += '</div>';
+
+            if (routes.length > 0) {
+                h += '<div style="font-size:0.78rem;color:#64748b;margin-top:6px;">航线: ' + escapeHtml(routes.join(' → ')) + '</div>';
+            }
+
+            trackingResult.innerHTML = h;
+            updatePreview();
+        })
+        .catch(function(err) {
+            trackingResult.innerHTML = '<div style="padding:10px;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:0.85rem;">❌ 查询失败：网络错误或接口异常。请稍后重试。</div>';
+        });
+    };
+
 </script>
 
 <!-- ====== v0.6 截图粘贴模态框（保留在底部，只删除旧截图区域） ====== -->
@@ -1256,6 +1663,29 @@ BAF 300 USD</textarea>
 .screenshot-item:last-child { border-bottom:none; }
 #screenshotModal.fee-modal.hidden, #feeSlotModal.fee-modal.hidden { display:none !important; }
 #screenshotModal.fee-modal:not(.hidden), #feeSlotModal.fee-modal:not(.hidden) { display:flex !important; }
+
+/* v0.7 样式 */
+.section-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin:14px 0; }
+.section-card h4 { margin:0 0 10px 0; font-size:0.9rem; font-weight:600; color:#0f172a; display:flex; align-items:center; gap:6px; }
+.raw-info-area { width:100%; min-height:120px; font-size:0.85rem; padding:10px; border:1px solid #cbd5e1; border-radius:8px; resize:vertical; font-family:inherit; }
+.raw-history-item { padding:8px 0; border-bottom:1px solid #eee; font-size:0.8rem; }
+.raw-history-item:last-child { border-bottom:none; }
+.timeline { position:relative; padding-left:24px; margin:10px 0; }
+.timeline::before { content:''; position:absolute; left:8px; top:4px; bottom:4px; width:2px; background:#e2e8f0; }
+.timeline-item { position:relative; margin-bottom:14px; }
+.timeline-item::before { content:''; position:absolute; left:-16px; top:4px; width:10px; height:10px; border-radius:50%; background:#94a3b8; }
+.timeline-item.estimated::before { background:#eab308; }
+.timeline-item.actual::before { background:#22c55e; }
+.timeline-time { font-size:0.72rem; color:#94a3b8; margin-top:1px; }
+.timeline-desc { font-weight:500; color:#0f172a; font-size:0.85rem; }
+.timeline-location { font-size:0.78rem; color:#64748b; }
+.timeline-badge { display:inline-block; font-size:0.65rem; padding:1px 6px; border-radius:8px; margin-left:4px; font-weight:500; }
+.timeline-badge.esti { background:#fef9c3; color:#854d0e; }
+.timeline-badge.actual { background:#dcfce7; color:#166534; }
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.info-grid label { font-size:0.75rem; color:#64748b; margin-bottom:2px; display:block; }
+.info-grid input { font-size:0.82rem; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; width:100%; background:white; }
+.info-grid .info-full { grid-column:1/-1; }
 </style>
 
 <!-- Footer -->
@@ -1276,96 +1706,6 @@ BAF 300 USD</textarea>
  <p>你在使用过程中输入的所有业务信息和供应商数据均保存在你的本地浏览器中，本工具不会上传、储存或分享你的任何业务信息。</p>
  <p>因使用本工具而产生的任何商业纠纷、损失或责任，平台及工具提供方均不承担法律责任。</p>
 </div>
-<script>
-(function() {
-  // MOT引擎跳转按钮 v0.3 — 从localStorage读取完整数据
 
-  function insertButton() {
-    if (document.getElementById('btnMOT')) return;
-
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'btnMOT';
-    btn.textContent = '⏱ 时间风险分析';
-    btn.style.cssText = 'display:block;width:100%;max-width:600px;margin:20px auto;padding:14px;background:#2c3e50;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);';
-
-    btn.addEventListener('click', function() {
-      var wfData = buildWorkflowData();
-      var encoded = encodeURIComponent(JSON.stringify(wfData));
-      var motURL = '../mot/?data=' + encoded;
-      window.open(motURL, '_blank');
-    });
-
-    // 只插一次，插在body末尾
-    document.body.appendChild(btn);
-  }
-
-  function buildWorkflowData() {
-    var data = {
-      billNo: '',
-      mode: '',
-      origin: '',
-      destination: '',
-      etd: '',
-      eta: '',
-      terms: '',
-      actualDates: {}
-    };
-
-    // 方案1：从localStorage读取当前版本数据（最完整）
-    var projectName = (document.getElementById('projectName') || {}).value || '';
-    var version = (document.getElementById('versionDisplay') || {}).value || '';
-    var storageKey = 'wf_' + projectName + '_' + version;
-
-    try {
-      var raw = localStorage.getItem(storageKey);
-      if (raw) {
-        var stored = JSON.parse(raw);
-        data.billNo = projectName + ' / ' + version;
-        data.mode = (stored.isSpecified ? '指定货' : '直客') + ' FCL出口';
-        data.origin = stored.geo1 || '';
-        data.destination = stored.geo3 || '';
-        data.etd = stored.etdDate || '';
-        data.terms = stored.tradeTerm || '';
-        data.containerInfo = stored.containerInfo || '';
-        // ETA：如果geo2里有 → 符号，尝试提取
-        if (stored.geo2 && stored.geo2.indexOf('→') > -1) {
-          var parts = stored.geo2.split('→');
-          data.transshipPort = parts[1].trim();
-        }
-      }
-    } catch(e) {
-      console.warn('MOT: localStorage读取失败，降级为DOM抓取', e);
-    }
-
-    // 方案2（兜底）：如果localStorage没拿到，从DOM抓
-    if (!data.etd) {
-      var etdEl = document.getElementById('etdDate');
-      if (etdEl) data.etd = etdEl.value;
-    }
-    if (!data.terms) {
-      var termEl = document.getElementById('tradeTerm');
-      if (termEl) data.terms = termEl.value;
-    }
-    if (!data.origin) {
-      var g1 = document.getElementById('geo1');
-      if (g1) data.origin = g1.value;
-    }
-    if (!data.destination) {
-      var g3 = document.getElementById('geo3');
-      if (g3) data.destination = g3.value;
-    }
-
-    return data;
-  }
-
-  // 页面加载后插入
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', insertButton);
-  } else {
-    insertButton();
-  }
-})();
-</script>
 </body>
 </html>
