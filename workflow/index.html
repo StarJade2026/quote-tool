@@ -1079,7 +1079,7 @@ BAF 300 USD</textarea>
                 html += '<div class="preview-section"><h4>🚢 货物追踪 — ' + escapeHtml(tr.billNo || '') + '</h4>';
                 html += '<div class="timeline">';
                 (tr.statusList || []).forEach(function(s) {
-                    var isEsti = s.isEsti;
+                    var isEsti = s.isEsti === true || s.isEsti === 'true' || s.isEsti === 'Y' || s.isEsti === 1;
                     var cls = isEsti ? 'estimated' : 'actual';
                     var badge = isEsti ? '<span class="timeline-badge esti">⏳ 预计</span>' : '<span class="timeline-badge actual">✅ 实际</span>';
                     html += '<div class="timeline-item ' + cls + '">';
@@ -1608,7 +1608,7 @@ BAF 300 USD</textarea>
             // 时间轴渲染
             var h = '<div class="timeline">';
             statusNodes.forEach(function(s) {
-                var isEsti = s.isEsti === true || s.isEsti === 'true' || s.isEsti === 1;
+                var isEsti = s.isEsti === true || s.isEsti === 'true' || s.isEsti === 'Y' || s.isEsti === 1;
                 var cls = isEsti ? 'estimated' : 'actual';
                 var badge = isEsti ? '<span class="timeline-badge esti">⏳ 预计</span>' : '<span class="timeline-badge actual">✅ 实际</span>';
                 var desc = s.desc || s.eventDesc || s.event || '-';
