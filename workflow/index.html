@@ -1627,6 +1627,48 @@ BAF 300 USD</textarea>
             }
 
             trackingResult.innerHTML = h;
+
+            // ====== v0.7 飞驼节点自动映射到MOT任务 ======
+            var statusList = containers[0].status || [];
+            var eventToNodeMap = {
+                'STSP': { seg: 'seg1', keyword: '装箱' },
+                'GITM': { seg: 'seg1', keyword: '装箱' },
+                'PASS': { seg: 'seg1', keyword: '报关' },
+                'TMPS': { seg: 'seg2', keyword: '发运' },
+                'LOBD': { seg: 'seg2', keyword: '发运' },
+                'DLPT': { seg: 'seg2', keyword: '发运' },
+                'BDAR': { seg: 'seg3', keyword: '清关' },
+                'POCA': { seg: 'seg3', keyword: '清关' },
+                'DSCH': { seg: 'seg3', keyword: '清关' },
+                'STCS': { seg: 'seg3', keyword: '派送' },
+                'RCVE': { seg: 'seg3', keyword: '派送' }
+            };
+
+            var updatedCount = 0;
+            statusList.forEach(function(node) {
+                if (node.isEsti === 'Y') return;
+
+                var map = eventToNodeMap[node.eventCode];
+                if (!map) return;
+
+                var segTasks = tasks[map.seg];
+                if (!segTasks) return;
+
+                for (var i = 0; i < segTasks.length; i++) {
+                    if (segTasks[i].name.indexOf(map.keyword) !== -1 && !segTasks[i].completed) {
+                        segTasks[i].completed = true;
+                        var timeStr = node.eventTime ? node.eventTime.slice(5, 16).replace('T', ' ') : '';
+                        segTasks[i].name = segTasks[i].name.replace(/\s*\[.*\]$/, '') + ' [' + timeStr + ']';
+                        updatedCount++;
+                        break;
+                    }
+                }
+            });
+
+            if (updatedCount > 0) {
+                trackingResult.innerHTML += '<div style="margin-top:6px;font-size:0.78rem;color:#16a34a;">✅ ' + updatedCount + ' 个节点已自动更新到流转单</div>';
+            }
+
             updatePreview();
         })
         .catch(function(err) {
