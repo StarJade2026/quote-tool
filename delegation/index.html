@@ -47,7 +47,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 
 .grid-panel { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
 .grid-panel h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); }
-.grid-status { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; }
+.grid-status { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; flex-wrap: wrap; }
 .grid-status span { display: flex; align-items: center; gap: 4px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .dot.confirmed { background: var(--confirmed); }
@@ -73,19 +73,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .manual-form .form-row input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
 .manual-form button { margin-top: 8px; padding: 8px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
 
-.loading { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
 @media (max-width: 800px) { .container { flex-direction: column; } .chat-panel { width:100%; min-width:auto; height:55vh; } .grid-panel { height:45vh; } }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="chat-panel">
-    <div class="chat-header">
-      <h1>🤖 虹运AI魔方助手</h1>
-      <p>像聊天一样告诉我您的货物信息，我会自动帮您填好所有单据。</p>
-    </div>
+    <div class="chat-header"><h1>🤖 虹运AI魔方助手</h1><p>像聊天一样告诉我您的货物信息，我会自动帮您填好所有单据。</p></div>
     <div class="chat-messages" id="chatMessages"></div>
     <div class="chat-input-area">
       <div class="chat-input-row">
@@ -98,7 +92,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
       </div>
     </div>
   </div>
-
   <div class="grid-panel">
     <h2>📊 委托数据实时预览</h2>
     <div class="grid-status" id="gridStatus"></div>
@@ -113,7 +106,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 
 <script>
 // ========== TFM 数据模型 ==========
-const TFM_MODEL = {
+var TFM_MODEL = {
   project: {
     trade_term: { field_key:"trade_term", field_label:"贸易条款", priority:1, source_hint:"合同或PI上有，如FOB/CIF/DAP", value:"", confidence:"missing", source:"", confirmed_by:"" },
     cargo_desc: { field_key:"cargo_desc", field_label:"货描", priority:1, source_hint:"品名、HS编码，客户邮件或合同", value:"", confidence:"missing", source:"", confirmed_by:"" },
@@ -143,7 +136,7 @@ const TFM_MODEL = {
   }
 };
 
-const GRID_LAYOUT = [
+var GRID_LAYOUT = [
   { title:"项目信息", group:"project", keys:["trade_term","cargo_desc","packages","gross_weight","volume"] },
   { title:"段1·起运", group:"seg1", keys:["POL","vessel_name","voyage","laycan_start","laycan_end","cut_off_date","ETD"] },
   { title:"段2·中转", group:"seg2", keys:["transship_port","mother_vessel","ETA_transship"] },
@@ -155,10 +148,10 @@ const GRID_LAYOUT = [
   { title:"备注", group:"notes", keys:[] }
 ];
 
-let tfmData = null;
-let chatHistory = [];
-let isProcessing = false;
-const API_PROXY = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
+var tfmData = null;
+var chatHistory = [];
+var isProcessing = false;
+var API_PROXY = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
 
 function init() {
   loadTFMData();
@@ -168,73 +161,73 @@ function init() {
 }
 
 function loadTFMData() {
-  const saved = localStorage.getItem('tfmProject');
+  var saved = localStorage.getItem('tfmProject');
   if (saved) { try { tfmData = JSON.parse(saved); } catch(e) { tfmData = null; } }
   if (!tfmData) { tfmData = JSON.parse(JSON.stringify(TFM_MODEL)); saveTFMData(); }
 }
 
 function saveTFMData() {
   localStorage.setItem('tfmProject', JSON.stringify(tfmData));
-  const co = { shipper:'', consignee:'', notifyParty:'', cargoDesc:tfmData.project.cargo_desc.value||'', packages:tfmData.project.packages.value||'', grossWeight:tfmData.project.gross_weight.value||'', volume:tfmData.project.volume.value||'', tradeTerm:tfmData.project.trade_term.value||'', deliveryDeadline:tfmData.seg3.delivery_deadline.value||'' };
+  var co = { shipper:'', consignee:'', notifyParty:'', cargoDesc:tfmData.project.cargo_desc.value||'', packages:tfmData.project.packages.value||'', grossWeight:tfmData.project.gross_weight.value||'', volume:tfmData.project.volume.value||'', tradeTerm:tfmData.project.trade_term.value||'', deliveryDeadline:tfmData.seg3.delivery_deadline.value||'' };
   localStorage.setItem('clientOrder', JSON.stringify(co));
 }
 
 function addBotMessage(text) {
   chatHistory.push({role:'assistant', content:text});
-  const div = document.createElement('div'); div.className='msg bot'; div.textContent=text;
-  document.getElementById('chatMessages').appendChild(div);
-  scrollChat();
+  var div = document.createElement('div'); div.className='msg bot'; div.textContent=text;
+  document.getElementById('chatMessages').appendChild(div); scrollChat();
 }
 
 function addUserMessage(text) {
   chatHistory.push({role:'user', content:text});
-  const div = document.createElement('div'); div.className='msg user'; div.textContent=text;
-  document.getElementById('chatMessages').appendChild(div);
-  scrollChat();
+  var div = document.createElement('div'); div.className='msg user'; div.textContent=text;
+  document.getElementById('chatMessages').appendChild(div); scrollChat();
 }
 
 function addSystemMessage(text) {
-  const div = document.createElement('div'); div.className='msg system'; div.textContent=text;
-  document.getElementById('chatMessages').appendChild(div);
-  scrollChat();
+  var div = document.createElement('div'); div.className='msg system'; div.textContent=text;
+  document.getElementById('chatMessages').appendChild(div); scrollChat();
 }
 
 function scrollChat() {
-  const el = document.getElementById('chatMessages');
+  var el = document.getElementById('chatMessages');
   el.scrollTop = el.scrollHeight;
 }
 
 async function sendMessage() {
   if (isProcessing) return;
-  const input = document.getElementById('userInput');
-  const text = input.value.trim();
+  var input = document.getElementById('userInput');
+  var text = input.value.trim();
   if (!text) return;
   input.value = '';
   addUserMessage(text);
   isProcessing = true;
   document.getElementById('sendBtn').disabled = true;
 
-  const localResult = localExtract(text);
+  var localResult = localExtract(text);
   if (localResult.extracted.length > 0) {
     applyExtractions(localResult.extracted);
-    addSystemMessage('✅ 已识别：'+localResult.extracted.map(function(e){return e.label}).join('、'));
+    addSystemMessage('✅ 已识别：'+localResult.extracted.map(function(e){return e.label;}).join('、'));
   }
 
-  const needsLLM = localResult.unmatched.length > 0;
+  var needsLLM = (text.length <= 200);
   if (needsLLM) {
-    addSystemMessage('🔍 正在深入理解...');
-    const llmResult = await llmExtract(text);
+    var llmResult = await llmExtract(text);
     if (llmResult && llmResult.length > 0) {
       applyExtractions(llmResult);
-      addSystemMessage('✅ 补充识别：'+llmResult.map(function(e){return e.field_label||e.key}).join('、'));
+      addSystemMessage('✅ 补充识别：'+llmResult.map(function(e){return e.field_label||e.key;}).join('、'));
     }
   }
 
-  const followUps = buildFollowUps();
+  loadTFMData();
+  renderGrid();
+  renderGridStatus();
+
+  var followUps = buildFollowUps();
   if (followUps.length > 0) {
     setTimeout(function(){ addBotMessage(followUps.join('；')+'。'); }, 500);
   } else {
-    const missingAny = countMissing();
+    var missingAny = countMissing();
     if (missingAny > 0) {
       setTimeout(function(){ addBotMessage('信息收得差不多了。还有'+missingAny+'项没填，您可以继续补充，或点"手动填写"补完。'); }, 500);
     } else {
@@ -242,15 +235,15 @@ async function sendMessage() {
     }
   }
 
-  renderGrid();
-  renderGridStatus();
   updateManualForm();
   isProcessing = false;
   document.getElementById('sendBtn').disabled = false;
 }
 
 function localExtract(text) {
+  if (text.length > 200) { saveTFMData(); return { extracted:[], unmatched:[] }; }
   var extracted = [];
+
   var portPatterns = [
     { regex:/天津港?|天津|新港|Tianjin|Xingang/i, target:{group:'seg1',key:'POL'}, label:'起运港·天津' },
     { regex:/上海港?|上海|Shanghai/i, target:{group:'seg1',key:'POL'}, label:'起运港·上海' },
@@ -270,7 +263,7 @@ function localExtract(text) {
     var p = portPatterns[i];
     if (p.regex.test(text)) {
       var dp = getDataPoint(p.target.group, p.target.key);
-      if (dp && !dp.value) {
+      if (dp) {
         dp.value = text.match(p.regex)[0];
         dp.confidence = 'unconfirmed'; dp.source = '对话提取'; dp.confirmed_by = '侦查员';
         extracted.push({group:p.target.group, key:p.target.key, label:p.label});
@@ -289,7 +282,7 @@ function localExtract(text) {
   for (var j=0; j<termPatterns.length; j++) {
     if (termPatterns[j].regex.test(text)) {
       var tdp = getDataPoint('project','trade_term');
-      if (tdp && !tdp.value) {
+      if (tdp) {
         tdp.value = termPatterns[j].value;
         tdp.confidence = 'confirmed'; tdp.source = '对话提取'; tdp.confirmed_by = '侦查员';
         extracted.push({group:'project', key:'trade_term', label:'贸易条款·'+termPatterns[j].value});
@@ -301,7 +294,7 @@ function localExtract(text) {
   var wm = text.match(/(\d+\.?\d*)\s*(吨|t|kg|公斤|千克)/i);
   if (wm) {
     var wdp = getDataPoint('project','gross_weight');
-    if (wdp && !wdp.value) {
+    if (wdp) {
       var num = parseFloat(wm[1]), unit = wm[2].toLowerCase();
       wdp.value = (unit==='kg'||unit==='公斤'||unit==='千克') ? (num/1000)+'吨' : num+'吨';
       wdp.confidence = 'confirmed'; wdp.source = '对话提取'; wdp.confirmed_by = '侦查员';
@@ -312,7 +305,7 @@ function localExtract(text) {
   var pm = text.match(/(\d+)\s*(件|箱|包|托|pallet|carton)/i);
   if (pm) {
     var pdp = getDataPoint('project','packages');
-    if (pdp && !pdp.value) {
+    if (pdp) {
       pdp.value = pm[1]+pm[2]; pdp.confidence = 'confirmed'; pdp.source = '对话提取'; pdp.confirmed_by = '侦查员';
       extracted.push({group:'project', key:'packages', label:'件数·'+pdp.value});
     }
@@ -321,7 +314,7 @@ function localExtract(text) {
   var vm = text.match(/(\d+\.?\d*)\s*(cbm|CBM|方|立方)/);
   if (vm) {
     var vdp = getDataPoint('project','volume');
-    if (vdp && !vdp.value) {
+    if (vdp) {
       vdp.value = vm[1]+'CBM'; vdp.confidence = 'confirmed'; vdp.source = '对话提取'; vdp.confirmed_by = '侦查员';
       extracted.push({group:'project', key:'volume', label:'体积·'+vdp.value});
     }
@@ -330,24 +323,15 @@ function localExtract(text) {
   var dm = text.match(/(\d{1,2}[月\/\-]\d{1,2})(?:日|号)?/);
   if (dm) {
     var ddp = getDataPoint('seg1','laycan_start');
-    if (ddp && !ddp.value) {
+    if (ddp) {
       ddp.value = dm[0]; ddp.confidence = 'unconfirmed'; ddp.source = '对话提取'; ddp.confirmed_by = '侦查员';
       extracted.push({group:'seg1', key:'laycan_start', label:'Laycan·'+ddp.value});
     }
   }
 
-  var cm = text.match(/([\u4e00-\u9fa5]{2,6})(设备|机械|矿石|原料|配件|零件|纺织品|电子产品|化工品)/);
-  if (cm) {
-    var cdp = getDataPoint('project','cargo_desc');
-    if (cdp && !cdp.value) {
-      cdp.value = cm[0]; cdp.confidence = 'unconfirmed'; cdp.source = '对话提取'; cdp.confirmed_by = '侦查员';
-      extracted.push({group:'project', key:'cargo_desc', label:'货描·'+cdp.value});
-    }
-  }
-
   if (/Fungurume|卢本巴希|Lubumbashi|科卢韦齐|Kolwezi|Likasi/i.test(text)) {
     var addp = getDataPoint('seg3','delivery_address');
-    if (addp && !addp.value) {
+    if (addp) {
       addp.value = text.match(/Fungurume|卢本巴希|Lubumbashi|科卢韦齐|Kolwezi|Likasi/i)[0];
       addp.confidence = 'unconfirmed'; addp.source = '对话提取'; addp.confirmed_by = '侦查员';
       extracted.push({group:'seg3', key:'delivery_address', label:'交货地址·'+addp.value});
@@ -358,7 +342,7 @@ function localExtract(text) {
     addSystemMessage('📌 检测到未确定项，已自动标记为缺失');
   }
 
-  saveTFMData();
+  loadTFMData();
   return { extracted:extracted, unmatched:[] };
 }
 
@@ -384,7 +368,12 @@ function applyExtractions(extractions) {
   for (var i=0; i<extractions.length; i++) {
     var ex = extractions[i];
     var dp = getDataPoint(ex.group, ex.key);
-    if (dp) { dp.value = ex.value||''; dp.confidence = ex.confidence||'unconfirmed'; dp.source = dp.source||'对话提取'; dp.confirmed_by = dp.confirmed_by||'侦查员'; }
+    if (dp) {
+      if (ex.value) { dp.value = ex.value; }
+      dp.confidence = ex.confidence || 'unconfirmed';
+      dp.source = dp.source || '对话提取';
+      dp.confirmed_by = dp.confirmed_by || '侦查员';
+    }
   }
   saveTFMData();
 }
@@ -393,7 +382,24 @@ function buildFollowUps() {
   var missing = getMissingPriority1();
   if (missing.length === 0) return [];
   var picks = missing.slice(0,3);
-  return picks.map(function(p){return p.source_hint;});
+  return picks.map(function(p){ return humanizeHint(p); });
+}
+
+function humanizeHint(dp) {
+  var map = {
+    'trade_term': '贸易条款是FOB还是CIF？合同或PI上能看到',
+    'cargo_desc': '货物品名和HS编码是什么？',
+    'packages': '一共多少件？装箱单上有',
+    'gross_weight': '货物总毛重多少吨？装箱单上有',
+    'POL': '从哪个港口发货？上海还是天津？',
+    'vessel_name': '船名定了吗？订舱确认书上有',
+    'laycan_start': 'Laycan定了吗？大概什么时间？',
+    'cut_off_date': '截单时间知道了吗？船公司会给',
+    'POD': '目的港是哪个？',
+    'delivery_address': '最终交货地址在哪？'
+  };
+  if (map[dp.field_key]) return map[dp.field_key];
+  return dp.field_label + '？' + dp.source_hint;
 }
 
 function getMissingPriority1() {
@@ -474,7 +480,7 @@ function submitManual() {
     var dp = getDataPoint(inp.dataset.group, inp.dataset.key);
     if (dp && inp.value.trim()) { dp.value = inp.value.trim(); dp.confidence = 'unconfirmed'; dp.source = '手动填写'; dp.confirmed_by = '客户'; }
   });
-  saveTFMData(); renderGrid(); renderGridStatus();
+  saveTFMData(); loadTFMData(); renderGrid(); renderGridStatus();
   addSystemMessage('📝 手动补充已保存');
   toggleManualForm();
 }
