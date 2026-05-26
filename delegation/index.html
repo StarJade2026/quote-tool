@@ -6,26 +6,15 @@
 <title>虹运AI魔方 · 委托入口</title>
 <style>
 :root {
-  --bg: #f5f3f0;
-  --card: #ffffff;
-  --text: #2c2416;
-  --text-secondary: #6b5e4a;
-  --accent: #c75b2a;
-  --accent-light: #fdf0e8;
-  --border: #e5ded4;
-  --confirmed: #2d6a4f;
-  --unconfirmed: #b0893c;
-  --missing: #c75b2a;
-  --inferred: #5a7d9a;
-  --bubble-user: #f0ebe4;
-  --bubble-bot: #ffffff;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --bg: #f5f3f0; --card: #ffffff; --text: #2c2416; --text-secondary: #6b5e4a;
+  --accent: #c75b2a; --accent-light: #fdf0e8; --border: #e5ded4;
+  --confirmed: #2d6a4f; --unconfirmed: #b0893c; --missing: #c75b2a; --inferred: #5a7d9a;
+  --bubble-user: #f0ebe4; --bubble-bot: #ffffff; --shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; }
 .container { display: flex; width: 100%; height: 100vh; }
-
-.chat-panel { width: 480px; min-width: 380px; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: #faf9f7; }
+.chat-panel { width: 460px; min-width: 360px; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: #faf9f7; }
 .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--card); }
 .chat-header h1 { font-size: 18px; font-weight: 600; }
 .chat-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
@@ -46,153 +35,215 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .chat-actions button:hover { border-color: var(--accent); color: var(--accent); }
 
 .grid-panel { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
-.grid-panel h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); }
-.grid-status { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; flex-wrap: wrap; }
-.grid-status span { display: flex; align-items: center; gap: 4px; }
+.grid-panel h2 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+.grid-summary { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; flex-wrap: wrap; }
+.grid-summary span { display: flex; align-items: center; gap: 4px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.dot.confirmed { background: var(--confirmed); }
-.dot.unconfirmed { background: var(--unconfirmed); }
-.dot.missing { background: var(--missing); }
-.dot.ai_inferred { background: var(--inferred); }
-.grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; flex: 1; }
-.grid-cell { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; box-shadow: var(--shadow); }
-.grid-cell h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-.grid-cell .dp { font-size: 12px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-.grid-cell .dp .label { color: var(--text-secondary); }
-.grid-cell .dp .value { font-weight: 500; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.grid-cell .dp.missing .value { color: var(--missing); font-style: italic; }
-.grid-cell .dp.confirmed .value { color: var(--confirmed); }
-.grid-cell .dp.unconfirmed .value { color: var(--unconfirmed); }
-.grid-cell .dp.ai_inferred .value { color: var(--inferred); }
-
+.dot.ok { background: var(--confirmed); } .dot.warn { background: var(--unconfirmed); } .dot.miss { background: var(--missing); }
+.section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.section h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.section .row { font-size: 12px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.section .row .lbl { color: var(--text-secondary); }
+.section .row .val { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.section .row.miss .val { color: var(--missing); font-style: italic; }
+.section .row.ok .val { color: var(--confirmed); }
+.section .row.warn .val { color: var(--unconfirmed); }
+.cargo-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:8px; }
+.cargo-table th { background:#f5f3f0; padding:6px 4px; text-align:left; border-bottom:2px solid var(--border); }
+.cargo-table td { padding:4px; border-bottom:1px solid var(--border); }
 .manual-form { display: none; margin-top: 16px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
 .manual-form.active { display: block; }
 .manual-form h3 { font-size: 14px; margin-bottom: 12px; }
 .manual-form .form-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
-.manual-form .form-row label { width: 120px; font-size: 13px; color: var(--text-secondary); flex-shrink: 0; }
+.manual-form .form-row label { width: 100px; font-size: 13px; color: var(--text-secondary); flex-shrink: 0; }
 .manual-form .form-row input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
 .manual-form button { margin-top: 8px; padding: 8px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
-
-@media (max-width: 800px) { .container { flex-direction: column; } .chat-panel { width:100%; min-width:auto; height:55vh; } .grid-panel { height:45vh; } }
+@media (max-width: 800px) { .container { flex-direction: column; } .chat-panel { width:100%; min-width:auto; height:50vh; } .grid-panel { height:50vh; } }
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="chat-panel">
-    <div class="chat-header"><h1>🤖 虹运AI魔方助手</h1><p>像聊天一样告诉我您的货物信息，我会自动帮您填好所有单据。</p></div>
-    <div class="chat-messages" id="chatMessages"></div>
-    <div class="chat-input-area">
-      <div class="chat-input-row">
-        <textarea id="userInput" rows="2" placeholder="例如：我要发102吨矿山设备从天津到刚果金Fungurume，DAP条款..."></textarea>
-        <button id="sendBtn" onclick="sendMessage()">发送</button>
-      </div>
-      <div class="chat-actions">
-        <button onclick="toggleManualForm()">📝 手动填写</button>
-        <button onclick="resetAll()">🔄 重新开始</button>
-      </div>
+<div class="chat-panel">
+  <div class="chat-header"><h1>🤖 虹运AI魔方助手</h1><p>像聊天一样告诉我货物信息，我会自动整理并生成托运方案。</p></div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-area">
+    <div class="chat-input-row">
+      <textarea id="userInput" rows="2" placeholder="例如：我要发102吨矿山设备从天津到刚果金Fungurume，DAP条款..."></textarea>
+      <button id="sendBtn" onclick="sendMessage()">发送</button>
     </div>
-  </div>
-  <div class="grid-panel">
-    <h2>📊 委托数据实时预览</h2>
-    <div class="grid-status" id="gridStatus"></div>
-    <div class="grid-container" id="gridContainer"></div>
-    <div class="manual-form" id="manualForm">
-      <h3>手动补充缺失信息</h3>
-      <div id="manualFields"></div>
-      <button onclick="submitManual()">提交补充</button>
+    <div class="chat-actions">
+      <button onclick="toggleManualForm()">📝 手动补货</button>
+      <button onclick="resetAll()">🔄 重新开始</button>
     </div>
   </div>
 </div>
-
+<div class="grid-panel" id="gridPanel">
+  <h2>📊 委托数据实时预览</h2>
+  <div class="grid-summary" id="gridSummary"></div>
+  <div id="gridContent"></div>
+  <div class="manual-form" id="manualForm">
+    <h3>手动补充货物信息</h3>
+    <div id="manualFields"></div>
+    <button onclick="submitManual()">提交补充</button>
+  </div>
+</div>
+</div>
 <script>
-// ========== TFM 数据模型 ==========
-var TFM_MODEL = {
-  project: {
-    trade_term: { field_key:"trade_term", field_label:"贸易条款", priority:1, source_hint:"合同或PI上有，如FOB/CIF/DAP", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    cargo_desc: { field_key:"cargo_desc", field_label:"货描", priority:1, source_hint:"品名、HS编码，客户邮件或合同", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    packages: { field_key:"packages", field_label:"件数", priority:1, source_hint:"装箱单或客户告知", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    gross_weight: { field_key:"gross_weight", field_label:"毛重", priority:1, source_hint:"装箱单或客户告知，单位吨/kg", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    volume: { field_key:"volume", field_label:"体积", priority:2, source_hint:"装箱单，单位CBM", value:"", confidence:"missing", source:"", confirmed_by:"" }
-  },
-  seg1: {
-    POL: { field_key:"POL", field_label:"起运港", priority:1, source_hint:"客户告知或合同，如天津港/上海港", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    vessel_name: { field_key:"vessel_name", field_label:"船名", priority:1, source_hint:"订舱确认书上有；或问船公司", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    voyage: { field_key:"voyage", field_label:"航次", priority:2, source_hint:"订舱确认书上有", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    laycan_start: { field_key:"laycan_start", field_label:"Laycan起始日", priority:1, source_hint:"Laycan定了吗？订舱确认书上有", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    laycan_end: { field_key:"laycan_end", field_label:"Laycan截止日", priority:2, source_hint:"订舱确认书上有", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    cut_off_date: { field_key:"cut_off_date", field_label:"截单时间", priority:1, source_hint:"截单时间知道了吗？船公司会给", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    ETD: { field_key:"ETD", field_label:"预计开船日", priority:2, source_hint:"船公司船期表或订舱确认书", value:"", confidence:"missing", source:"", confirmed_by:"" }
-  },
-  seg2: {
-    transship_port: { field_key:"transship_port", field_label:"中转港", priority:2, source_hint:"船公司航线图或订舱确认书", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    mother_vessel: { field_key:"mother_vessel", field_label:"母船船名", priority:2, source_hint:"订舱确认书或二程船信息", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    ETA_transship: { field_key:"ETA_transship", field_label:"预计到中转港", priority:2, source_hint:"船公司船期表", value:"", confidence:"missing", source:"", confirmed_by:"" }
-  },
-  seg3: {
-    POD: { field_key:"POD", field_label:"目的港", priority:1, source_hint:"客户告知或合同", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    delivery_address: { field_key:"delivery_address", field_label:"交货地址", priority:1, source_hint:"客户告知，如Fungurume矿区", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    customs_broker: { field_key:"customs_broker", field_label:"清关行", priority:2, source_hint:"收货人或代理在跟；批了吗？", value:"", confidence:"missing", source:"", confirmed_by:"" },
-    delivery_deadline: { field_key:"delivery_deadline", field_label:"交货截止日", priority:2, source_hint:"合同或客户要求", value:"", confidence:"missing", source:"", confirmed_by:"" }
-  }
+// ========== 数据模型 ==========
+var API_PROXY = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
+var project = null;
+
+var REQUIRED_FIELDS = ['name','qty','unit','weight_t','trade_term','pol','fuel_electric'];
+var FIELD_LABELS = {
+  name:'品名',model:'型号',category:'大品类',hs_code:'HS编码',qty:'数量',unit:'单位',
+  weight_t:'单件毛重(t)',max_single_weight_t:'单件最大重量(t)',volume_cbm:'单件体积(CBM)',
+  dimensions_mm:'尺寸(mm)',oversize:'超限',packaging:'包装',dangerous:'危险品',
+  dangerous_class:'危险品等级',fuel_electric:'含油含电',trade_term:'贸易条款',
+  pol:'起运港',pod:'目的港',delivery_address:'交货地址',status:'货物状态',
+  special_requirement:'特殊要求',remark:'备注'
+};
+var SOURCE_HINTS = {
+  name:'设备/货物品名',model:'规格型号',hs_code:'HS编码，报关要用',
+  weight_t:'单件毛重多少吨？装箱单上有',volume_cbm:'单件体积多少CBM？装箱单上有',
+  dimensions_mm:'整机尺寸（长宽高mm）',packaging:'包装方式？托盘/木箱/裸装',
+  dangerous:'是否危险品？',fuel_electric:'是否含油含电？矿山设备通常含油含电',
+  trade_term:'贸易条款？FOB还是CIF？合同上有',pol:'从哪个港口发？',
+  pod:'目的港是哪个？',delivery_address:'最终交货地址在哪？',status:'现货还是排产？'
 };
 
-var GRID_LAYOUT = [
-  { title:"项目信息", group:"project", keys:["trade_term","cargo_desc","packages","gross_weight","volume"] },
-  { title:"段1·起运", group:"seg1", keys:["POL","vessel_name","voyage","laycan_start","laycan_end","cut_off_date","ETD"] },
-  { title:"段2·中转", group:"seg2", keys:["transship_port","mother_vessel","ETA_transship"] },
-  { title:"段3·目的港", group:"seg3", keys:["POD","delivery_address","customs_broker","delivery_deadline"] },
-  { title:"联系人", group:"contacts", keys:[] },
-  { title:"费用/成本", group:"costs", keys:[] },
-  { title:"单证", group:"docs", keys:[] },
-  { title:"时间线", group:"timeline", keys:[] },
-  { title:"备注", group:"notes", keys:[] }
-];
+function initProject() {
+  var saved = localStorage.getItem('tfmProject');
+  if (saved) { try { project = JSON.parse(saved); if (!project.cargo_items) project = null; } catch(e) { project = null; } }
+  if (!project) {
+    project = { project_id:'TFM'+Date.now().toString(36).toUpperCase(), cargo_items:[], grid:{ inland:{}, booking:{}, customs:{} }, meta:{ created_at:new Date().toISOString(), version:'cargo_items_v1.1' } };
+    saveProject();
+  }
+}
+function saveProject() { localStorage.setItem('tfmProject', JSON.stringify(project)); }
 
-var tfmData = null;
+function addCargoItem(item) {
+  item.item_id = (project.cargo_items.length + 1);
+  project.cargo_items.push(item);
+  runProjections();
+  saveProject();
+}
+
+function runProjections() {
+  var items = project.cargo_items;
+  if (items.length === 0) return;
+  var inland = { total_weight:0, oversize_count:0, fuel_electric_count:0, specials:[], total_qty:0, items:items };
+  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:'', pod:'', dangerous_list:[], items:items };
+  var customs = { hs_codes:[], models:[], names:[], need_inspection:false, special_supervision:false, total_weight:0, items:items };
+
+  for (var i=0; i<items.length; i++) {
+    var it = items[i];
+    inland.total_weight += (it.weight_t||0) * (it.qty||0);
+    inland.total_qty += (it.qty||0);
+    if (it.oversize) inland.oversize_count++;
+    if (it.fuel_electric) inland.fuel_electric_count++;
+    if (it.special_requirement) inland.specials.push(it.special_requirement);
+
+    booking.total_weight += (it.weight_t||0) * (it.qty||0);
+    booking.total_volume += (it.volume_cbm||0) * (it.qty||0);
+    booking.total_qty += (it.qty||0);
+    booking.trade_term = booking.trade_term || it.trade_term || '';
+    booking.pol = booking.pol || it.pol || '';
+    booking.pod = booking.pod || it.pod || '';
+    if (it.dangerous && it.dangerous_class) { if (booking.dangerous_list.indexOf(it.dangerous_class)<0) booking.dangerous_list.push(it.dangerous_class); }
+
+    customs.total_weight += (it.weight_t||0) * (it.qty||0);
+    if (it.hs_code && customs.hs_codes.indexOf(it.hs_code)<0) customs.hs_codes.push(it.hs_code);
+    if (it.model && customs.models.indexOf(it.model)<0) customs.models.push(it.model);
+    if (it.name && customs.names.indexOf(it.name)<0) customs.names.push(it.name);
+    if (it.dangerous || it.fuel_electric) customs.need_inspection = true;
+  }
+  project.grid = { inland:inland, booking:booking, customs:customs };
+}
+
+function getMissingRequired() {
+  var missing = [];
+  if (project.cargo_items.length === 0) return REQUIRED_FIELDS.map(function(f){ return {field:f, label:FIELD_LABELS[f]||f, hint:SOURCE_HINTS[f]||''}; });
+  var last = project.cargo_items[project.cargo_items.length-1];
+  for (var i=0; i<REQUIRED_FIELDS.length; i++) {
+    var f = REQUIRED_FIELDS[i];
+    if (!last[f] && last[f] !== 0 && last[f] !== false) missing.push({field:f, label:FIELD_LABELS[f]||f, hint:SOURCE_HINTS[f]||''});
+  }
+  return missing;
+}
+
+// ========== 渲染 ==========
+function renderAll() {
+  var summary = document.getElementById('gridSummary');
+  var items = project.cargo_items;
+  var total = items.length;
+  var complete = 0;
+  for (var i=0; i<items.length; i++) {
+    var it = items[i]; var ok = true;
+    for (var j=0; j<REQUIRED_FIELDS.length; j++) { if (!it[REQUIRED_FIELDS[j]] && it[REQUIRED_FIELDS[j]]!==0 && it[REQUIRED_FIELDS[j]]!==false) ok=false; }
+    if (ok) complete++;
+  }
+  summary.innerHTML = '<span><span class="dot ok"></span> 货物条目 '+total+'</span><span><span class="dot ok"></span> 信息完整 '+complete+'</span><span><span class="dot miss"></span> 待补充 '+(total-complete)+'</span>';
+
+  var content = document.getElementById('gridContent');
+  var html = '';
+
+  if (items.length > 0) {
+    html += '<div class="section"><h3>📦 货物清单 (cargo_items)</h3>';
+    html += '<table class="cargo-table"><tr><th>#</th><th>品名</th><th>型号</th><th>数量</th><th>单重(t)</th><th>尺寸</th><th>状态</th><th>含油电</th></tr>';
+    for (var i=0; i<items.length; i++) {
+      var it = items[i];
+      html += '<tr><td>'+(i+1)+'</td><td>'+(it.name||'—')+'</td><td>'+(it.model||'—')+'</td><td>'+(it.qty||'—')+(it.unit||'')+'</td><td>'+(it.weight_t||'—')+'</td><td>'+(it.dimensions_mm||'—')+'</td><td>'+(it.status||'—')+'</td><td>'+(it.fuel_electric?'⚠️是':'否')+'</td></tr>';
+    }
+    html += '</table></div>';
+  }
+
+  var inland = project.grid.inland;
+  if (inland && inland.items && inland.items.length > 0) {
+    html += '<div class="section"><h3>🚛 内陆线投影</h3>';
+    html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+inland.total_weight.toFixed(1)+'吨</span></div>';
+    html += '<div class="row"><span class="lbl">总件数</span><span class="val">'+inland.total_qty+'</span></div>';
+    html += '<div class="row'+(inland.oversize_count>0?' warn':'')+'"><span class="lbl">超限件数</span><span class="val">'+inland.oversize_count+'件 '+(inland.oversize_count>0?'⚠️需特种车':'')+'</span></div>';
+    html += '<div class="row'+(inland.fuel_electric_count>0?' warn':'')+'"><span class="lbl">含油含电件</span><span class="val">'+inland.fuel_electric_count+'件 '+(inland.fuel_electric_count>0?'⚠️仓库拍照留底':'')+'</span></div>';
+    if (inland.total_weight>40) html += '<div class="row warn"><span class="lbl">⚠️ 单件超40吨</span><span class="val">需特种运输方案</span></div>';
+    html += '</div>';
+  }
+
+  var booking = project.grid.booking;
+  if (booking && booking.items && booking.items.length > 0) {
+    html += '<div class="section"><h3>🚢 订舱线投影</h3>';
+    html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+booking.total_weight.toFixed(1)+'吨</span></div>';
+    html += '<div class="row"><span class="lbl">总体积</span><span class="val">'+(booking.total_volume>0?booking.total_volume.toFixed(1)+'CBM':'—')+'</span></div>';
+    html += '<div class="row"><span class="lbl">总件数</span><span class="val">'+booking.total_qty+'</span></div>';
+    html += '<div class="row"><span class="lbl">贸易条款</span><span class="val">'+(booking.trade_term||'—')+'</span></div>';
+    html += '<div class="row"><span class="lbl">起运港</span><span class="val">'+(booking.pol||'—')+'</span></div>';
+    html += '<div class="row"><span class="lbl">目的港</span><span class="val">'+(booking.pod||'—')+'</span></div>';
+    if (booking.dangerous_list.length>0) html += '<div class="row warn"><span class="lbl">⚠️ 危险品等级</span><span class="val">'+booking.dangerous_list.join(', ')+'</span></div>';
+    html += '</div>';
+  }
+
+  var customs = project.grid.customs;
+  if (customs && customs.items && customs.items.length > 0) {
+    html += '<div class="section"><h3>📋 关务线投影</h3>';
+    html += '<div class="row"><span class="lbl">HS编码</span><span class="val">'+(customs.hs_codes.length>0?customs.hs_codes.join(', '):'缺失→需追问')+'</span></div>';
+    html += '<div class="row"><span class="lbl">型号清单</span><span class="val">'+(customs.models.length>0?customs.models.join(', '):'—')+'</span></div>';
+    html += '<div class="row"><span class="lbl">品名清单</span><span class="val">'+customs.names.join(', ')+'</span></div>';
+    html += '<div class="row'+(customs.need_inspection?' warn':'')+'"><span class="lbl">需商检</span><span class="val">'+(customs.need_inspection?'⚠️是':'否')+'</span></div>';
+    html += '</div>';
+  }
+
+  if (items.length === 0) {
+    html += '<div class="section"><h3>等待货物信息</h3><div class="row"><span class="lbl" style="color:#999;">对话或手动添加货物后，这里会显示三线投影结果</span></div></div>';
+  }
+  content.innerHTML = html;
+}
+
+// ========== 对话 ==========
 var chatHistory = [];
 var isProcessing = false;
-var API_PROXY = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
-
-function init() {
-  loadTFMData();
-  renderGrid();
-  renderGridStatus();
-  addBotMessage('您好，我是虹运AI魔方助手。请告诉我您要发的货物信息，像跟人聊天一样说就行。');
-}
-
-function loadTFMData() {
-  var saved = localStorage.getItem('tfmProject');
-  if (saved) { try { tfmData = JSON.parse(saved); } catch(e) { tfmData = null; } }
-  if (!tfmData) { tfmData = JSON.parse(JSON.stringify(TFM_MODEL)); saveTFMData(); }
-}
-
-function saveTFMData() {
-  localStorage.setItem('tfmProject', JSON.stringify(tfmData));
-  var co = { shipper:'', consignee:'', notifyParty:'', cargoDesc:tfmData.project.cargo_desc.value||'', packages:tfmData.project.packages.value||'', grossWeight:tfmData.project.gross_weight.value||'', volume:tfmData.project.volume.value||'', tradeTerm:tfmData.project.trade_term.value||'', deliveryDeadline:tfmData.seg3.delivery_deadline.value||'' };
-  localStorage.setItem('clientOrder', JSON.stringify(co));
-}
-
-function addBotMessage(text) {
-  chatHistory.push({role:'assistant', content:text});
-  var div = document.createElement('div'); div.className='msg bot'; div.textContent=text;
-  document.getElementById('chatMessages').appendChild(div); scrollChat();
-}
-
-function addUserMessage(text) {
-  chatHistory.push({role:'user', content:text});
-  var div = document.createElement('div'); div.className='msg user'; div.textContent=text;
-  document.getElementById('chatMessages').appendChild(div); scrollChat();
-}
-
-function addSystemMessage(text) {
-  var div = document.createElement('div'); div.className='msg system'; div.textContent=text;
-  document.getElementById('chatMessages').appendChild(div); scrollChat();
-}
-
-function scrollChat() {
-  var el = document.getElementById('chatMessages');
-  el.scrollTop = el.scrollHeight;
-}
+function addBotMessage(text) { chatHistory.push({role:'assistant',content:text}); var d=document.createElement('div');d.className='msg bot';d.textContent=text;document.getElementById('chatMessages').appendChild(d);scrollChat(); }
+function addUserMessage(text) { chatHistory.push({role:'user',content:text}); var d=document.createElement('div');d.className='msg user';d.textContent=text;document.getElementById('chatMessages').appendChild(d);scrollChat(); }
+function addSysMessage(text) { var d=document.createElement('div');d.className='msg system';d.textContent=text;document.getElementById('chatMessages').appendChild(d);scrollChat(); }
+function scrollChat() { var el=document.getElementById('chatMessages'); el.scrollTop=el.scrollHeight; }
 
 async function sendMessage() {
   if (isProcessing) return;
@@ -204,35 +255,31 @@ async function sendMessage() {
   isProcessing = true;
   document.getElementById('sendBtn').disabled = true;
 
-  var localResult = localExtract(text);
-  if (localResult.extracted.length > 0) {
-    applyExtractions(localResult.extracted);
-    addSystemMessage('✅ 已识别：'+localResult.extracted.map(function(e){return e.label;}).join('、'));
-  }
-
-  var needsLLM = (text.length <= 200);
-  if (needsLLM) {
-    var llmResult = await llmExtract(text);
+  if (text.length <= 200) {
+    var local = localExtract(text);
+    if (local) { addCargoItem(local); addSysMessage('✅ 已识别：'+local.name+'，'+local.weight_t+'吨，'+(local.qty||1)+(local.unit||'台')); }
+    var llmResult = await llmExtractCargo(text);
     if (llmResult && llmResult.length > 0) {
-      applyExtractions(llmResult);
-      addSystemMessage('✅ 补充识别：'+llmResult.map(function(e){return e.field_label||e.key;}).join('、'));
+      for (var i=0; i<llmResult.length; i++) { addCargoItem(llmResult[i]); }
+      addSysMessage('✅ 补充识别 '+llmResult.length+' 条货物');
     }
+  } else {
+    addSysMessage('📋 检测到货物清单，正在解析...');
+    var batch = await llmExtractCargo(text);
+    if (batch && batch.length > 0) {
+      for (var i=0; i<batch.length; i++) { addCargoItem(batch[i]); }
+      addSysMessage('✅ 已解析 '+batch.length+' 条货物');
+    } else { addSysMessage('⚠️ 未能解析清单，请尝试逐条告知或使用手动补货'); }
   }
 
-  loadTFMData();
-  renderGrid();
-  renderGridStatus();
-
-  var followUps = buildFollowUps();
-  if (followUps.length > 0) {
-    setTimeout(function(){ addBotMessage(followUps.join('；')+'。'); }, 500);
-  } else {
-    var missingAny = countMissing();
-    if (missingAny > 0) {
-      setTimeout(function(){ addBotMessage('信息收得差不多了。还有'+missingAny+'项没填，您可以继续补充，或点"手动填写"补完。'); }, 500);
-    } else {
-      setTimeout(function(){ addBotMessage('全部信息已收录！数据已自动同步，您可以关闭页面了。'); }, 500);
-    }
+  renderAll();
+  var missing = getMissingRequired();
+  if (missing.length > 0) {
+    var picks = missing.slice(0,3);
+    var msgs = picks.map(function(m){ return humanizeHint(m); });
+    setTimeout(function(){ addBotMessage(msgs.join('；')+'。'); }, 500);
+  } else if (project.cargo_items.length > 0) {
+    setTimeout(function(){ addBotMessage('信息已收录！三线投影已更新，右侧可查看汇总。还有补充随时告诉我。'); }, 500);
   }
 
   updateManualForm();
@@ -241,256 +288,119 @@ async function sendMessage() {
 }
 
 function localExtract(text) {
-  if (text.length > 200) { saveTFMData(); return { extracted:[], unmatched:[] }; }
-  var extracted = [];
+  var item = {};
+  var found = false;
 
-  var portPatterns = [
-    { regex:/天津港?|天津|新港|Tianjin|Xingang/i, target:{group:'seg1',key:'POL'}, label:'起运港·天津' },
-    { regex:/上海港?|上海|Shanghai/i, target:{group:'seg1',key:'POL'}, label:'起运港·上海' },
-    { regex:/青岛港?|青岛|Qingdao/i, target:{group:'seg1',key:'POL'}, label:'起运港·青岛' },
-    { regex:/宁波港?|宁波|Ningbo/i, target:{group:'seg1',key:'POL'}, label:'起运港·宁波' },
-    { regex:/深圳港?|深圳|蛇口|Shenzhen|Shekou/i, target:{group:'seg1',key:'POL'}, label:'起运港·深圳' },
-    { regex:/广州港?|广州|黄埔|Guangzhou/i, target:{group:'seg1',key:'POL'}, label:'起运港·广州' },
-    { regex:/德班|Durban/i, target:{group:'seg3',key:'POD'}, label:'目的港·德班' },
-    { regex:/蒙巴萨|Mombasa/i, target:{group:'seg3',key:'POD'}, label:'目的港·蒙巴萨' },
-    { regex:/达累斯萨拉姆|Dar es Salaam/i, target:{group:'seg3',key:'POD'}, label:'目的港·达累斯萨拉姆' },
-    { regex:/马塔迪|Matadi/i, target:{group:'seg3',key:'POD'}, label:'目的港·马塔迪' },
-    { regex:/鲸湾港|Walvis Bay/i, target:{group:'seg3',key:'POD'}, label:'目的港·鲸湾港' },
-    { regex:/洛比托|Lobito/i, target:{group:'seg3',key:'POD'}, label:'目的港·洛比托' },
-    { regex:/新加坡|Singapore/i, target:{group:'seg2',key:'transship_port'}, label:'中转港·新加坡' }
-  ];
-  for (var i=0; i<portPatterns.length; i++) {
-    var p = portPatterns[i];
-    if (p.regex.test(text)) {
-      var dp = getDataPoint(p.target.group, p.target.key);
-      if (dp) {
-        dp.value = text.match(p.regex)[0];
-        dp.confidence = 'unconfirmed'; dp.source = '对话提取'; dp.confirmed_by = '侦查员';
-        extracted.push({group:p.target.group, key:p.target.key, label:p.label});
-      }
-    }
-  }
+  var tp = text.match(/DAP|FOB|CIF|CFR|CNF|EXW|DDP/i);
+  if (tp) { item.trade_term = tp[0].toUpperCase(); found = true; }
 
-  var termPatterns = [
-    { regex:/DAP|delivered at place/i, value:'DAP' },
-    { regex:/FOB|free on board/i, value:'FOB' },
-    { regex:/CIF|cost insurance freight/i, value:'CIF' },
-    { regex:/CFR|CNF|cost and freight/i, value:'CFR' },
-    { regex:/EXW|ex works/i, value:'EXW' },
-    { regex:/DDP|delivered duty paid/i, value:'DDP' }
-  ];
-  for (var j=0; j<termPatterns.length; j++) {
-    if (termPatterns[j].regex.test(text)) {
-      var tdp = getDataPoint('project','trade_term');
-      if (tdp) {
-        tdp.value = termPatterns[j].value;
-        tdp.confidence = 'confirmed'; tdp.source = '对话提取'; tdp.confirmed_by = '侦查员';
-        extracted.push({group:'project', key:'trade_term', label:'贸易条款·'+termPatterns[j].value});
-      }
-      break;
-    }
-  }
+  var pp = text.match(/天津港?|天津|上海港?|上海|青岛港?|青岛|宁波港?|宁波|深圳港?|深圳|蛇口|广州港?|广州|黄埔/i);
+  if (pp) { item.pol = pp[0]; found = true; }
+
+  var dp = text.match(/德班|蒙巴萨|达累斯萨拉姆|马塔迪|鲸湾港|洛比托/i);
+  if (dp) { item.pod = dp[0]; found = true; }
+
+  var ad = text.match(/Fungurume|卢本巴希|Lubumbashi|科卢韦齐|Kolwezi|Likasi/i);
+  if (ad) { item.delivery_address = ad[0]; found = true; }
 
   var wm = text.match(/(\d+\.?\d*)\s*(吨|t|kg|公斤|千克)/i);
-  if (wm) {
-    var wdp = getDataPoint('project','gross_weight');
-    if (wdp) {
-      var num = parseFloat(wm[1]), unit = wm[2].toLowerCase();
-      wdp.value = (unit==='kg'||unit==='公斤'||unit==='千克') ? (num/1000)+'吨' : num+'吨';
-      wdp.confidence = 'confirmed'; wdp.source = '对话提取'; wdp.confirmed_by = '侦查员';
-      extracted.push({group:'project', key:'gross_weight', label:'毛重·'+wdp.value});
-    }
+  if (wm) { var n=parseFloat(wm[1]),u=wm[2].toLowerCase(); item.weight_t = (u==='kg'||u==='公斤'||u==='千克')?n/1000:n; found=true; }
+
+  var qm = text.match(/(\d+)\s*(台|件|箱|包|托|个)/);
+  if (qm) { item.qty = parseInt(qm[1]); item.unit = qm[2]; found = true; }
+
+  if (/矿山|挖掘机|推土机|装载机|自卸车|平地机|压路机|发电机组|洒水车/.test(text)) {
+    var nm = text.match(/矿山设备|挖掘机|推土机|装载机|自卸车|平地机|压路机|发电机组|洒水车/);
+    if (nm) { item.name = nm[0]; found = true; }
   }
 
-  var pm = text.match(/(\d+)\s*(件|箱|包|托|pallet|carton)/i);
-  if (pm) {
-    var pdp = getDataPoint('project','packages');
-    if (pdp) {
-      pdp.value = pm[1]+pm[2]; pdp.confidence = 'confirmed'; pdp.source = '对话提取'; pdp.confirmed_by = '侦查员';
-      extracted.push({group:'project', key:'packages', label:'件数·'+pdp.value});
-    }
-  }
+  if (/含油|带电|柴油|汽油/i.test(text)) { item.fuel_electric = true; found = true; }
+  if (/现货|排产|在途/i.test(text)) { var sm=text.match(/现货|排产|在途/i); if(sm){item.status=sm[0];found=true;} }
+  if (/裸装|托盘|木箱|散货/i.test(text)) { var pm=text.match(/裸装|托盘|木箱|散货/i); if(pm){item.packaging=pm[0];found=true;} }
 
-  var vm = text.match(/(\d+\.?\d*)\s*(cbm|CBM|方|立方)/);
-  if (vm) {
-    var vdp = getDataPoint('project','volume');
-    if (vdp) {
-      vdp.value = vm[1]+'CBM'; vdp.confidence = 'confirmed'; vdp.source = '对话提取'; vdp.confirmed_by = '侦查员';
-      extracted.push({group:'project', key:'volume', label:'体积·'+vdp.value});
-    }
-  }
-
-  var dm = text.match(/(\d{1,2}[月\/\-]\d{1,2})(?:日|号)?/);
-  if (dm) {
-    var ddp = getDataPoint('seg1','laycan_start');
-    if (ddp) {
-      ddp.value = dm[0]; ddp.confidence = 'unconfirmed'; ddp.source = '对话提取'; ddp.confirmed_by = '侦查员';
-      extracted.push({group:'seg1', key:'laycan_start', label:'Laycan·'+ddp.value});
-    }
-  }
-
-  if (/Fungurume|卢本巴希|Lubumbashi|科卢韦齐|Kolwezi|Likasi/i.test(text)) {
-    var addp = getDataPoint('seg3','delivery_address');
-    if (addp) {
-      addp.value = text.match(/Fungurume|卢本巴希|Lubumbashi|科卢韦齐|Kolwezi|Likasi/i)[0];
-      addp.confidence = 'unconfirmed'; addp.source = '对话提取'; addp.confirmed_by = '侦查员';
-      extracted.push({group:'seg3', key:'delivery_address', label:'交货地址·'+addp.value});
-    }
-  }
-
-  if (/还没定|待确认|在跟|不确定|TBD|TBC/i.test(text)) {
-    addSystemMessage('📌 检测到未确定项，已自动标记为缺失');
-  }
-
-  loadTFMData();
-  return { extracted:extracted, unmatched:[] };
+  if (!found) return null;
+  if (!item.qty) item.qty = 1;
+  if (!item.unit) item.unit = '台';
+  if (item.fuel_electric === undefined) item.fuel_electric = true;
+  if (!item.status) item.status = '现货';
+  return item;
 }
 
-async function llmExtract(text) {
-  var missingFields = getMissingPriority1();
-  if (missingFields.length === 0) return [];
-  var fieldList = missingFields.map(function(f){return f.field_key+'('+f.field_label+')';}).join(', ');
-  var prompt = '你是货运代理AI助手。从客户的话中提取数据点。\n客户说："'+text+'"\n需要提取的字段：'+fieldList+'\n返回JSON数组：[{"field_key":"...","value":"...","confidence":"confirmed|unconfirmed"}]，提取不到的不要返回，只返回JSON数组。';
+async function llmExtractCargo(text) {
+  var prompt = '你是货运代理AI助手。从客户消息中提取货物信息，返回JSON数组。\n客户说："'+text+'"\n每条货物提取以下字段（有就填，没有就null）：name,model,category,hs_code,qty(number),unit,weight_t(number),volume_cbm(number),dimensions_mm,oversize(boolean),packaging,dangerous(boolean),dangerous_class,fuel_electric(boolean),trade_term,pol,pod,delivery_address,status,special_requirement,remark\n只返回JSON数组，不要其他文字。如果客户发了多条货物清单，每条一个对象。';
   try {
-    var resp = await fetch(API_PROXY, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'deepseek-chat', messages:[{role:'user',content:prompt}], temperature:0.1, max_tokens:500})
-    });
+    var resp = await fetch(API_PROXY, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-chat',messages:[{role:'user',content:prompt}],temperature:0.1,max_tokens:2000})});
     var data = await resp.json();
     var content = data.choices?.[0]?.message?.content || '';
     var m = content.match(/\[[\s\S]*\]/);
-    if (m) return JSON.parse(m[0]);
-  } catch(e) { console.error('LLM提取失败:', e); }
-  return [];
-}
-
-function applyExtractions(extractions) {
-  for (var i=0; i<extractions.length; i++) {
-    var ex = extractions[i];
-    var dp = getDataPoint(ex.group, ex.key);
-    if (dp) {
-      if (ex.value) { dp.value = ex.value; }
-      dp.confidence = ex.confidence || 'unconfirmed';
-      dp.source = dp.source || '对话提取';
-      dp.confirmed_by = dp.confirmed_by || '侦查员';
-    }
-  }
-  saveTFMData();
-}
-
-function buildFollowUps() {
-  var missing = getMissingPriority1();
-  if (missing.length === 0) return [];
-  var picks = missing.slice(0,3);
-  return picks.map(function(p){ return humanizeHint(p); });
-}
-
-function humanizeHint(dp) {
-  var map = {
-    'trade_term': '贸易条款是FOB还是CIF？合同或PI上能看到',
-    'cargo_desc': '货物品名和HS编码是什么？',
-    'packages': '一共多少件？装箱单上有',
-    'gross_weight': '货物总毛重多少吨？装箱单上有',
-    'POL': '从哪个港口发货？上海还是天津？',
-    'vessel_name': '船名定了吗？订舱确认书上有',
-    'laycan_start': 'Laycan定了吗？大概什么时间？',
-    'cut_off_date': '截单时间知道了吗？船公司会给',
-    'POD': '目的港是哪个？',
-    'delivery_address': '最终交货地址在哪？'
-  };
-  if (map[dp.field_key]) return map[dp.field_key];
-  return dp.field_label + '？' + dp.source_hint;
-}
-
-function getMissingPriority1() {
-  var result = [];
-  for (var gn in tfmData) {
-    for (var k in tfmData[gn]) {
-      var dp = tfmData[gn][k];
-      if (dp.priority===1 && (!dp.value || dp.confidence==='missing')) result.push(Object.assign({},dp,{group:gn,field_key:k}));
-    }
-  }
-  return result;
-}
-
-function countMissing() {
-  var c = 0;
-  for (var gn in tfmData) { for (var k in tfmData[gn]) { if (!tfmData[gn][k].value || tfmData[gn][k].confidence==='missing') c++; } }
-  return c;
-}
-
-function getDataPoint(group, key) { return tfmData?.[group]?.[key] || null; }
-
-function renderGrid() {
-  var container = document.getElementById('gridContainer');
-  container.innerHTML = '';
-  for (var i=0; i<GRID_LAYOUT.length; i++) {
-    var cell = GRID_LAYOUT[i];
-    var div = document.createElement('div'); div.className = 'grid-cell';
-    var html = '<h3>'+cell.title+'</h3>';
-    if (cell.keys.length===0 && cell.group==='contacts') html += '<div class="dp"><span class="label" style="color:#999;">客户提交后自动填充</span></div>';
-    else if (cell.keys.length===0) html += '<div class="dp"><span class="label" style="color:#999;">待后续版本</span></div>';
-    else {
-      for (var j=0; j<cell.keys.length; j++) {
-        var dp = getDataPoint(cell.group, cell.keys[j]);
-        if (dp) {
-          var cls = dp.value ? dp.confidence : 'missing';
-          var display = dp.value || '—';
-          html += '<div class="dp '+cls+'"><span class="label">'+dp.field_label+'</span><span class="value" title="'+display+'">'+display+'</span></div>';
-        }
+    if (m) {
+      var arr = JSON.parse(m[0]);
+      for (var i=0; i<arr.length; i++) {
+        if (!arr[i].qty) arr[i].qty = 1;
+        if (!arr[i].unit) arr[i].unit = '台';
+        if (arr[i].fuel_electric === undefined || arr[i].fuel_electric === null) arr[i].fuel_electric = true;
+        if (!arr[i].status) arr[i].status = '现货';
       }
+      return arr;
     }
-    div.innerHTML = html; container.appendChild(div);
-  }
+  } catch(e) { console.error('LLM失败:', e); }
+  return null;
 }
 
-function renderGridStatus() {
-  var confirmed=0, unconfirmed=0, missing=0, inferred=0;
-  for (var gn in tfmData) {
-    for (var k in tfmData[gn]) {
-      var dp = tfmData[gn][k];
-      if (dp.value) { if (dp.confidence==='confirmed') confirmed++; else if (dp.confidence==='ai_inferred') inferred++; else unconfirmed++; }
-      else missing++;
-    }
-  }
-  document.getElementById('gridStatus').innerHTML = '<span><span class="dot confirmed"></span> 已确认 '+confirmed+'</span><span><span class="dot unconfirmed"></span> 待确认 '+unconfirmed+'</span><span><span class="dot ai_inferred"></span> AI推断 '+inferred+'</span><span><span class="dot missing"></span> 缺失 '+missing+'</span>';
+function humanizeHint(m) {
+  var map = { trade_term:'贸易条款是FOB还是CIF？合同或PI上有', name:'货物品名是什么？', weight_t:'单件毛重多少吨？装箱单上有', qty:'数量多少？', unit:'单位是什么？台/件/套？', pol:'从哪个港口发？上海还是天津？', fuel_electric:'是否含油含电？矿山设备通常含油含电', status:'现货还是排产？', hs_code:'HS编码是什么？报关要用', pod:'目的港是哪个？', delivery_address:'最终交货地址在哪？', packaging:'包装方式？托盘/木箱/裸装？', dimensions_mm:'整机尺寸多少？长宽高mm', dangerous:'是否危险品？' };
+  if (map[m.field]) return map[m.field];
+  return m.label+'？'+(m.hint||'');
 }
 
-function toggleManualForm() {
-  var form = document.getElementById('manualForm');
-  form.classList.toggle('active');
-  if (form.classList.contains('active')) updateManualForm();
-}
-
+// ========== 手动补货 ==========
+function toggleManualForm() { var f=document.getElementById('manualForm'); f.classList.toggle('active'); if(f.classList.contains('active'))updateManualForm(); }
 function updateManualForm() {
   var container = document.getElementById('manualFields');
-  var missing = [];
-  for (var gn in tfmData) {
-    for (var k in tfmData[gn]) {
-      var dp = tfmData[gn][k];
-      if (!dp.value || dp.confidence==='missing') missing.push(Object.assign({},dp,{group:gn,field_key:k}));
-    }
-  }
-  container.innerHTML = missing.map(function(m){return '<div class="form-row"><label>'+m.field_label+'</label><input data-group="'+m.group+'" data-key="'+m.field_key+'" placeholder="'+m.source_hint+'" value="'+(m.value||'')+'"></div>';}).join('');
+  var html = '<div class="form-row"><label>品名*</label><input id="mf_name" placeholder="如挖掘机"></div>';
+  html += '<div class="form-row"><label>型号</label><input id="mf_model" placeholder="如SY1050H"></div>';
+  html += '<div class="form-row"><label>数量*</label><input id="mf_qty" type="number" value="1"></div>';
+  html += '<div class="form-row"><label>单位*</label><input id="mf_unit" value="台"></div>';
+  html += '<div class="form-row"><label>单件毛重(t)*</label><input id="mf_weight" type="number" step="0.1"></div>';
+  html += '<div class="form-row"><label>贸易条款*</label><input id="mf_term" placeholder="DAP/FOB/CIF"></div>';
+  html += '<div class="form-row"><label>起运港*</label><input id="mf_pol" placeholder="天津港/上海港"></div>';
+  html += '<div class="form-row"><label>含油含电*</label><input id="mf_fuel" value="是（矿山设备默认含油含电）"></div>';
+  html += '<div class="form-row"><label>状态*</label><input id="mf_status" value="现货"></div>';
+  html += '<div class="form-row"><label>HS编码</label><input id="mf_hs" placeholder="如8429.52"></div>';
+  html += '<div class="form-row"><label>尺寸(mm)</label><input id="mf_dim" placeholder="长*宽*高"></div>';
+  html += '<div class="form-row"><label>包装</label><input id="mf_pkg" placeholder="裸装/托盘/木箱"></div>';
+  container.innerHTML = html;
 }
-
 function submitManual() {
-  var inputs = document.querySelectorAll('#manualFields input');
-  inputs.forEach(function(inp){
-    var dp = getDataPoint(inp.dataset.group, inp.dataset.key);
-    if (dp && inp.value.trim()) { dp.value = inp.value.trim(); dp.confidence = 'unconfirmed'; dp.source = '手动填写'; dp.confirmed_by = '客户'; }
-  });
-  saveTFMData(); loadTFMData(); renderGrid(); renderGridStatus();
-  addSystemMessage('📝 手动补充已保存');
+  var item = {
+    name: document.getElementById('mf_name').value,
+    model: document.getElementById('mf_model').value || null,
+    qty: parseInt(document.getElementById('mf_qty').value)||1,
+    unit: document.getElementById('mf_unit').value||'台',
+    weight_t: parseFloat(document.getElementById('mf_weight').value)||0,
+    trade_term: document.getElementById('mf_term').value||null,
+    pol: document.getElementById('mf_pol').value||null,
+    fuel_electric: true,
+    status: document.getElementById('mf_status').value||'现货',
+    hs_code: document.getElementById('mf_hs').value||null,
+    dimensions_mm: document.getElementById('mf_dim').value||null,
+    packaging: document.getElementById('mf_pkg').value||null
+  };
+  if (!item.name || !item.weight_t) { alert('品名和毛重必填'); return; }
+  addCargoItem(item);
+  renderAll();
+  addSysMessage('📝 手动添加：'+item.name+' '+item.weight_t+'吨');
   toggleManualForm();
 }
 
 function resetAll() {
-  if (!confirm('确定要清除所有已填数据，重新开始吗？')) return;
-  localStorage.removeItem('tfmProject'); localStorage.removeItem('clientOrder');
-  tfmData = JSON.parse(JSON.stringify(TFM_MODEL)); saveTFMData();
-  chatHistory = []; document.getElementById('chatMessages').innerHTML = '';
-  renderGrid(); renderGridStatus();
+  if (!confirm('清除所有数据重新开始？')) return;
+  localStorage.removeItem('tfmProject');
+  project = null;
+  chatHistory = [];
+  document.getElementById('chatMessages').innerHTML = '';
+  initProject();
+  renderAll();
   addBotMessage('已重置。请告诉我您的货物信息。');
 }
 
@@ -498,7 +408,9 @@ document.getElementById('userInput').addEventListener('keydown', function(e) {
   if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
-init();
+initProject();
+renderAll();
+addBotMessage('您好，我是虹运AI魔方助手。请告诉我货物信息——品名、重量、数量、从哪里发到哪里，像聊天一样说就行。');
 </script>
 </body>
 </html>
