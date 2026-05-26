@@ -132,7 +132,15 @@ function renderAll() {
     html += '<div class="section"><h3>📦 货物清单</h3><table class="cargo-table"><tr><th>#</th><th>品名</th><th>型号</th><th>数量</th><th>单重(t)</th><th>尺寸</th><th>状态</th><th>含油电</th><th></th></tr>';
     for (var i=0; i<items.length; i++) {
       var it = items[i];
-      html += '<tr><td>'+(i+1)+'</td><td>'+(it.name||'—')+'</td><td>'+(it.model||'—')+'</td><td>'+(it.qty||'?')+' '+(it.unit||'')+'</td><td>'+(it.weight_t!=null?it.weight_t:'?')+'</td><td>'+(it.dimensions_mm||'—')+'</td><td>'+(it.status||'—')+'</td><td>'+(it.fuel_electric?'⚠️是':'否')+'</td><td><button onclick="removeItem('+it.item_id+');renderAll();" style="background:none;border:none;color:#c75b2a;cursor:pointer;font-size:14px;">✕</button></td></tr>';
+html += '<tr><td>'+(i+1)+'</td>'+
+'<td data-field="name" data-item-id="'+it.item_id+'" ondblclick="startEdit(this)">'+(it.name||'—')+'</td>'+
+'<td data-field="model" data-item-id="'+it.item_id+'" ondblclick="startEdit(this)">'+(it.model||'—')+'</td>'+
+'<td data-field="qty" data-item-id="'+it.item_id+'" ondblclick="startEdit(this)">'+(it.qty||'?')+' '+(it.unit||'')+'</td>'+
+'<td data-field="weight_t" data-item-id="'+it.item_id+'" ondblclick="startEdit(this)">'+(it.weight_t!=null?it.weight_t:'?')+'</td>'+
+'<td data-field="dimensions_mm" data-item-id="'+it.item_id+'" ondblclick="startEdit(this)">'+(it.dimensions_mm||'—')+'</td>'+
+'<td data-field="status" data-item-id="'+it.item_id+'" ondblclick="startEdit(this)">'+(it.status||'—')+'</td>'+
+'<td data-field="fuel_electric" data-item-id="'+it.item_id+'" ondblclick="startEdit(this)">'+(it.fuel_electric?'⚠️是':'否')+'</td>'+
+'<td><button onclick="removeItem('+it.item_id+');renderAll();" style="background:none;border:none;color:#c75b2a;cursor:pointer;font-size:14px;">✕</button></td></tr>';
     }
     html += '</table></div>';
     var inland = project.grid.inland, booking = project.grid.booking, customs = project.grid.customs;
@@ -232,6 +240,30 @@ function executeAction(action) {
   }
 }
 
+function startEdit(td) {
+  if (td.querySelector('input')) return;
+  var orig = td.textContent;
+  var field = td.getAttribute('data-field');
+  var id = parseInt(td.getAttribute('data-item-id'));
+  td.innerHTML = '<input value="'+orig.replace(/"/g,'&quot;')+'" style="width:100%;border:1px solid #c75b2a;padding:2px;font-size:11px;">';
+  var input = td.querySelector('input');
+  input.focus(); input.select();
+  var save = function() {
+    var val = input.value;
+    if (val === '—') val = '';
+    for (var i=0; i<project.cargo_items.length; i++) {
+      if (project.cargo_items[i].item_id === id) {
+        if (field === 'qty') val = parseInt(val)||0;
+        else if (field === 'weight_t' || field === 'volume_cbm') val = parseFloat(val)||null;
+        project.cargo_items[i][field] = val;
+        break;
+      }
+    }
+    runProjections(); save(); renderAll();
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e) { if (e.key==='Enter') { e.preventDefault(); save(); } });
+}
 function localPreFill(text) {
   var item = {}, found = false;
   var tp = text.match(/DAP|FOB|CIF|CFR|CNF|EXW|DDP/i); if(tp){item.trade_term=tp[0].toUpperCase();found=true;}
