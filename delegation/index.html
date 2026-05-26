@@ -210,8 +210,9 @@ async function chatWithAssistant(text) {
 
 function parseResponse(content) {
   var m = content.match(/\{[\s\S]*\}/);
-  if (m) { try { return JSON.parse(m[0]); } catch(e) {} }
-  return { reply: content.replace(/\{[\s\S]*\}/g,'').trim()||content, extracted_items:[], actions:['none'] };
+  if (m) { try { return JSON.parse(m[0]); } catch(e) { console.error('[魔方JSON解析失败]', e.message, '原始内容:', m[0].substring(0,500)); } }
+  console.warn('[魔方] AI未返回有效JSON对象，使用降级', content.substring(0,200));
+  return { reply: content.replace(/\{[\s\S]*\}/g,'').trim()||'收到，但数据解析出了点问题，请再说一次。', extracted_items:[], actions:['none'] };
 }
 
 function executeAction(action) {
