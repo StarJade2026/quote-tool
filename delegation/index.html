@@ -86,12 +86,12 @@ function runProjections() {
   var items = project.cargo_items;
   if (!items.length) { project.grid = { inland:{}, booking:{}, customs:{} }; return; }
   var inland = { total_weight:0, oversize_count:0, fuel_electric_count:0, total_qty:0 };
-  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:'', pod:'', dangerous_list:[] };
+  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:''pols:[], pod:'', dangerous_list:[] };
   var customs = { hs_codes:[], models:[], names:[], need_inspection:false, total_weight:0 };
   for (var i=0; i<items.length; i++) {
     var it = items[i], w = (it.weight_t||0)*(it.qty||1);
     inland.total_weight+=w; inland.total_qty+=(it.qty||0); if(it.oversize)inland.oversize_count++; if(it.fuel_electric)inland.fuel_electric_count++;
-    booking.total_weight+=w; booking.total_volume+=(it.volume_cbm||0)*(it.qty||1); booking.total_qty+=(it.qty||0); if(it.trade_term)booking.trade_term=it.trade_term; if(it.pol)booking.pol=it.pol; if(it.pod)booking.pod=it.pod; if(it.dangerous&&it.dangerous_class&&booking.dangerous_list.indexOf(it.dangerous_class)<0)booking.dangerous_list.push(it.dangerous_class);
+    booking.total_weight+=w; booking.total_volume+=(it.volume_cbm||0)*(it.qty||1); booking.total_qty+=(it.qty||0); if(it.trade_term)booking.trade_term=it.trade_term; if(it.pol && booking.pols.indexOf(it.pol)<0)booking.pols.push(it.pol);; if(it.pod)booking.pod=it.pod; if(it.dangerous&&it.dangerous_class&&booking.dangerous_list.indexOf(it.dangerous_class)<0)booking.dangerous_list.push(it.dangerous_class);
     customs.total_weight+=w; if(it.hs_code&&customs.hs_codes.indexOf(it.hs_code)<0)customs.hs_codes.push(it.hs_code); if(it.model&&customs.models.indexOf(it.model)<0)customs.models.push(it.model); if(it.name&&customs.names.indexOf(it.name)<0)customs.names.push(it.name); if(it.dangerous||it.fuel_electric)customs.need_inspection=true;
   }
   project.grid = { inland:inland, booking:booking, customs:customs };
@@ -147,7 +147,7 @@ function renderAll() {
     html += '<div class="row"><span class="lbl">总体积</span><span class="val">'+(booking.total_volume>0?booking.total_volume.toFixed(1)+'CBM':'待补充')+'</span></div>';
     html += '<div class="row"><span class="lbl">总件数</span><span class="val">'+(booking.total_qty>0?booking.total_qty:'待补充')+'</span></div>';
     html += '<div class="row"><span class="lbl">贸易条款</span><span class="val">'+(booking.trade_term||'待补充')+'</span></div>';
-    html += '<div class="row"><span class="lbl">起运港</span><span class="val">'+(booking.pol||'待补充')+'</span></div>';
+    html += '<div class="row"><span class="lbl">起运港</span><span class="val">'+(booking.pols&&booking.pols.length>0?booking.pols.join('、'):'待补充')+'</span></div>';
     html += '<div class="row"><span class="lbl">目的港</span><span class="val">'+(booking.pod||'待补充')+'</span></div>';
     if (booking.dangerous_list.length>0) html += '<div class="row warn"><span class="lbl">⚠️ 危险品等级</span><span class="val">'+booking.dangerous_list.join(', ')+'</span></div>';
     html += '</div><div class="section"><h3>📋 关务线投影</h3>';
