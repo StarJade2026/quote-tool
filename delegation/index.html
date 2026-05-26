@@ -125,7 +125,7 @@ function renderAll() {
   var summary = document.getElementById('gridSummary');
   var complete=0;
   for(var i=0;i<items.length;i++){var it=items[i],ok=true;for(var j=0;j<REQUIRED.length;j++){var v=it[REQUIRED[j]];if(v===null||v===undefined||v==='')ok=false;}if(ok)complete++;}
-  summary.innerHTML = '<span><span class="dot ok"></span> 货物条目 '+items.length+'</span><span><span class="dot ok"></span> 完整 '+complete+'</span><span><span class="dot miss"></span> 待补 '+(items.length-complete)+'</span>';
+  summary.innerHTML = '<span><span class="dot ok"></span> 已填 '+items.length+'</span><span><span class="dot warn"></span> 待确认 '+(items.length-complete)+'</span>';
 
   var content = document.getElementById('gridContent'), html = '';
   if (items.length > 0) {
