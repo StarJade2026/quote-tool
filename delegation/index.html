@@ -61,6 +61,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 <div class="grid-panel">
   <h2>📊 委托数据实时预览</h2>
   <div class="grid-summary" id="gridSummary"></div>
+  <button id="copyRequestBtn" onclick="copyQuoteRequest()" style="margin-left:12px;padding:6px 14px;background:#2d6a4f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">📋 生成报价请求</button>
   <div id="gridContent"></div>
 </div>
 </div>
@@ -168,6 +169,30 @@ html += '<tr><td>'+(i+1)+'</td>'+
     html += '<div class="section"><h3>等待货物信息</h3><div style="font-size:12px;color:#999;">对话开始后，货物信息会出现在这里</div></div>';
   }
   content.innerHTML = html;
+}
+  function copyQuoteRequest() {
+  var items = project.cargo_items;
+  if (!items.length) { alert('暂无货物信息'); return; }
+  var text = '【报价请求】\n\n';
+  text += '货物清单：\n';
+  for (var i=0; i<items.length; i++) {
+    var it = items[i];
+    text += (i+1)+'. '+(it.name||'?')+' '+(it.model||'')+' ×'+(it.qty||'?')+(it.unit||'台')+' '+(it.weight_t||'?')+'吨/台';
+    if (it.dimensions_mm) text += ' '+it.dimensions_mm;
+    if (it.fuel_electric) text += ' ⚠️含油含电';
+    if (it.status) text += ' ['+it.status+']';
+    text += '\n';
+  }
+  var g = project.grid;
+  text += '\n三线投影：\n';
+  text += '内陆线：总重'+(g.inland.total_weight>0?g.inland.total_weight.toFixed(1)+'吨':'?')+' 总件数'+(g.inland.total_qty||'?');
+  if (g.inland.oversize_count>0) text += ' 超限'+g.inland.oversize_count+'件';
+  if (g.inland.fuel_electric_count>0) text += ' 含油含电'+g.inland.fuel_electric_count+'件';
+  text += '\n订舱线：起运港'+(g.booking.pols&&g.booking.pols.length>0?g.booking.pols.join('/'):'?')+' 目的港'+(g.booking.pod||'?')+' 条款'+(g.booking.trade_term||'?');
+  if (g.booking.dangerous_list.length>0) text += ' ⚠️危险品'+g.booking.dangerous_list.join(',');
+  text += '\n关务线：HS编码'+(g.customs.hs_codes.length>0?g.customs.hs_codes.join(','):'缺失')+' 商检'+(g.customs.need_inspection?'需':'否');
+  text += '\n\n'+missingFields();
+  navigator.clipboard.writeText(text).then(function(){ alert('报价请求已复制到剪贴板'); });
 }
 
 // ========== System Prompt 模板 ==========
