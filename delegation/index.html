@@ -183,7 +183,7 @@ async function chatWithAssistant(text) {
   var content = '';
   try {
     var resp = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'deepseek-chat', messages:messages, temperature:0.3, max_tokens:1500 }) });
+      body: JSON.stringify({ model:'deepseek-chat', messages:messages, temperature:0.3, max_tokens:4000 }) });
     var data = await resp.json();
     content = data.choices?.[0]?.message?.content || '';
   } catch(e) { content = '{"reply":"抱歉，网络出了问题，请再说一次。","extracted_items":[],"actions":["none"]}'; }
