@@ -78,25 +78,10 @@ function initProject() {
   if (s) { try { project = JSON.parse(s); if (!project.cargo_items) project = null; } catch(e) { project = null; } }
   if (!project) { project = { project_id:'TFM'+Date.now().toString(36).toUpperCase(), cargo_items:[], grid:{ inland:{}, booking:{}, customs:{} } }; save(); }
 }
-function save() { localStorage.setItem('tfmProject', JSON.stringify(project)); }
+function save() { try { localStorage.setItem('tfmProject', JSON.stringify(project)); } catch(e) { console.error('[魔方] localStorage写入失败', e.message); } }
 function addItem(it) { it.item_id = project.cargo_items.length+1; project.cargo_items.push(it); runProjections(); save(); }
 function removeItem(id) { project.cargo_items = project.cargo_items.filter(function(x){ return x.item_id!==id; }); for(var i=0;i<project.cargo_items.length;i++)project.cargo_items[i].item_id=i+1; runProjections(); save(); }
 function clearItems() { project.cargo_items = []; runProjections(); save(); }
-
-function runProjections() {
-  var items = project.cargo_items;
-  if (!items.length) { project.grid = { inland:{}, booking:{}, customs:{} }; return; }
-  var inland = { total_weight:0, oversize_count:0, fuel_electric_count:0, total_qty:0 };
-  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:'',pols:[], pod:'', dangerous_list:[] };
-  var customs = { hs_codes:[], models:[], names:[], need_inspection:false, total_weight:0 };
-  for (var i=0; i<items.length; i++) {
-    var it = items[i], w = (it.weight_t||0)*(it.qty||1);
-    inland.total_weight+=w; inland.total_qty+=(it.qty||0); if(it.oversize)inland.oversize_count++; if(it.fuel_electric)inland.fuel_electric_count++;
-    booking.total_weight+=w; booking.total_volume+=(it.volume_cbm||0)*(it.qty||1); booking.total_qty+=(it.qty||0); if(it.trade_term)booking.trade_term=it.trade_term; if(it.pol && booking.pols.indexOf(it.pol)<0)booking.pols.push(it.pol);; if(it.pod)booking.pod=it.pod; if(it.dangerous&&it.dangerous_class&&booking.dangerous_list.indexOf(it.dangerous_class)<0)booking.dangerous_list.push(it.dangerous_class);
-    customs.total_weight+=w; if(it.hs_code&&customs.hs_codes.indexOf(it.hs_code)<0)customs.hs_codes.push(it.hs_code); if(it.model&&customs.models.indexOf(it.model)<0)customs.models.push(it.model); if(it.name&&customs.names.indexOf(it.name)<0)customs.names.push(it.name); if(it.dangerous||it.fuel_electric)customs.need_inspection=true;
-  }
-  project.grid = { inland:inland, booking:booking, customs:customs };
-}
 
 function cargoSummary() {
   var items = project.cargo_items;
@@ -238,6 +223,11 @@ async function chatWithAssistant(text) {
     for (var k in local) { if (local[k] !== null && local[k] !== undefined && !result.extracted_items[0][k]) result.extracted_items[0][k] = local[k]; }
   }
 
+    if (result.extracted_items.length >= 3) {
+    var newNames = result.extracted_items.map(function(x){ return x.name; }).join(',');
+    var oldNames = project.cargo_items.map(function(x){ return x.name; }).join(',');
+    if (newNames === oldNames) { clearItems(); }
+  }
   for (var i = 0; i < result.extracted_items.length; i++) {
     if (result.extracted_items[i].name) addItem(result.extracted_items[i]);
   }
