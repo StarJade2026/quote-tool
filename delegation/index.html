@@ -50,7 +50,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .section .row.warn .val { color: var(--unconfirmed); }
 .cargo-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:8px; }
 .cargo-table th { background:#f5f3f0; padding:6px 4px; text-align:left; border-bottom:2px solid var(--border); }
-.cargo-table td { padding:4px; border-bottom:1px solid var(--border); }
+.cargo-table td { padding:4px; border-bottom:1px solid var(--border); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .manual-form { display: none; margin-top: 16px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
 .manual-form.active { display: block; }
 .manual-form h3 { font-size: 14px; margin-bottom: 12px; }
@@ -68,7 +68,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
   <div class="chat-messages" id="chatMessages"></div>
   <div class="chat-input-area">
     <div class="chat-input-row">
-      <textarea id="userInput" rows="2" placeholder="例如：我要发102吨矿山设备从天津到刚果金Fungurume，DAP条款..."></textarea>
+      <textarea id="userInput" rows="2" placeholder="例如：13台挖掘机102吨/台，天津到达累斯萨拉姆，DAP..."></textarea>
       <button id="sendBtn" onclick="sendMessage()">发送</button>
     </div>
     <div class="chat-actions">
@@ -89,25 +89,25 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 </div>
 </div>
 <script>
-// ========== 数据模型 ==========
 var API_PROXY = 'https://api-proxy.rainbowway-api.workers.dev/v1/chat/completions';
 var project = null;
 
 var REQUIRED_FIELDS = ['name','qty','unit','weight_t','trade_term','pol','fuel_electric'];
+
 var FIELD_LABELS = {
-  name:'品名',model:'型号',category:'大品类',hs_code:'HS编码',qty:'数量',unit:'单位',
-  weight_t:'单件毛重(t)',max_single_weight_t:'单件最大重量(t)',volume_cbm:'单件体积(CBM)',
-  dimensions_mm:'尺寸(mm)',oversize:'超限',packaging:'包装',dangerous:'危险品',
-  dangerous_class:'危险品等级',fuel_electric:'含油含电',trade_term:'贸易条款',
-  pol:'起运港',pod:'目的港',delivery_address:'交货地址',status:'货物状态',
-  special_requirement:'特殊要求',remark:'备注'
+  name:'品名',model:'型号',hs_code:'HS编码',qty:'数量',unit:'单位',
+  weight_t:'单件毛重(t)',volume_cbm:'单件体积(CBM)',dimensions_mm:'尺寸(mm)',
+  packaging:'包装',dangerous:'危险品',fuel_electric:'含油含电',
+  trade_term:'贸易条款',pol:'起运港',pod:'目的港',delivery_address:'交货地址',
+  status:'货物状态',special_requirement:'特殊要求'
 };
+
 var SOURCE_HINTS = {
   name:'设备/货物品名',model:'规格型号',hs_code:'HS编码，报关要用',
-  weight_t:'单件毛重多少吨？装箱单上有',volume_cbm:'单件体积多少CBM？装箱单上有',
-  dimensions_mm:'整机尺寸（长宽高mm）',packaging:'包装方式？托盘/木箱/裸装',
-  dangerous:'是否危险品？',fuel_electric:'是否含油含电？矿山设备通常含油含电',
-  trade_term:'贸易条款？FOB还是CIF？合同上有',pol:'从哪个港口发？',
+  weight_t:'单件毛重多少吨？',volume_cbm:'单件体积多少CBM？',
+  dimensions_mm:'整机尺寸长宽高mm',packaging:'包装方式？托盘/木箱/裸装',
+  dangerous:'是否危险品？',fuel_electric:'是否含油含电？',
+  trade_term:'贸易条款？FOB还是CIF？',pol:'从哪个港口发？',
   pod:'目的港是哪个？',delivery_address:'最终交货地址在哪？',status:'现货还是排产？'
 };
 
@@ -131,27 +131,25 @@ function addCargoItem(item) {
 function runProjections() {
   var items = project.cargo_items;
   if (items.length === 0) return;
-  var inland = { total_weight:0, oversize_count:0, fuel_electric_count:0, specials:[], total_qty:0, items:items };
-  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:'', pod:'', dangerous_list:[], items:items };
-  var customs = { hs_codes:[], models:[], names:[], need_inspection:false, special_supervision:false, total_weight:0, items:items };
+  var inland = { total_weight:0, oversize_count:0, fuel_electric_count:0, specials:[], total_qty:0 };
+  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:'', pod:'', dangerous_list:[] };
+  var customs = { hs_codes:[], models:[], names:[], need_inspection:false, total_weight:0 };
 
   for (var i=0; i<items.length; i++) {
     var it = items[i];
-    inland.total_weight += (it.weight_t||0) * (it.qty||0);
-    inland.total_qty += (it.qty||0);
+    var w = (it.weight_t||0) * (it.qty||1);
+    inland.total_weight += w; inland.total_qty += (it.qty||0);
     if (it.oversize) inland.oversize_count++;
     if (it.fuel_electric) inland.fuel_electric_count++;
     if (it.special_requirement) inland.specials.push(it.special_requirement);
 
-    booking.total_weight += (it.weight_t||0) * (it.qty||0);
-    booking.total_volume += (it.volume_cbm||0) * (it.qty||0);
-    booking.total_qty += (it.qty||0);
-    booking.trade_term = booking.trade_term || it.trade_term || '';
-    booking.pol = booking.pol || it.pol || '';
-    booking.pod = booking.pod || it.pod || '';
-    if (it.dangerous && it.dangerous_class) { if (booking.dangerous_list.indexOf(it.dangerous_class)<0) booking.dangerous_list.push(it.dangerous_class); }
+    booking.total_weight += w; booking.total_volume += (it.volume_cbm||0) * (it.qty||1); booking.total_qty += (it.qty||0);
+    if (it.trade_term) booking.trade_term = it.trade_term;
+    if (it.pol) booking.pol = it.pol;
+    if (it.pod) booking.pod = it.pod;
+    if (it.dangerous && it.dangerous_class && booking.dangerous_list.indexOf(it.dangerous_class)<0) booking.dangerous_list.push(it.dangerous_class);
 
-    customs.total_weight += (it.weight_t||0) * (it.qty||0);
+    customs.total_weight += w;
     if (it.hs_code && customs.hs_codes.indexOf(it.hs_code)<0) customs.hs_codes.push(it.hs_code);
     if (it.model && customs.models.indexOf(it.model)<0) customs.models.push(it.model);
     if (it.name && customs.names.indexOf(it.name)<0) customs.names.push(it.name);
@@ -160,26 +158,43 @@ function runProjections() {
   project.grid = { inland:inland, booking:booking, customs:customs };
 }
 
-function getMissingRequired() {
+function valOr(v, alt) { return (v !== null && v !== undefined && v !== '') ? v : alt; }
+function numOr(v, alt) { return (v !== null && v !== undefined && v !== '') ? v : alt; }
+
+function getGlobalMissing() {
+  var items = project.cargo_items;
+  if (items.length === 0) return REQUIRED_FIELDS.map(function(f){ return {field:f, label:FIELD_LABELS[f]||f, hint:SOURCE_HINTS[f]||''}; });
   var missing = [];
-  if (project.cargo_items.length === 0) return REQUIRED_FIELDS.map(function(f){ return {field:f, label:FIELD_LABELS[f]||f, hint:SOURCE_HINTS[f]||''}; });
-  var last = project.cargo_items[project.cargo_items.length-1];
   for (var i=0; i<REQUIRED_FIELDS.length; i++) {
     var f = REQUIRED_FIELDS[i];
-    if (!last[f] && last[f] !== 0 && last[f] !== false) missing.push({field:f, label:FIELD_LABELS[f]||f, hint:SOURCE_HINTS[f]||''});
+    var allMissing = true;
+    for (var j=0; j<items.length; j++) {
+      var v = items[j][f];
+      if (v !== null && v !== undefined && v !== '' && v !== 0 && v !== false) { allMissing = false; break; }
+    }
+    if (allMissing) missing.push({field:f, label:FIELD_LABELS[f]||f, hint:SOURCE_HINTS[f]||''});
+  }
+  var extraChecks = ['hs_code','pod','delivery_address','packaging','dimensions_mm'];
+  for (var k=0; k<extraChecks.length; k++) {
+    var ef = extraChecks[k];
+    var allMiss = true;
+    for (var m=0; m<items.length; m++) {
+      var ev = items[m][ef];
+      if (ev !== null && ev !== undefined && ev !== '' && ev !== 0 && ev !== false) { allMiss = false; break; }
+    }
+    if (allMiss) missing.push({field:ef, label:FIELD_LABELS[ef]||ef, hint:SOURCE_HINTS[ef]||''});
   }
   return missing;
 }
 
-// ========== 渲染 ==========
 function renderAll() {
-  var summary = document.getElementById('gridSummary');
   var items = project.cargo_items;
+  var summary = document.getElementById('gridSummary');
   var total = items.length;
   var complete = 0;
   for (var i=0; i<items.length; i++) {
     var it = items[i]; var ok = true;
-    for (var j=0; j<REQUIRED_FIELDS.length; j++) { if (!it[REQUIRED_FIELDS[j]] && it[REQUIRED_FIELDS[j]]!==0 && it[REQUIRED_FIELDS[j]]!==false) ok=false; }
+    for (var j=0; j<REQUIRED_FIELDS.length; j++) { var v=it[REQUIRED_FIELDS[j]]; if (v===null||v===undefined||v==='') ok=false; }
     if (ok) complete++;
   }
   summary.innerHTML = '<span><span class="dot ok"></span> 货物条目 '+total+'</span><span><span class="dot ok"></span> 信息完整 '+complete+'</span><span><span class="dot miss"></span> 待补充 '+(total-complete)+'</span>';
@@ -192,47 +207,41 @@ function renderAll() {
     html += '<table class="cargo-table"><tr><th>#</th><th>品名</th><th>型号</th><th>数量</th><th>单重(t)</th><th>尺寸</th><th>状态</th><th>含油电</th></tr>';
     for (var i=0; i<items.length; i++) {
       var it = items[i];
-      html += '<tr><td>'+(i+1)+'</td><td>'+(it.name||'—')+'</td><td>'+(it.model||'—')+'</td><td>'+(it.qty||'—')+(it.unit||'')+'</td><td>'+(it.weight_t||'—')+'</td><td>'+(it.dimensions_mm||'—')+'</td><td>'+(it.status||'—')+'</td><td>'+(it.fuel_electric?'⚠️是':'否')+'</td></tr>';
+      html += '<tr><td>'+(i+1)+'</td><td>'+valOr(it.name,'—')+'</td><td>'+valOr(it.model,'—')+'</td><td>'+numOr(it.qty,'?')+' '+valOr(it.unit,'')+'</td><td>'+numOr(it.weight_t,'?')+'</td><td>'+valOr(it.dimensions_mm,'—')+'</td><td>'+valOr(it.status,'—')+'</td><td>'+(it.fuel_electric?'⚠️是':'否')+'</td></tr>';
     }
     html += '</table></div>';
   }
 
   var inland = project.grid.inland;
-  if (inland && inland.items && inland.items.length > 0) {
+  if (items.length > 0) {
     html += '<div class="section"><h3>🚛 内陆线投影</h3>';
-    html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+inland.total_weight.toFixed(1)+'吨</span></div>';
-    html += '<div class="row"><span class="lbl">总件数</span><span class="val">'+inland.total_qty+'</span></div>';
+    html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+(inland.total_weight>0?inland.total_weight.toFixed(1)+'吨':'待补充')+'</span></div>';
+    html += '<div class="row"><span class="lbl">总件数</span><span class="val">'+(inland.total_qty>0?inland.total_qty:'待补充')+'</span></div>';
     html += '<div class="row'+(inland.oversize_count>0?' warn':'')+'"><span class="lbl">超限件数</span><span class="val">'+inland.oversize_count+'件 '+(inland.oversize_count>0?'⚠️需特种车':'')+'</span></div>';
     html += '<div class="row'+(inland.fuel_electric_count>0?' warn':'')+'"><span class="lbl">含油含电件</span><span class="val">'+inland.fuel_electric_count+'件 '+(inland.fuel_electric_count>0?'⚠️仓库拍照留底':'')+'</span></div>';
-    if (inland.total_weight>40) html += '<div class="row warn"><span class="lbl">⚠️ 单件超40吨</span><span class="val">需特种运输方案</span></div>';
+    if (inland.total_weight>40) html += '<div class="row warn"><span class="lbl">⚠️ 总重超40吨</span><span class="val">需特种运输方案</span></div>';
     html += '</div>';
-  }
 
-  var booking = project.grid.booking;
-  if (booking && booking.items && booking.items.length > 0) {
+    var booking = project.grid.booking;
     html += '<div class="section"><h3>🚢 订舱线投影</h3>';
-    html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+booking.total_weight.toFixed(1)+'吨</span></div>';
-    html += '<div class="row"><span class="lbl">总体积</span><span class="val">'+(booking.total_volume>0?booking.total_volume.toFixed(1)+'CBM':'—')+'</span></div>';
-    html += '<div class="row"><span class="lbl">总件数</span><span class="val">'+booking.total_qty+'</span></div>';
-    html += '<div class="row"><span class="lbl">贸易条款</span><span class="val">'+(booking.trade_term||'—')+'</span></div>';
-    html += '<div class="row"><span class="lbl">起运港</span><span class="val">'+(booking.pol||'—')+'</span></div>';
-    html += '<div class="row"><span class="lbl">目的港</span><span class="val">'+(booking.pod||'—')+'</span></div>';
+    html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+(booking.total_weight>0?booking.total_weight.toFixed(1)+'吨':'待补充')+'</span></div>';
+    html += '<div class="row"><span class="lbl">总体积</span><span class="val">'+(booking.total_volume>0?booking.total_volume.toFixed(1)+'CBM':'待补充')+'</span></div>';
+    html += '<div class="row"><span class="lbl">总件数</span><span class="val">'+(booking.total_qty>0?booking.total_qty:'待补充')+'</span></div>';
+    html += '<div class="row"><span class="lbl">贸易条款</span><span class="val">'+valOr(booking.trade_term,'待补充')+'</span></div>';
+    html += '<div class="row"><span class="lbl">起运港</span><span class="val">'+valOr(booking.pol,'待补充')+'</span></div>';
+    html += '<div class="row"><span class="lbl">目的港</span><span class="val">'+valOr(booking.pod,'待补充')+'</span></div>';
     if (booking.dangerous_list.length>0) html += '<div class="row warn"><span class="lbl">⚠️ 危险品等级</span><span class="val">'+booking.dangerous_list.join(', ')+'</span></div>';
     html += '</div>';
-  }
 
-  var customs = project.grid.customs;
-  if (customs && customs.items && customs.items.length > 0) {
+    var customs = project.grid.customs;
     html += '<div class="section"><h3>📋 关务线投影</h3>';
     html += '<div class="row"><span class="lbl">HS编码</span><span class="val">'+(customs.hs_codes.length>0?customs.hs_codes.join(', '):'缺失→需追问')+'</span></div>';
     html += '<div class="row"><span class="lbl">型号清单</span><span class="val">'+(customs.models.length>0?customs.models.join(', '):'—')+'</span></div>';
     html += '<div class="row"><span class="lbl">品名清单</span><span class="val">'+customs.names.join(', ')+'</span></div>';
     html += '<div class="row'+(customs.need_inspection?' warn':'')+'"><span class="lbl">需商检</span><span class="val">'+(customs.need_inspection?'⚠️是':'否')+'</span></div>';
     html += '</div>';
-  }
-
-  if (items.length === 0) {
-    html += '<div class="section"><h3>等待货物信息</h3><div class="row"><span class="lbl" style="color:#999;">对话或手动添加货物后，这里会显示三线投影结果</span></div></div>';
+  } else {
+    html += '<div class="section"><h3>等待货物信息</h3><div class="row"><span class="lbl" style="color:#999;">对话或手动添加货物后，这里会显示货物清单和三线投影结果</span></div></div>';
   }
   content.innerHTML = html;
 }
@@ -257,29 +266,35 @@ async function sendMessage() {
 
   if (text.length <= 200) {
     var local = localExtract(text);
-    if (local) { addCargoItem(local); addSysMessage('✅ 已识别：'+local.name+'，'+local.weight_t+'吨，'+(local.qty||1)+(local.unit||'台')); }
-    var llmResult = await llmExtractCargo(text);
+    if (local && local.name) {
+      addCargoItem(local);
+      var parts = [local.name];
+      if (local.weight_t) parts.push(local.weight_t+'吨');
+      if (local.qty) parts.push(local.qty+(local.unit||'台'));
+      addSysMessage('✅ 已识别：'+parts.join('，'));
+    }
+    var llmResult = await llmExtractShort(text);
     if (llmResult && llmResult.length > 0) {
-      for (var i=0; i<llmResult.length; i++) { addCargoItem(llmResult[i]); }
-      addSysMessage('✅ 补充识别 '+llmResult.length+' 条货物');
+      for (var i=0; i<llmResult.length; i++) { if (llmResult[i].name) addCargoItem(llmResult[i]); }
+      addSysMessage('✅ 补充识别 '+llmResult.length+' 条');
     }
   } else {
-    addSysMessage('📋 检测到货物清单，正在解析...');
-    var batch = await llmExtractCargo(text);
+    addSysMessage('📋 收到货物清单，正在逐项解析...');
+    var batch = await llmExtractList(text);
     if (batch && batch.length > 0) {
-      for (var i=0; i<batch.length; i++) { addCargoItem(batch[i]); }
+      for (var i=0; i<batch.length; i++) { if (batch[i].name) addCargoItem(batch[i]); }
       addSysMessage('✅ 已解析 '+batch.length+' 条货物');
     } else { addSysMessage('⚠️ 未能解析清单，请尝试逐条告知或使用手动补货'); }
   }
 
   renderAll();
-  var missing = getMissingRequired();
-  if (missing.length > 0) {
+  var missing = getGlobalMissing();
+  if (missing.length > 0 && project.cargo_items.length > 0) {
     var picks = missing.slice(0,3);
     var msgs = picks.map(function(m){ return humanizeHint(m); });
     setTimeout(function(){ addBotMessage(msgs.join('；')+'。'); }, 500);
   } else if (project.cargo_items.length > 0) {
-    setTimeout(function(){ addBotMessage('信息已收录！三线投影已更新，右侧可查看汇总。还有补充随时告诉我。'); }, 500);
+    setTimeout(function(){ addBotMessage('信息已收录！三线投影已更新。还有补充随时告诉我。'); }, 500);
   }
 
   updateManualForm();
@@ -309,8 +324,8 @@ function localExtract(text) {
   var qm = text.match(/(\d+)\s*(台|件|箱|包|托|个)/);
   if (qm) { item.qty = parseInt(qm[1]); item.unit = qm[2]; found = true; }
 
-  if (/矿山|挖掘机|推土机|装载机|自卸车|平地机|压路机|发电机组|洒水车/.test(text)) {
-    var nm = text.match(/矿山设备|挖掘机|推土机|装载机|自卸车|平地机|压路机|发电机组|洒水车/);
+  if (/挖掘机|推土机|装载机|自卸车|平地机|压路机|发电机组|洒水车|矿山设备/.test(text)) {
+    var nm = text.match(/挖掘机|推土机|装载机|自卸车|平地机|压路机|发电机组|洒水车|矿山设备/);
     if (nm) { item.name = nm[0]; found = true; }
   }
 
@@ -319,36 +334,34 @@ function localExtract(text) {
   if (/裸装|托盘|木箱|散货/i.test(text)) { var pm=text.match(/裸装|托盘|木箱|散货/i); if(pm){item.packaging=pm[0];found=true;} }
 
   if (!found) return null;
-  if (!item.qty) item.qty = 1;
-  if (!item.unit) item.unit = '台';
-  if (item.fuel_electric === undefined) item.fuel_electric = true;
-  if (!item.status) item.status = '现货';
+  if (item.weight_t === undefined) item.weight_t = null;
+  if (item.qty === undefined) item.qty = null;
   return item;
 }
 
-async function llmExtractCargo(text) {
-  var prompt = '你是货运代理AI助手。从客户消息中提取货物信息，返回JSON数组。\n客户说："'+text+'"\n每条货物提取以下字段（有就填，没有就null）：name,model,category,hs_code,qty(number),unit,weight_t(number),volume_cbm(number),dimensions_mm,oversize(boolean),packaging,dangerous(boolean),dangerous_class,fuel_electric(boolean),trade_term,pol,pod,delivery_address,status,special_requirement,remark\n只返回JSON数组，不要其他文字。如果客户发了多条货物清单，每条一个对象。';
+async function llmExtractShort(text) {
+  var prompt = '你是货运代理AI。从客户消息提取货物信息。\n客户说："'+text+'"\n返回JSON数组，每条货物字段：name,model,qty(number),unit,weight_t(number),volume_cbm,dimensions_mm,packaging,dangerous(boolean),dangerous_class,fuel_electric(boolean),trade_term,pol,pod,delivery_address,status,hs_code。没有的填null，不要虚构。只返回JSON数组。';
+  return await callLLM(prompt);
+}
+
+async function llmExtractList(text) {
+  var prompt = '你是货运代理AI。下面是一份货物清单，请逐项提取为JSON数组。\n\n客户清单：\n"""\n'+text+'\n"""\n\n每条货物一个对象，字段：name,model,qty(number),unit,weight_t(number),dimensions_mm,status,packaging,hs_code,dangerous(boolean),fuel_electric(boolean),trade_term,pol,pod,delivery_address\n\n提取规则：\n- 表格的每一行=一条货物，不要合并\n- 数量列有数字就填qty，没有填null\n- 重量列有数字就填weight_t，没有填null\n- 型号列有文字就填model\n- 尺寸列有文字就填dimensions_mm\n- 没有的字段填null，不要虚构\n- 只返回JSON数组，不要其他文字';
+  return await callLLM(prompt);
+}
+
+async function callLLM(prompt) {
   try {
     var resp = await fetch(API_PROXY, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-chat',messages:[{role:'user',content:prompt}],temperature:0.1,max_tokens:2000})});
     var data = await resp.json();
     var content = data.choices?.[0]?.message?.content || '';
     var m = content.match(/\[[\s\S]*\]/);
-    if (m) {
-      var arr = JSON.parse(m[0]);
-      for (var i=0; i<arr.length; i++) {
-        if (!arr[i].qty) arr[i].qty = 1;
-        if (!arr[i].unit) arr[i].unit = '台';
-        if (arr[i].fuel_electric === undefined || arr[i].fuel_electric === null) arr[i].fuel_electric = true;
-        if (!arr[i].status) arr[i].status = '现货';
-      }
-      return arr;
-    }
+    if (m) return JSON.parse(m[0]);
   } catch(e) { console.error('LLM失败:', e); }
   return null;
 }
 
 function humanizeHint(m) {
-  var map = { trade_term:'贸易条款是FOB还是CIF？合同或PI上有', name:'货物品名是什么？', weight_t:'单件毛重多少吨？装箱单上有', qty:'数量多少？', unit:'单位是什么？台/件/套？', pol:'从哪个港口发？上海还是天津？', fuel_electric:'是否含油含电？矿山设备通常含油含电', status:'现货还是排产？', hs_code:'HS编码是什么？报关要用', pod:'目的港是哪个？', delivery_address:'最终交货地址在哪？', packaging:'包装方式？托盘/木箱/裸装？', dimensions_mm:'整机尺寸多少？长宽高mm', dangerous:'是否危险品？' };
+  var map = { trade_term:'贸易条款是FOB还是CIF？合同或PI上有', name:'货物品名是什么？', weight_t:'单件毛重多少吨？', qty:'数量多少？', unit:'单位是什么？台/件/套？', pol:'从哪个港口发？', fuel_electric:'是否含油含电？矿山设备通常含油含电', status:'现货还是排产？', hs_code:'HS编码是什么？报关要用', pod:'目的港是哪个？', delivery_address:'最终交货地址在哪？', packaging:'包装方式？托盘/木箱/裸装？', dimensions_mm:'整机尺寸多少？', dangerous:'是否危险品？' };
   if (map[m.field]) return map[m.field];
   return m.label+'？'+(m.hint||'');
 }
@@ -359,32 +372,36 @@ function updateManualForm() {
   var container = document.getElementById('manualFields');
   var html = '<div class="form-row"><label>品名*</label><input id="mf_name" placeholder="如挖掘机"></div>';
   html += '<div class="form-row"><label>型号</label><input id="mf_model" placeholder="如SY1050H"></div>';
-  html += '<div class="form-row"><label>数量*</label><input id="mf_qty" type="number" value="1"></div>';
+  html += '<div class="form-row"><label>数量*</label><input id="mf_qty" type="number" placeholder="如6"></div>';
   html += '<div class="form-row"><label>单位*</label><input id="mf_unit" value="台"></div>';
-  html += '<div class="form-row"><label>单件毛重(t)*</label><input id="mf_weight" type="number" step="0.1"></div>';
+  html += '<div class="form-row"><label>单件毛重(t)*</label><input id="mf_weight" type="number" step="0.1" placeholder="如102.6"></div>';
   html += '<div class="form-row"><label>贸易条款*</label><input id="mf_term" placeholder="DAP/FOB/CIF"></div>';
   html += '<div class="form-row"><label>起运港*</label><input id="mf_pol" placeholder="天津港/上海港"></div>';
-  html += '<div class="form-row"><label>含油含电*</label><input id="mf_fuel" value="是（矿山设备默认含油含电）"></div>';
+  html += '<div class="form-row"><label>含油含电*</label><input id="mf_fuel" value="是"></div>';
   html += '<div class="form-row"><label>状态*</label><input id="mf_status" value="现货"></div>';
   html += '<div class="form-row"><label>HS编码</label><input id="mf_hs" placeholder="如8429.52"></div>';
   html += '<div class="form-row"><label>尺寸(mm)</label><input id="mf_dim" placeholder="长*宽*高"></div>';
   html += '<div class="form-row"><label>包装</label><input id="mf_pkg" placeholder="裸装/托盘/木箱"></div>';
+  html += '<div class="form-row"><label>目的港</label><input id="mf_pod" placeholder="如达累斯萨拉姆"></div>';
+  html += '<div class="form-row"><label>交货地址</label><input id="mf_addr" placeholder="如Fungurume"></div>';
   container.innerHTML = html;
 }
 function submitManual() {
   var item = {
     name: document.getElementById('mf_name').value,
     model: document.getElementById('mf_model').value || null,
-    qty: parseInt(document.getElementById('mf_qty').value)||1,
-    unit: document.getElementById('mf_unit').value||'台',
-    weight_t: parseFloat(document.getElementById('mf_weight').value)||0,
+    qty: parseInt(document.getElementById('mf_qty').value)||null,
+    unit: document.getElementById('mf_unit').value||null,
+    weight_t: parseFloat(document.getElementById('mf_weight').value)||null,
     trade_term: document.getElementById('mf_term').value||null,
     pol: document.getElementById('mf_pol').value||null,
     fuel_electric: true,
     status: document.getElementById('mf_status').value||'现货',
     hs_code: document.getElementById('mf_hs').value||null,
     dimensions_mm: document.getElementById('mf_dim').value||null,
-    packaging: document.getElementById('mf_pkg').value||null
+    packaging: document.getElementById('mf_pkg').value||null,
+    pod: document.getElementById('mf_pod').value||null,
+    delivery_address: document.getElementById('mf_addr').value||null
   };
   if (!item.name || !item.weight_t) { alert('品名和毛重必填'); return; }
   addCargoItem(item);
