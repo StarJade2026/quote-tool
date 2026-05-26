@@ -86,7 +86,7 @@ function runProjections() {
   var items = project.cargo_items;
   if (!items.length) { project.grid = { inland:{}, booking:{}, customs:{} }; return; }
   var inland = { total_weight:0, oversize_count:0, fuel_electric_count:0, total_qty:0 };
-  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:''pols:[], pod:'', dangerous_list:[] };
+  var booking = { total_weight:0, total_volume:0, total_qty:0, trade_term:'', pol:'',pols:[], pod:'', dangerous_list:[] };
   var customs = { hs_codes:[], models:[], names:[], need_inspection:false, total_weight:0 };
   for (var i=0; i<items.length; i++) {
     var it = items[i], w = (it.weight_t||0)*(it.qty||1);
