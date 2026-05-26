@@ -129,10 +129,10 @@ function renderAll() {
 
   var content = document.getElementById('gridContent'), html = '';
   if (items.length > 0) {
-    html += '<div class="section"><h3>📦 货物清单</h3><table class="cargo-table"><tr><th>#</th><th>品名</th><th>型号</th><th>数量</th><th>单重(t)</th><th>尺寸</th><th>状态</th><th>含油电</th></tr>';
+    html += '<div class="section"><h3>📦 货物清单</h3><table class="cargo-table"><tr><th>#</th><th>品名</th><th>型号</th><th>数量</th><th>单重(t)</th><th>尺寸</th><th>状态</th><th>含油电</th><th></th></tr>';
     for (var i=0; i<items.length; i++) {
       var it = items[i];
-      html += '<tr><td>'+(i+1)+'</td><td>'+(it.name||'—')+'</td><td>'+(it.model||'—')+'</td><td>'+(it.qty||'?')+' '+(it.unit||'')+'</td><td>'+(it.weight_t!=null?it.weight_t:'?')+'</td><td>'+(it.dimensions_mm||'—')+'</td><td>'+(it.status||'—')+'</td><td>'+(it.fuel_electric?'⚠️是':'否')+'</td></tr>';
+      html += '<tr><td>'+(i+1)+'</td><td>'+(it.name||'—')+'</td><td>'+(it.model||'—')+'</td><td>'+(it.qty||'?')+' '+(it.unit||'')+'</td><td>'+(it.weight_t!=null?it.weight_t:'?')+'</td><td>'+(it.dimensions_mm||'—')+'</td><td>'+(it.status||'—')+'</td><td>'+(it.fuel_electric?'⚠️是':'否')+'</td><td><button onclick="removeItem('+it.item_id+');renderAll();" style="background:none;border:none;color:#c75b2a;cursor:pointer;font-size:14px;">✕</button></td></tr>';
     }
     html += '</table></div>';
     var inland = project.grid.inland, booking = project.grid.booking, customs = project.grid.customs;
