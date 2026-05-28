@@ -81,6 +81,12 @@ function initProject() {
   if (!project) { project = { project_id:'TFM'+Date.now().toString(36).toUpperCase(), cargo_items:[], grid:{ inland:{}, booking:{}, customs:{} } }; }
   try { save(); } catch(e) {}
 }
+ function addItem(it) {
+  for (var i=0; i<project.cargo_items.length; i++) {
+    if (project.cargo_items[i].name === it.name && project.cargo_items[i].weight_t === it.weight_t && project.cargo_items[i].qty === it.qty) {
+      project.cargo_items[i] = it; project.cargo_items[i].item_id = i+1; runProjections(); save(); return;
+    }
+  }
   it.item_id = project.cargo_items.length+1; project.cargo_items.push(it); runProjections(); save();
 }
 function removeItem(id) { project.cargo_items = project.cargo_items.filter(function(x){ return x.item_id!==id; }); for(var i=0;i<project.cargo_items.length;i++)project.cargo_items[i].item_id=i+1; runProjections(); save(); }
