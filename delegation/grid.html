@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>虹运AI魔方 · 九宫格</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background:#f5f3f0; padding:20px; }
+h1 { font-size:20px; margin-bottom:16px; }
+.grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; max-width:900px; }
+.cell { background:white; border-radius:8px; padding:12px; border:1px solid #e5ded4; min-height:120px; }
+.cell h3 { font-size:13px; margin-bottom:6px; color:#6b5e4a; }
+.cell .status { font-size:12px; padding:2px 8px; border-radius:10px; display:inline-block; margin-bottom:6px; }
+.cell .status.ok { background:#dcfce7; color:#166534; }
+.cell .status.warn { background:#fef3c7; color:#854d0e; }
+.cell .status.miss { background:#fee2e2; color:#991b1b; }
+.cell .data { font-size:11px; color:#444; line-height:1.5; }
+.back-btn { margin-bottom:16px; display:inline-block; padding:8px 16px; background:#2d6a4f; color:white; text-decoration:none; border-radius:6px; font-size:14px; }
+.nav-btns { margin-top:20px; display:flex; gap:10px; flex-wrap:wrap; }
+.nav-btns a { padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; }
+.nav-sop { background:#c75b2a; color:white; }
+.nav-mot { background:#b0893c; color:white; }
+</style>
+</head>
+<body>
+
+<a href="delegation/" class="back-btn">← 返回委托入口</a>
+<h1>📊 九宫格全景</h1>
+
+<div class="grid" id="gridContainer"></div>
+
+<div class="nav-btns">
+  <a href="#" class="nav-sop" id="btnSOP">📋 打开SOP流转单 →</a>
+  <a href="#" class="nav-mot" id="btnMOT">⏱ MOT时间风险分析 →</a>
+</div>
+
+<script>
+// 读取URL参数
+var params = new URLSearchParams(window.location.search);
+var dataParam = params.get('data');
+var project = null;
+
+if (dataParam) {
+  try {
+    var json = decodeURIComponent(escape(atob(dataParam)));
+    project = JSON.parse(json);
+  } catch(e) {
+    document.getElementById('gridContainer').innerHTML = '<p style="color:red;">数据解析失败</p>';
+  }
+}
+
+// 渲染九宫格
+if (project && project.cargo_items) {
+  var items = project.cargo_items;
+  var grid = project.grid || { inland:{}, booking:{}, customs:{} };
+  
+  var cells = [
+    { seg:'段一·国内段', line:'订舱线', id:'seg1_line1', data: grid.booking },
+    { seg:'段一·国内段', line:'内陆中转线', id:'seg1_line2', data: grid.inland },
+    { seg:'段一·国内段', line:'关务线', id:'seg1_line3', data: grid.customs },
+    { seg:'段二·跨境段', line:'订舱线', id:'seg2_line1', data: null },
+    { seg:'段二·跨境段', line:'内陆中转线', id:'seg2_line2', data: null },
+    { seg:'段二·跨境段', line:'关务线', id:'seg2_line3', data: null },
+    { seg:'段三·目的港段', line:'订舱线', id:'seg3_line1', data: null },
+    { seg:'段三·目的港段', line:'内陆中转线', id:'seg3_line2', data: null },
+    { seg:'段三·目的港段', line:'关务线', id:'seg3_line3', data: null }
+  ];
+  
+  var html = '';
+  cells.forEach(function(c) {
+    var statusCls = 'miss', statusText = '待填写';
+    var detail = '';
+    
+    if (c.id === 'seg1_line1' && grid.booking) {
+      var b = grid.booking;
+      statusCls = b.trade_term ? 'ok' : 'warn';
+      statusText = b.trade_term ? '已填充' : '部分填充';
+      detail = '总重:'+(b.total_weight||'?')+'吨 件数:'+(b.total_qty||'?')+' 条款:'+(b.trade_term||'?');
+    } else if (c.id === 'seg1_line2' && grid.inland) {
+      var iv = grid.inland;
+      statusCls = iv.total_weight > 0 ? 'ok' : 'warn';
+      statusText = iv.total_weight > 0 ? '已填充' : '部分填充';
+      detail = '总重:'+(iv.total_weight||'?')+'吨 件数:'+(iv.total_qty||'?');
+      if (iv.oversize_count > 0) detail += ' 超限:'+iv.oversize_count+'件';
+    } else if (c.id === 'seg1_line3' && grid.customs) {
+      var cv = grid.customs;
+      statusCls = cv.hs_codes.length > 0 ? 'ok' : 'warn';
+      statusText = cv.hs_codes.length > 0 ? '已填充' : '部分填充';
+      detail = 'HS:'+(cv.hs_codes.length>0?cv.hs_codes.join(','):'缺失');
+    }
+    
+    html += '<div class="cell">' +
+      '<h3>'+c.seg+' · '+c.line+'</h3>' +
+      '<span class="status '+statusCls+'">'+statusText+'</span>' +
+      '<div class="data">'+detail+'</div>' +
+      '</div>';
+  });
+  
+  document.getElementById('gridContainer').innerHTML = html;
+  
+  // SOP和MOT跳转按钮
+  document.getElementById('btnSOP').href = '../workflow/?data=' + dataParam;
+  document.getElementById('btnMOT').href = '../mot/?data=' + dataParam;
+} else {
+  document.getElementById('gridContainer').innerHTML = '<p>暂无数据。请从委托入口开始。</p>';
+}
+</script>
+</body>
+</html>
