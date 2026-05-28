@@ -74,8 +74,12 @@ var REQUIRED = ['name','qty','unit','weight_t','trade_term','pol','fuel_electric
 var FLABEL = { name:'品名',model:'型号',hs_code:'HS编码',qty:'数量',unit:'单位',weight_t:'单件毛重(t)',volume_cbm:'单件体积(CBM)',dimensions_mm:'尺寸(mm)',packaging:'包装',dangerous:'危险品',fuel_electric:'含油含电',trade_term:'贸易条款',pol:'起运港',pod:'目的港',delivery_address:'交货地址',status:'货物状态',special_requirement:'特殊要求' };
 
 function initProject() {
-  var s = localStorage.getItem('tfmProject');
-  if (s) { try { project = JSON.parse(s); if (!project.cargo_items) project = null; } catch(e) { project = null; } }
+  try {
+    var s = localStorage.getItem('tfmProject');
+    if (s) { try { project = JSON.parse(s); if (!project.cargo_items) project = null; } catch(e) { project = null; } }
+  } catch(e) {
+    console.warn('[魔方] localStorage读取失败，使用空项目', e.message);
+  }
   if (!project) { project = { project_id:'TFM'+Date.now().toString(36).toUpperCase(), cargo_items:[], grid:{ inland:{}, booking:{}, customs:{} } }; save(); }
 }
 function save() { try { localStorage.setItem('tfmProject', JSON.stringify(project)); } catch(e) { console.error('[魔方] localStorage写入失败', e.message); } }
