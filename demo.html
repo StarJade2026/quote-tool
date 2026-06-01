@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>虹运AI魔方 · 委托演示</title>
+<style>
+:root {
+  --bg: #f5f3f0; --card: #ffffff; --text: #2c2416; --text-secondary: #6b5e4a;
+  --accent: #c75b2a; --border: #e5ded4; --confirmed: #2d6a4f; --unconfirmed: #b0893c;
+  --missing: #c75b2a; --bubble-user: #f0ebe4; --bubble-bot: #ffffff;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; }
+.container { display: flex; width: 100%; height: 100vh; }
+
+.chat-panel { width: 460px; min-width: 360px; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: #faf9f7; }
+.chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--card); }
+.chat-header h1 { font-size: 18px; font-weight: 600; }
+.chat-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 90%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
+.msg.bot { align-self: flex-start; background: var(--bubble-bot); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.msg.user { align-self: flex-end; background: var(--bubble-user); border-bottom-right-radius: 4px; }
+.chat-input-area { padding: 12px 20px; border-top: 1px solid var(--border); background: var(--card); }
+.chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+.chat-input-row textarea { flex:1; border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; resize:none; font-family:inherit; outline:none; background:#f5f3f0; }
+.chat-input-row button { padding: 10px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+.chat-hint { text-align:center; padding:8px; font-size:12px; color:var(--accent); background:#fff8f0; border-radius:8px; margin-top:8px; }
+
+.grid-panel { flex: 1; overflow-y: auto; padding: 20px; }
+.grid-panel h2 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+.grid-summary { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; flex-wrap: wrap; }
+.grid-summary span { display: flex; align-items: center; gap: 4px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.ok { background: var(--confirmed); } .dot.warn { background: var(--unconfirmed); } .dot.miss { background: var(--missing); }
+.section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+.section h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.section .row { font-size: 12px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.section .row .lbl { color: var(--text-secondary); }
+.section .row.warn .val { color: var(--unconfirmed); }
+.section .row.miss .val { color: var(--missing); font-style: italic; }
+.cargo-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:8px; }
+.cargo-table th { background:#f5f3f0; padding:4px; text-align:left; border-bottom:2px solid var(--border); }
+.cargo-table td { padding:4px; border-bottom:1px solid var(--border); }
+@media (max-width: 800px) { .container { flex-direction: column; } .chat-panel { width:100%; min-width:auto; height:50vh; } .grid-panel { height:50vh; } }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="chat-panel">
+  <div class="chat-header">
+    <h1>🤖 虹运AI魔方助手</h1>
+    <p>告诉我货物信息，我会整理货物清单并做三线投影。</p>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-area">
+    <div class="chat-input-row">
+      <textarea id="userInput" rows="2" placeholder="例如：6台挖掘机102吨/台，天津到达累斯萨拉姆，DAP..."></textarea>
+      <button id="sendBtn" onclick="simulateSend()">发送</button>
+    </div>
+    <div class="chat-hint">💡 演示模式：输入任意文字或点击预设按钮体验对话驱动效果</div>
+    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+      <button class="preset-btn" onclick="simulatePreset('6台挖掘机102吨/台，天津到达累斯萨拉姆，DAP')" style="font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;">挖掘机·散杂货</button>
+      <button class="preset-btn" onclick="simulatePreset('3个20尺柜的水泵到拉各斯，DAP')" style="font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;">水泵·集装箱</button>
+      <button class="preset-btn" onclick="simulateClear()" style="font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;">重置演示</button>
+    </div>
+  </div>
+</div>
+<div class="grid-panel">
+  <h2>📊 委托数据实时预览</h2>
+  <div class="grid-summary" id="gridSummary">
+    <span><span class="dot ok"></span> 已填 <span id="filledCount">0</span></span>
+    <span><span class="dot warn"></span> 待确认 <span id="pendingCount">0</span></span>
+  </div>
+  <button id="copyRequestBtn" onclick="goToJiugongge()" style="margin-bottom:12px;padding:6px 14px;background:#2d6a4f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">📊 进入九宫格Dashboard →</button>
+  <div id="gridContent"></div>
+</div>
+</div>
+
+<script>
+// ========== 预设的演示对话 ==========
+var DEMO_DIALOG = [
+  { role: 'assistant', text: '您好！请告诉我您的货物信息——品名、重量、数量、从哪里发到哪里，像聊天一样说就行。' },
+  { role: 'user', text: '我要发6台挖掘机，单台102吨，还有2台装载机35吨/台，从天津发到达累斯萨拉姆，DAP条款。' },
+  { role: 'assistant', text: '收到。6台挖掘机102吨/台+2台装载机35吨/台，总重约682吨，天津→达累斯萨拉姆，DAP。\n\n102吨挖掘机属于超限设备，必须走散杂船。内陆段超100吨需要大件运输方案+护送，提前确认码头吊装能力。\n\n另外——这些设备含油含电吗？柴油发动机的油箱如果没排空，出口报关和海运都要特殊处理。' },
+  { role: 'user', text: '含柴油发动机，油箱可以安排排空。另外装载机带蓄电池。' },
+  { role: 'assistant', text: '明白了。排空油箱+蓄电池绝缘处理后，危险品申报风险可控。\n\n确认一下关键信息：6台挖掘机×102吨+2台装载机×35吨，总毛重约682吨，天津港→达累斯萨拉姆，DAP条款，含油含电设备（已安排排空+绝缘）。\n\n货物信息已提取，右侧可查看货物清单和三线投影。' }
+];
+
+var DEMO_CARGO = [
+  { name:'挖掘机', model:'SY1050H', qty:6, unit:'台', weight_t:102, volume_cbm:null, dimensions_mm:'14000×3700×5300', packaging:'裸装', dangerous:false, fuel_electric:true, trade_term:'DAP', pol:'天津', pod:'达累斯萨拉姆', delivery_address:'Fungurume矿区', status:'现货' },
+  { name:'装载机', model:'ZL50', qty:2, unit:'台', weight_t:35, volume_cbm:null, dimensions_mm:'8500×3000×3500', packaging:'裸装', dangerous:false, fuel_electric:true, trade_term:'DAP', pol:'天津', pod:'达累斯萨拉姆', delivery_address:'Fungurume矿区', status:'现货' }
+];
+
+var dialogStep = 0;
+var isPlaying = false;
+
+function addMsg(role, text) {
+  var d = document.createElement('div');
+  d.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
+  d.textContent = text;
+  document.getElementById('chatMessages').appendChild(d);
+  var el = document.getElementById('chatMessages');
+  el.scrollTop = el.scrollHeight;
+}
+
+function playNextStep() {
+  if (dialogStep < DEMO_DIALOG.length) {
+    var step = DEMO_DIALOG[dialogStep];
+    addMsg(step.role, step.text);
+    dialogStep++;
+    
+    if (dialogStep === DEMO_DIALOG.length) {
+      renderCargoData();
+    }
+  }
+}
+
+function renderCargoData() {
+  var items = DEMO_CARGO;
+  document.getElementById('filledCount').textContent = items.length;
+  document.getElementById('pendingCount').textContent = 0;
+
+  var content = document.getElementById('gridContent');
+  var html = '<div class="section"><h3>📦 货物清单</h3><table class="cargo-table"><tr><th>#</th><th>品名</th><th>型号</th><th>数量</th><th>单重(t)</th><th>尺寸</th><th>状态</th><th>含油电</th></tr>';
+  
+  items.forEach(function(it, i) {
+    html += '<tr><td>'+(i+1)+'</td><td>'+it.name+'</td><td>'+it.model+'</td><td>'+it.qty+' '+it.unit+'</td><td>'+it.weight_t+'</td><td>'+(it.dimensions_mm||'—')+'</td><td>'+(it.status||'—')+'</td><td>'+(it.fuel_electric?'⚠️是':'否')+'</td></tr>';
+  });
+  html += '</table></div>';
+
+  var totalWeight = 682;
+  var oversizeCount = 6;
+  var fuelCount = 8;
+  
+  html += '<div class="section"><h3>🚛 内陆线投影</h3>';
+  html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+totalWeight+'吨</span></div>';
+  html += '<div class="row"><span class="lbl">总件数</span><span class="val">8件</span></div>';
+  html += '<div class="row warn"><span class="lbl">超限件数</span><span class="val">6件 ⚠️需特种车+护送</span></div>';
+  html += '<div class="row warn"><span class="lbl">⚠️ 含油含电</span><span class="val">8件 需确认油箱排空+蓄电池绝缘</span></div>';
+  html += '<div class="row" style="background:#fff0ed;border-left:3px solid #c75b2a;padding-left:8px;"><span class="lbl">⛔ 超100吨大件</span><span class="val">6件挖掘机102吨/台，需大件方案+护送，提前确认码头吊装能力</span></div>';
+  html += '</div>';
+
+  html += '<div class="section"><h3>🚢 订舱线投影</h3>';
+  html += '<div class="row"><span class="lbl">总毛重</span><span class="val">'+totalWeight+'吨</span></div>';
+  html += '<div class="row"><span class="lbl">总件数</span><span class="val">8件</span></div>';
+  html += '<div class="row"><span class="lbl">贸易条款</span><span class="val">DAP</span></div>';
+  html += '<div class="row"><span class="lbl">起运港</span><span class="val">天津</span></div>';
+  html += '<div class="row"><span class="lbl">目的港</span><span class="val">达累斯萨拉姆</span></div>';
+  html += '<div class="row warn"><span class="lbl">运输方式</span><span class="val">⚠️散杂船（超重超限，不可装箱）</span></div>';
+  html += '</div>';
+
+  html += '<div class="section"><h3>📋 关务线投影</h3>';
+  html += '<div class="row"><span class="lbl">HS编码</span><span class="val">8429（挖掘机）/ 8429（装载机）</span></div>';
+  html += '<div class="row"><span class="lbl">品名清单</span><span class="val">挖掘机, 装载机</span></div>';
+  html += '<div class="row warn"><span class="lbl">⚠️ 含油含电设备</span><span class="val">需危险品申报+排空证明+绝缘处理</span></div>';
+  html += '</div>';
+
+  content.innerHTML = html;
+}
+
+function goToJiugongge() {
+  window.open('https://starjade2026.github.io/quote-tool/jiugongge.html', '_blank');
+}
+
+function simulateSend() {
+  if (isPlaying) return;
+  var input = document.getElementById('userInput');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addMsg('user', text);
+  addMsg('assistant', '演示模式：系统自动提取货物信息（正常使用时由AI实时提取）。右侧为TFM刚果金项目的真实数据展示。');
+  renderCargoData();
+}
+
+function simulatePreset(text) {
+  if (isPlaying) return;
+  document.getElementById('chatMessages').innerHTML = '';
+  dialogStep = 0;
+  isPlaying = true;
+  
+  playNextStep();
+  
+  var timer = setInterval(function() {
+    if (dialogStep >= DEMO_DIALOG.length) {
+      clearInterval(timer);
+      isPlaying = false;
+      return;
+    }
+    playNextStep();
+  }, 2000);
+}
+
+function simulateClear() {
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('gridContent').innerHTML = '<div class="section"><h3>等待货物信息</h3><div style="font-size:12px;color:#999;">点击预设按钮开始演示，或输入任意文字</div></div>';
+  dialogStep = 0;
+  isPlaying = false;
+  document.getElementById('filledCount').textContent = '0';
+  document.getElementById('pendingCount').textContent = '0';
+}
+
+// 初始化
+addMsg('assistant', '👋 演示模式已就绪。点击下方预设按钮或输入任意文字开始体验。');
+addMsg('assistant', '💡 正常使用时，客户在左边说话，AI实时提取货物信息填入右侧。魔方核心价值：对话驱动，自动提取，规则引擎保障。');
+</script>
+</body>
+</html>
