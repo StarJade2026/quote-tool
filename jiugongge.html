@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>虹运AI魔方 · 九宫格Dashboard</title>
+<style>
+:root {
+  --bg: #f5f3f0; --card: #ffffff; --text: #2c2416; --text-secondary: #6b5e4a;
+  --accent: #c75b2a; --border: #e5ded4;
+  --green: #2d6a4f; --yellow: #b0893c; --red: #c75b2a; --gray: #a39b8e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+.container { max-width: 1200px; margin: 0 auto; }
+
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.header h1 { font-size: 20px; font-weight: 600; }
+.project-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); }
+.project-bar .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.dot.green { background: var(--green); } .dot.yellow { background: var(--yellow); } .dot.red { background: var(--red); } .dot.gray { background: var(--gray); }
+
+.filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.filters select, .filters button { padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--card); cursor: pointer; font-family: inherit; }
+.filters button { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.cell { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; min-height: 160px; }
+.cell:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.cell .cell-header { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
+.cell .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cell .status-dot.complete { background: var(--green); }
+.cell .status-dot.partial { background: var(--yellow); }
+.cell .status-dot.missing { background: var(--gray); }
+.cell .data-preview { font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
+.cell .data-preview .highlight { color: var(--red); font-weight: 500; }
+.cell .data-preview .ok { color: var(--green); }
+
+.bottom-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.panel-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.panel-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.panel-card .item { font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.panel-card .item:last-child { border-bottom: none; }
+.panel-card .item .tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.tag.red { background: #fee2e2; color: #991b1b; }
+.tag.yellow { background: #fef3c7; color: #854d0e; }
+.tag.green { background: #dcfce7; color: #166534; }
+
+.role-switch { display: flex; gap: 8px; margin-bottom: 16px; }
+.role-switch button { padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; background: var(--card); cursor: pointer; font-family: inherit; }
+.role-switch button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.summary-bar { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; font-size: 13px; }
+
+@media (max-width: 768px) {
+  .grid-container { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .cell { padding: 10px; min-height: 120px; }
+  .cell .cell-header { font-size: 11px; }
+  .bottom-panel { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <div>
+    <h1>📊 九宫格Dashboard</h1>
+    <div class="project-bar">
+      <span id="projectName">TFM刚果金水泵</span>
+      <span>|</span>
+      <span><span class="dot green"></span>3格完整</span>
+      <span><span class="dot yellow"></span>3格部分</span>
+      <span><span class="dot red"></span>2格缺失</span>
+      <span><span class="dot gray"></span>1格待填</span>
+    </div>
+  </div>
+</div>
+
+<div class="summary-bar" id="summaryBar">📋 简报：段一国内段已就绪，段三关务线SONCAP认证待确认，3票货截关时间为本周五</div>
+
+<div class="role-switch">
+  <button class="active" onclick="switchRole('owner', this)">👤 Julia</button>
+  <button onclick="switchRole('manager', this)">📋 操作主管</button>
+  <button onclick="switchRole('operator', this)">✅ 操作员</button>
+</div>
+
+<div class="filters">
+  <select id="filterSeg" onchange="renderGrid()">
+    <option value="all">全部段</option>
+    <option value="seg1">段一·国内段</option>
+    <option value="seg2">段二·跨境段</option>
+    <option value="seg3">段三·目的港段</option>
+  </select>
+  <select id="filterLine" onchange="renderGrid()">
+    <option value="all">全部线</option>
+    <option value="line1">订舱线</option>
+    <option value="line2">内陆中转线</option>
+    <option value="line3">关务线</option>
+  </select>
+  <button onclick="resetFilters()">🔄 重置</button>
+</div>
+
+<div class="grid-container" id="gridContainer"></div>
+
+<div class="bottom-panel">
+  <div class="panel-card">
+    <h3>🔴 今天先确认</h3>
+    <div id="priorityList"></div>
+  </div>
+  <div class="panel-card">
+    <h3>⚠️ 预警区</h3>
+    <div id="alertList"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ========== 九宫格数据（基于Schema V3.0 + TFM演示数据） ==========
+var currentRole = 'owner';
+
+var gridData = {
+  project_name: 'TFM刚果金水泵',
+  transport_mode: 'breakbulk',
+  channel_id: '亚非',
+  trade_term: 'DAP',
+  cells: [
+    { id: 'seg1_line1', seg: '段一·国内段', line: '订舱线', status: 'complete',
+      data: '订舱确认·PILSHA641·船名Kota Bunga·Laycan 11/1-10', risk: 'green', risk_note: '' },
+    { id: 'seg1_line2', seg: '段一·国内段', line: '内陆中转线', status: 'partial',
+      data: '集港进行中·堆场已确认·大件吊装方案待船东确认', risk: 'yellow', risk_note: '大件积载方案未确认' },
+    { id: 'seg1_line3', seg: '段一·国内段', line: '关务线', status: 'complete',
+      data: '出口报关已完成·HS编码已确认', risk: 'green', risk_note: '' },
+    { id: 'seg2_line1', seg: '段二·跨境段', line: '订舱线', status: 'complete',
+      data: '航线Shanghai→Lagos直航·船吊1×40MT+2×45MT+1×90MT', risk: 'green', risk_note: '' },
+    { id: 'seg2_line2', seg: '段二·跨境段', line: '内陆中转线', status: 'complete',
+      data: '直航无中转·航程约35天', risk: 'green', risk_note: '' },
+    { id: 'seg2_line3', seg: '段二·跨境段', line: '关务线', status: 'partial',
+      data: '过境许可待确认·船上货物清单待确认', risk: 'yellow', risk_note: 'Cargo Manifest待确认' },
+    { id: 'seg3_line1', seg: '段三·目的港段', line: '订舱线', status: 'missing',
+      data: '换单待确认·目的港代理未指定·到港通知未发出', risk: 'red', risk_note: 'D级：目的港代理未指定' },
+    { id: 'seg3_line2', seg: '段三·目的港段', line: '内陆中转线', status: 'missing',
+      data: '收货地址待确认·内陆拖车未安排·需90吨吊车配合卸货', risk: 'red', risk_note: 'D级：目的地无合适吊装设备' },
+    { id: 'seg3_line3', seg: '段三·目的港段', line: '关务线', status: 'missing',
+      data: 'SONCAP认证未办理·尼日利亚进口关税未确认', risk: 'red', risk_note: 'D级：SONCAP认证未办理' }
+  ],
+  priorities: [
+    { text: '🔴 SONCAP认证——无此证书货物无法清关，需立即确认收货人办理进度', tag: 'red' },
+    { text: '🔴 目的港代理——未指定代理，换单/清关/派送全卡住', tag: 'red' },
+    { text: '🟡 大件积载方案——85吨分馏塔需船东确认甲板下位置', tag: 'yellow' }
+  ],
+  alerts: [
+    { text: '🔴 D级：SONCAP认证未办理，预计到港后无法清关', tag: 'red' },
+    { text: '🔴 D级：目的港代理未指定', tag: 'red' },
+    { text: '🟡 C级：大件积载方案待确认', tag: 'yellow' },
+    { text: '🟡 C级：收货地址待确认（影响拖车安排）', tag: 'yellow' }
+  ]
+};
+
+function getStatusDot(status) {
+  if (status === 'complete') return '<span class="status-dot complete"></span>';
+  if (status === 'partial') return '<span class="status-dot partial"></span>';
+  return '<span class="status-dot missing"></span>';
+}
+
+function getRiskColor(risk) {
+  if (risk === 'green') return 'var(--green)';
+  if (risk === 'yellow') return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+function renderGrid() {
+  var segFilter = document.getElementById('filterSeg').value;
+  var lineFilter = document.getElementById('filterLine').value;
+  
+  var filtered = gridData.cells.filter(function(c) {
+    var segMatch = segFilter === 'all' || c.id.indexOf(segFilter) >= 0;
+    var lineMatch = lineFilter === 'all' || c.id.indexOf(lineFilter) >= 0;
+    return segMatch && lineMatch;
+  });
+
+  var html = '';
+  filtered.forEach(function(c) {
+    var riskColor = getRiskColor(c.risk);
+    var statusLabel = c.status === 'complete' ? '已填充' : (c.status === 'partial' ? '部分填充' : '待填写');
+    
+    html += '<div class="cell" style="border-left: 3px solid ' + riskColor + '" onclick="showCellDetail(\'' + c.id + '\')">' +
+      '<div class="cell-header">' +
+        '<span>' + c.seg + ' · ' + c.line + '</span>' +
+        getStatusDot(c.status) +
+      '</div>' +
+      '<div class="data-preview">' + 
+        c.data.replace(/D级：/g, '<span class="highlight">D级：</span>')
+             .replace(/C级：/g, '<span class="highlight">C级：</span>') +
+      '</div>' +
+      (c.risk_note ? '<div style="margin-top:6px;font-size:11px;color:' + riskColor + ';">⚠ ' + c.risk_note + '</div>' : '') +
+    '</div>';
+  });
+  
+  document.getElementById('gridContainer').innerHTML = html;
+}
+
+function switchRole(role, btn) {
+  currentRole = role;
+  document.querySelectorAll('.role-switch button').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  
+  if (role === 'owner') {
+    document.getElementById('filterSeg').value = 'all';
+    document.getElementById('filterLine').value = 'all';
+    document.getElementById('priorityList').style.display = 'block';
+    document.getElementById('alertList').style.display = 'block';
+  } else if (role === 'manager') {
+    document.getElementById('filterSeg').value = 'all';
+    document.getElementById('filterLine').value = 'all';
+    document.getElementById('priorityList').style.display = 'block';
+    document.getElementById('alertList').style.display = 'block';
+  } else {
+    document.getElementById('filterSeg').value = 'all';
+    document.getElementById('filterLine').value = 'all';
+    document.getElementById('priorityList').style.display = 'none';
+    document.getElementById('alertList').style.display = 'block';
+  }
+  renderGrid();
+}
+
+function resetFilters() {
+  document.getElementById('filterSeg').value = 'all';
+  document.getElementById('filterLine').value = 'all';
+  renderGrid();
+}
+
+function showCellDetail(cellId) {
+  var cell = gridData.cells.find(function(c) { return c.id === cellId; });
+  if (!cell) return;
+  
+  var statusText = cell.status === 'complete' ? '✅ 已填充' : (cell.status === 'partial' ? '⚠️ 部分填充' : '❌ 待填写');
+  var suggestion = '';
+  
+  if (cell.id === 'seg3_line3') {
+    suggestion = '\n\n📋 建议：立即联系收货人办理SONCAP认证，预计办理周期7-14个工作日。\n📎 办理入口：CCIC (bj.ccic.com) / Cotecna / SGS';
+  } else if (cell.id === 'seg3_line1') {
+    suggestion = '\n\n📋 建议：指定目的港代理，确认换单流程和派送方案。';
+  } else if (cell.id === 'seg1_line2') {
+    suggestion = '\n\n📋 建议：联系船东确认85吨分馏塔甲板下位置，确保装船方案可行。';
+  }
+  
+  alert(cell.seg + ' · ' + cell.line + '\n\n' + statusText + '\n\n当前数据：\n' + cell.data + (cell.risk_note ? '\n\n⚠ 风险提示：' + cell.risk_note : '') + suggestion);
+}
+
+function renderPriorities() {
+  var html = '';
+  gridData.priorities.forEach(function(p) {
+    html += '<div class="item"><span>' + p.text + '</span><span class="tag ' + p.tag + '">' + (p.tag === 'red' ? '必须处理' : '本周关注') + '</span></div>';
+  });
+  document.getElementById('priorityList').innerHTML = html;
+}
+
+function renderAlerts() {
+  var html = '';
+  gridData.alerts.forEach(function(a) {
+    html += '<div class="item"><span>' + a.text + '</span><span class="tag ' + a.tag + '">' + (a.tag === 'red' ? 'D级' : 'C级') + '</span></div>';
+  });
+  document.getElementById('alertList').innerHTML = html;
+}
+
+renderGrid();
+renderPriorities();
+renderAlerts();
+</script>
+</body>
+</html>
